@@ -19,6 +19,7 @@ import type { Picked } from './types';
 import { registerServiceWorker } from './offline/download';
 import { renderDetail } from './ui/detail';
 import { roseSVG } from './ui/icons';
+import { initLocate } from './ui/locate';
 import { initOffline } from './ui/offlinePage';
 import { reportDemError, setStatus } from './ui/status';
 import { renderSummary } from './ui/summary';
@@ -178,8 +179,8 @@ $('toggle').addEventListener('click', () => {
 /* ---------- picking a point ---------- */
 
 let pickMarker: L.Marker | null = null;
-map.on('click', async (e: L.LeafletMouseEvent) => {
-  const ll = e.latlng;
+/** Pick a point: marker, region lookup, terrain at the point. Used by map clicks and the position dot. */
+async function pickPoint(ll: L.LatLng): Promise<void> {
   if (!pickMarker) {
     pickMarker = L.marker(ll, {
       icon: L.divIcon({ className: '', html: '<div class="pin"></div>', iconSize: [14, 14], iconAnchor: [7, 7] }),
@@ -200,12 +201,14 @@ map.on('click', async (e: L.LeafletMouseEvent) => {
     mine.terrain = null;
   }
   if (state.picked === mine) renderPanels();
-});
+}
+map.on('click', (e: L.LeafletMouseEvent) => void pickPoint(e.latlng));
 
 /* ---------- start ---------- */
 
 registerServiceWorker();
 initOffline();
+initLocate(pickPoint);
 
 onZoom();
 state.date = isoDate(today);

@@ -16,8 +16,10 @@ import { map } from './map';
 import { state } from './state';
 import { terrainAt } from './terrain/dem';
 import type { Picked } from './types';
+import { registerServiceWorker } from './offline/download';
 import { renderDetail } from './ui/detail';
 import { roseSVG } from './ui/icons';
+import { initOffline } from './ui/offlinePage';
 import { reportDemError, setStatus } from './ui/status';
 import { renderSummary } from './ui/summary';
 import { $, fmtDate, isoDate } from './util';
@@ -201,6 +203,9 @@ map.on('click', async (e: L.LeafletMouseEvent) => {
 });
 
 /* ---------- start ---------- */
+
+registerServiceWorker();
+initOffline();
 
 onZoom();
 state.date = isoDate(today);

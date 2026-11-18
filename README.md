@@ -9,6 +9,8 @@ An avalanche terrain map for Norway. It combines data from:
 | **Himmelretning** | Kartverket DTM (hoydedata.no ImageServer, LERC float32) | Slope + aspect computed in the browser per tile (Horn's method), from zoom 11. |
 | **Observasjoner** | Regobs API v5 | Snow observations for the selected day and the two days before, with photos. |
 
+**Saved areas (offline maps).** The square button on the map saves the visible area (basemap, steepness and/or elevation data, up to a chosen zoom) to the device. The download icon opens a page to view, resume or delete saved areas. Saved tiles are used automatically, also without network. Warnings and observations still need network.
+
 Click anywhere on the map to pick a point. The app finds the forecast region, samples elevation/slope/aspect at that point, and marks each avalanche problem as *Gjelder punktet* or *Ikke her* with the reason.
 
 All APIs are public, need no key, and allow cross-origin requests, so this is a purely static site with no backend.
@@ -49,6 +51,7 @@ Outside the season (before 1 December) there are no warnings, so use the **Vis 1
 
 ```
 index.html                 Panel markup (Norwegian UI). Loads src/main.ts.
+public/sw.js               Service worker: serves saved tiles from Cache Storage, else network.
 src/
   main.ts                  Entry point: creates layers, wires controls, loads data, handles map clicks.
   config.ts                API URLs, colours, zoom thresholds, demo date.
@@ -72,7 +75,12 @@ src/
     steepness.ts           NVE steepness tiles + legend.
     regions.ts             Region polygons and styling.
     observations.ts        Regobs markers.
+  offline/
+    tiles.ts               Which tile URLs make up a saved area (must match what the layers request) + size estimate.
+    download.ts            Download/resume into Cache Storage, delete (keeps tiles shared with other areas), storage info.
+    store.ts               Saved-area metadata in localStorage.
   ui/
+    offlinePage.ts         Map buttons + the "Lagrede områder" page.
     detail.ts              "Skredvarsel" tab (full warning, varsom.no style).
     summary.ts             Short summary in the "Kartlag" tab.
     point.ts               Picked-point line and hit chips.
@@ -90,6 +98,8 @@ Data flow: `main.ts` → `api/*` fetches → results stored in `state` → `laye
 - **Problem icons** are our own drawings in the EAWS style, not NVE's artwork.
 - **Elevation load.** At zoom 10–11 the avalanche layer fetches elevation at 2× resolution (≈4× data per tile) so steep slopes aren't smoothed away. First load of an area can take a few seconds.
 - Terrain hits are an automatic reading of the warning and do not replace your own assessment in the field.
+
+- **Saved areas need a service worker.** It works on localhost and https in normal browsers. The browser pane inside the Claude desktop app does not run service workers, so there areas download but are not used. If you change a tile URL or the DEM oversampling, saved areas made before the change will no longer match.
 
 ## Data and attribution
 

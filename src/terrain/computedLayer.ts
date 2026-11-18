@@ -1,4 +1,5 @@
 import * as L from 'leaflet';
+import { DEM_MAX_NATIVE } from '../config';
 import type { DemTile } from '../types';
 import { getDem } from './dem';
 
@@ -32,7 +33,7 @@ export function computedLayer({ minZoom, draw, oversample, onError }: Options): 
   }
   return new ComputedLayer({
     minZoom,
-    maxNativeZoom: 15,
+    maxNativeZoom: DEM_MAX_NATIVE,
     maxZoom: 17,
     pane: 'terrain',
     keepBuffer: 1,

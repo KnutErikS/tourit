@@ -1,11 +1,11 @@
 import * as L from 'leaflet';
-import { BRATT_URL } from '../config';
+import { BRATT_MAX_NATIVE, BRATT_TILE_URL, BRATT_URL } from '../config';
 import { esc } from '../util';
 
 /** NVE's official steepness map (the same layer varsom.no uses). */
-export const steepnessLayer = L.tileLayer(`${BRATT_URL}/tile/{z}/{y}/{x}`, {
+export const steepnessLayer = L.tileLayer(BRATT_TILE_URL, {
   minZoom: 5,
-  maxNativeZoom: 16,
+  maxNativeZoom: BRATT_MAX_NATIVE,
   maxZoom: 17,
   opacity: 0.75,
   pane: 'terrain',

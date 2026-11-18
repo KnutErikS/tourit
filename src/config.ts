@@ -3,6 +3,7 @@ export const NVE_API = 'https://api01.nve.no/hydrology/forecast/avalanche/v6.3.2
 export const REGOBS_API = 'https://api.regobs.no/v5';
 export const DTM_URL = 'https://hoydedata.no/arcgis/rest/services/DTM/ImageServer/exportImage';
 export const BRATT_URL = 'https://gis3.nve.no/arcgis/rest/services/wmts/Bratthet_2024/MapServer';
+export const BRATT_TILE_URL = `${BRATT_URL}/tile/{z}/{y}/{x}`;
 export const BASEMAP_URL =
   'https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/{z}/{y}/{x}.png';
 
@@ -32,3 +33,14 @@ export const ASPECT_MIN_ZOOM = 11;
 
 /** A day from last season with plenty of warnings, used by the demo button. */
 export const DEMO = { date: '2026-03-14', center: [69.55, 20.1] as [number, number], zoom: 10 };
+
+/** Zoom limits per tile source (beyond these, Leaflet scales up the last native zoom). */
+export const BASEMAP_MAX_NATIVE = 17;
+export const BRATT_MAX_NATIVE = 16;
+export const DEM_MAX_NATIVE = 15;
+
+/**
+ * Cache Storage name for saved map areas. Must match CACHE in public/sw.js.
+ * Bump both if the stored format ever changes.
+ */
+export const OFFLINE_CACHE = 'tourit-tiles-v1';

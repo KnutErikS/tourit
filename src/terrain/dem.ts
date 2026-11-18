@@ -13,6 +13,20 @@ const ORIG = 20037508.342789244;
 const MAX_CACHE = 500;
 const cache = new Map<string, Promise<DemTile>>();
 
+/** Exact DTM request URL for tile (x, y, z) at oversampling f. Also used by offline downloads. */
+export function demUrl(x: number, y: number, z: number, f = 1): string {
+  const n = 256 * f;
+  const size = CIRC / 2 ** z;
+  const res = size / n;
+  const xmin = -ORIG + x * size;
+  const ymax = ORIG - y * size;
+  const bbox = [xmin - res, ymax - size - res, xmin + size + res, ymax + res].join(',');
+  return (
+    `${DTM_URL}?bbox=${bbox}&bboxSR=3857&imageSR=3857&size=${n + 2},${n + 2}` +
+    `&format=lerc&pixelType=F32&interpolation=RSP_BilinearInterpolation&f=image`
+  );
+}
+
 /**
  * Elevation analysis for tile (x, y, z).
  * `f` = oversampling: fetch f×f elevation samples per screen pixel, so steep
@@ -27,12 +41,8 @@ export function getDem(x: number, y: number, z: number, f = 1): Promise<DemTile>
   const n = 256 * f;
   const size = CIRC / 2 ** z;
   const res = size / n;
-  const xmin = -ORIG + x * size;
   const ymax = ORIG - y * size;
-  const bbox = [xmin - res, ymax - size - res, xmin + size + res, ymax + res].join(',');
-  const url =
-    `${DTM_URL}?bbox=${bbox}&bboxSR=3857&imageSR=3857&size=${n + 2},${n + 2}` +
-    `&format=lerc&pixelType=F32&interpolation=RSP_BilinearInterpolation&f=image`;
+  const url = demUrl(x, y, z, f);
 
   const p = fetch(url)
     .then((r) => {

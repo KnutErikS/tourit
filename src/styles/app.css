@@ -19,8 +19,10 @@ body{margin:0}[hidden]{display:none!important}
   --accent:#6aa5e8; --accent-ink:#06121f; --chip:#1a2531; --d5:#e9e1df; --shadow:0 8px 28px rgba(0,0,0,.5); color-scheme:dark}
 html,body{height:100%}
 body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:14px;overflow:hidden}
-#map{position:absolute;inset:0;background:var(--bg)}
-.leaflet-container{font-family:var(--f-body);background:var(--bg)}
+/* The basemap tiles are partly transparent and designed for a light backdrop,
+   so the map background stays light in both themes (only the panel goes dark). */
+#map{position:absolute;inset:0;background:#e9edf1}
+.leaflet-container{font-family:var(--f-body);background:#e9edf1}
 .leaflet-control-attribution{font-size:10px}
 
 #panel{position:absolute;z-index:1000;top:calc(12px + env(safe-area-inset-top,0px));left:calc(12px + env(safe-area-inset-left,0px));

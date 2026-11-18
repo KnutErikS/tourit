@@ -11,6 +11,8 @@ An avalanche terrain map for Norway. It combines data from:
 
 **Saved areas (offline maps).** The square button on the map saves the visible area (basemap, steepness and/or elevation data, up to a chosen zoom) to the device. The download icon opens a page to view, resume or delete saved areas. Saved tiles are used automatically, also without network. Warnings and observations still need network.
 
+**3D view (needs network).** The 3D button opens a MapLibre GL map at the same spot, with terrain from AWS Terrain Tiles (Kartverket DTM 10 over Norway) and the topo map, steepness layer and danger-level regions draped over it. Tapping the terrain picks a point like in 2D. "2D" goes back. MapLibre is only downloaded the first time 3D is opened.
+
 Click anywhere on the map to pick a point. The app finds the forecast region, samples elevation/slope/aspect at that point, and marks each avalanche problem as *Gjelder punktet* or *Ikke her* with the reason.
 
 All APIs are public, need no key, and allow cross-origin requests, so this is a purely static site with no backend.
@@ -75,6 +77,8 @@ src/
     steepness.ts           NVE steepness tiles + legend.
     regions.ts             Region polygons and styling.
     observations.ts        Regobs markers.
+  three/
+    view3d.ts              3D view: lazy-loads MapLibre, builds the style, syncs layers/position with 2D.
   offline/
     tiles.ts               Which tile URLs make up a saved area (must match what the layers request) + size estimate.
     download.ts            Download/resume into Cache Storage, delete (keeps tiles shared with other areas), storage info.
@@ -100,6 +104,8 @@ Data flow: `main.ts` → `api/*` fetches → results stored in `state` → `laye
 - Terrain hits are an automatic reading of the warning and do not replace your own assessment in the field.
 
 - **Saved areas need a service worker.** It works on localhost and https in normal browsers. The browser pane inside the Claude desktop app does not run service workers, so there areas download but are not used. If you change a tile URL or the DEM oversampling, saved areas made before the change will no longer match.
+
+- **MapLibre's worker** is imported with Vite's `?url` and set with `setWorkerUrl` (see `src/three/view3d.ts`). MapLibre normally finds the worker relative to its own file, which Vite's dep pre-bundling and build don't follow; without this the 3D map shows terrain but no regions and never finishes loading. In dev, `window.__map3d` gives the MapLibre map in the console.
 
 ## Data and attribution
 

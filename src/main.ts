@@ -19,6 +19,7 @@ import type { Picked } from './types';
 import { registerServiceWorker } from './offline/download';
 import { renderDetail } from './ui/detail';
 import { roseSVG } from './ui/icons';
+import { init3D, setPick3D, update3D } from './three/view3d';
 import { initLocate } from './ui/locate';
 import { initOffline } from './ui/offlinePage';
 import { reportDemError, setStatus } from './ui/status';
@@ -55,6 +56,7 @@ async function loadWarnings(date: string): Promise<void> {
   state.regions.forEach((r) => (r.warn = byId.get(r.id) ?? null));
   restyleRegions();
   avalancheLayer.redraw();
+  update3D();
   renderPanels();
 
   const warned = state.regions.filter((r) => r.warn && r.warn.level >= 1);
@@ -193,6 +195,7 @@ async function pickPoint(ll: L.LatLng): Promise<void> {
   const mine: Picked = { ll, terrain: undefined };
   state.picked = mine;
   state.selected = regionAt(state.regions, ll);
+  setPick3D(ll);
   restyleRegions();
   renderPanels();
   try {
@@ -209,6 +212,7 @@ map.on('click', (e: L.LeafletMouseEvent) => void pickPoint(e.latlng));
 registerServiceWorker();
 initOffline();
 initLocate(pickPoint);
+init3D(pickPoint);
 
 onZoom();
 state.date = isoDate(today);

@@ -44,3 +44,11 @@ export const DEM_MAX_NATIVE = 15;
  * Bump both if the stored format ever changes.
  */
 export const OFFLINE_CACHE = 'tourit-tiles-v1';
+
+/**
+ * 3D terrain (MapLibre raster-dem, Terrarium encoding): AWS Terrain Tiles,
+ * which use Kartverket's DTM 10 over Norway. Static files on S3, so the 3D
+ * view puts no load on hoydedata.no. Only used with network.
+ */
+export const TERRAIN_3D_URL = 'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png';
+export const TERRAIN_3D_MAX_ZOOM = 15;

@@ -21,7 +21,7 @@ html,body{height:100%}
 body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:14px;overflow:hidden}
 /* The basemap tiles are partly transparent and designed for a light backdrop,
    so the map background stays light in both themes (only the panel goes dark). */
-#map{position:absolute;inset:0;background:#e9edf1}
+#map{position:absolute;inset:0;background:#e9edf1;z-index:0}
 .leaflet-container{font-family:var(--f-body);background:#e9edf1}
 .leaflet-control-attribution{font-size:10px}
 
@@ -191,4 +191,11 @@ details.ws > div{display:grid;gap:8px;padding-top:8px}
   box-shadow:0 0 0 1px rgba(0,0,0,.25),0 1px 5px rgba(0,0,0,.35);position:relative;cursor:pointer}
 .me::after{content:"";position:absolute;inset:-3px;border-radius:50%;border:2px solid #2a7de1;animation:mepulse 2s ease-out infinite}
 @keyframes mepulse{from{transform:scale(1);opacity:.8}to{transform:scale(2.6);opacity:0}}
+/* ---------- 3D ---------- */
+#map3d{position:absolute;inset:0;z-index:1;background:#e9edf1}
+body.is3d #hint{display:none}
+.ctl3dbar a.ctl3d{font:700 13px/30px var(--f-display);letter-spacing:.03em;color:#16202b}
+.maplibregl-ctrl button.ctl3d{font:700 13px var(--f-display);letter-spacing:.03em;color:#16202b}
+#map3d .maplibregl-ctrl-top-right{top:calc(env(safe-area-inset-top,0px))}
+@media (max-width:640px){#map3d .maplibregl-ctrl-bottom-right{display:none}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}

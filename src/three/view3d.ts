@@ -6,7 +6,10 @@ import {
 } from '../config';
 import { drawAspect } from '../layers/aspect';
 import { avalancheOversample, drawAvalancheTerrain } from '../layers/avalancheTerrain';
+import { KIND_LABEL, images, obsKind } from '../domain/observations';
 import { getDem } from '../terrain/dem';
+import { obsTime, popupHTML } from '../ui/obsHtml';
+import type { ObsKind } from '../types';
 import { map } from '../map';
 import { state } from '../state';
 import { setStatus } from '../ui/status';
@@ -169,6 +172,7 @@ function syncLayers(): void {
   m3.setPaintProperty('bratt', 'raster-opacity', +$<HTMLInputElement>('o-bratt').value);
   m3.setLayoutProperty('aspect', 'visibility', vis(checked('l-asp')));
   for (const id of ['skred', 'regions-fill', 'regions-line']) m3.setLayoutProperty(id, 'visibility', vis(checked('l-skred')));
+  update3DObs();
 }
 
 /** Show the picked point in 3D too. */
@@ -184,6 +188,42 @@ export function setPick3D(ll: L.LatLng | null): void {
     el.className = 'pin';
     pickMarker3 = new ml.Marker({ element: el }).setLngLat([ll.lng, ll.lat]).addTo(m3);
   } else pickMarker3.setLngLat([ll.lng, ll.lat]);
+}
+
+/* ---------- Regobs observations ---------- */
+
+const obsMarkers3 = new Map<number, ML.Marker>();
+const Z_ORDER: Record<ObsKind, number> = { obs: 0, tegn: 1, skred: 2 };
+
+/** (Re)draw observation markers in 3D. Markers follow the terrain surface. */
+export function update3DObs(): void {
+  if (!m3 || !ml) return;
+  obsMarkers3.forEach((mk) => mk.remove());
+  obsMarkers3.clear();
+  if (!checked('l-obs')) return;
+  state.obs
+    .slice()
+    .sort((a, b) => Z_ORDER[obsKind(a)] - Z_ORDER[obsKind(b)])
+    .forEach((o) => {
+      const loc = o.ObsLocation;
+      if (!loc || !Number.isFinite(loc.Latitude) || !Number.isFinite(loc.Longitude)) return;
+      const k = obsKind(o);
+      const el = document.createElement('div');
+      el.className = `om ${k}${images(o).length ? ' img' : ''}`;
+      el.title = `${KIND_LABEL[k]} · ${obsTime(o)}`;
+      el.style.zIndex = String(Z_ORDER[k]);
+      const popup = new ml!.Popup({ maxWidth: '320px', offset: 10 }).setHTML(popupHTML(o));
+      const mk = new ml!.Marker({ element: el }).setLngLat([loc.Longitude!, loc.Latitude!]).setPopup(popup).addTo(m3!);
+      obsMarkers3.set(o.RegId, mk);
+    });
+}
+
+/** Fly to an observation in 3D and open its popup (from the list in the warning tab). */
+export function focusObs3D(regId: number): void {
+  const mk = obsMarkers3.get(regId);
+  if (!m3 || !mk) return;
+  m3.flyTo({ center: mk.getLngLat(), zoom: Math.max(m3.getZoom(), 12) });
+  if (!mk.getPopup()?.isOpen()) mk.togglePopup();
 }
 
 /* ---------- open / close ---------- */
@@ -248,6 +288,7 @@ export async function open3D(): Promise<void> {
     if (!m3) {
       setStatus('Laster 3D-kart…', 'busy');
       m3 = await create();
+      update3DObs();
     } else {
       const c = map.getCenter();
       m3.resize();
@@ -289,7 +330,7 @@ const Toggle3DControl = L.Control.extend({
 export function init3D(pick: (ll: L.LatLng) => void): void {
   onPick = pick;
   new Toggle3DControl({ position: 'topright' }).addTo(map);
-  for (const id of ['l-bratt', 'l-skred', 'l-asp']) $(id).addEventListener('change', syncLayers);
+  for (const id of ['l-bratt', 'l-skred', 'l-asp', 'l-obs']) $(id).addEventListener('change', syncLayers);
   // main.ts updates state on these first (its listeners are registered earlier).
   for (const id of ['s-thr', 's-rest', 'a-min']) $(id).addEventListener('change', refreshOverlays);
   $('o-bratt').addEventListener('input', syncLayers);

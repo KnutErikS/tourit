@@ -19,7 +19,7 @@ import type { Picked } from './types';
 import { registerServiceWorker } from './offline/download';
 import { renderDetail } from './ui/detail';
 import { roseSVG } from './ui/icons';
-import { init3D, setPick3D, update3D } from './three/view3d';
+import { focusObs3D, init3D, is3DOpen, setPick3D, update3D, update3DObs } from './three/view3d';
 import { initLocate } from './ui/locate';
 import { initOffline } from './ui/offlinePage';
 import { reportDemError, setStatus } from './ui/status';
@@ -39,6 +39,14 @@ function renderPanels(): void {
 }
 
 function openObservation(regId: number): void {
+  if (is3DOpen()) {
+    if (!$<HTMLInputElement>('l-obs').checked) {
+      $<HTMLInputElement>('l-obs').checked = true;
+      obsGroup.addTo(map);
+      update3DObs();
+    }
+    return focusObs3D(regId);
+  }
   focusObservation(regId, () => {
     if (!map.hasLayer(obsGroup)) {
       $<HTMLInputElement>('l-obs').checked = true;
@@ -76,6 +84,7 @@ async function loadObservations(date: string): Promise<void> {
   if (state.date !== date) return;
   state.obs = obs;
   drawObservations(obs);
+  update3DObs();
   const nSkred = obs.filter((o) => obsKind(o) === 'skred').length;
   const nImg = obs.reduce((n, o) => n + images(o).length, 0);
   el.textContent = obs.length ? `${obs.length} observasjoner · ${nSkred} med skred · ${nImg} bilder` : 'Ingen snøobservasjoner i perioden.';

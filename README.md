@@ -11,7 +11,7 @@ An avalanche terrain map for Norway. It combines data from:
 
 **Saved areas (offline maps).** The square button on the map saves the visible area (basemap, steepness and/or elevation data, up to a chosen zoom) to the device. The download icon opens a page to view, resume or delete saved areas. Saved tiles are used automatically, also without network. Warnings and observations still need network.
 
-**3D view (needs network).** The 3D button opens a MapLibre GL map at the same spot, with terrain from AWS Terrain Tiles (Kartverket DTM 10 over Norway) and the topo map, steepness layer and danger-level regions draped over it. Tapping the terrain picks a point like in 2D. "2D" goes back. MapLibre is only downloaded the first time 3D is opened.
+**3D view (needs network).** The 3D button opens a MapLibre GL map at the same spot, with terrain from AWS Terrain Tiles (Kartverket DTM 10 over Norway). All layers from the panel work there too: topo map, steepness, danger-level regions, the avalanche-terrain overlay, aspect, and Regobs observations with popups. The two computed overlays are served to MapLibre through a `tourit://` tile protocol that uses the same drawing code as 2D (so they still fetch elevation from hoydedata.no). Tapping the terrain picks a point like in 2D. "2D" goes back. MapLibre is only downloaded the first time 3D is opened.
 
 Click anywhere on the map to pick a point. The app finds the forecast region, samples elevation/slope/aspect at that point, and marks each avalanche problem as *Gjelder punktet* or *Ikke her* with the reason.
 
@@ -78,7 +78,8 @@ src/
     regions.ts             Region polygons and styling.
     observations.ts        Regobs markers.
   three/
-    view3d.ts              3D view: lazy-loads MapLibre, builds the style, syncs layers/position with 2D.
+    view3d.ts              3D view: lazy-loads MapLibre, builds the style, tourit:// protocol for computed overlays,
+                           observation markers, syncs layers/position with 2D.
   offline/
     tiles.ts               Which tile URLs make up a saved area (must match what the layers request) + size estimate.
     download.ts            Download/resume into Cache Storage, delete (keeps tiles shared with other areas), storage info.

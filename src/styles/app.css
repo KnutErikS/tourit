@@ -197,5 +197,13 @@ body.is3d #hint{display:none}
 .ctl3dbar a.ctl3d{font:700 13px/30px var(--f-display);letter-spacing:.03em;color:#16202b}
 .maplibregl-ctrl button.ctl3d{font:700 13px var(--f-display);letter-spacing:.03em;color:#16202b}
 #map3d .maplibregl-ctrl-top-right{top:calc(env(safe-area-inset-top,0px))}
+.maplibregl-popup-content{background:var(--panel);color:var(--fg);border-radius:12px;padding:10px 12px;box-shadow:0 3px 14px rgba(0,0,0,.4);font-family:var(--f-body);min-width:240px}
+.maplibregl-popup-content .thumbs img{width:120px;height:90px}
+.maplibregl-popup-anchor-bottom .maplibregl-popup-tip,.maplibregl-popup-anchor-bottom-left .maplibregl-popup-tip,.maplibregl-popup-anchor-bottom-right .maplibregl-popup-tip{border-top-color:var(--panel)}
+.maplibregl-popup-anchor-top .maplibregl-popup-tip,.maplibregl-popup-anchor-top-left .maplibregl-popup-tip,.maplibregl-popup-anchor-top-right .maplibregl-popup-tip{border-bottom-color:var(--panel)}
+.maplibregl-popup-anchor-left .maplibregl-popup-tip{border-right-color:var(--panel)}
+.maplibregl-popup-anchor-right .maplibregl-popup-tip{border-left-color:var(--panel)}
+.maplibregl-popup-close-button{color:var(--muted);font-size:18px;padding:0 6px}
+#map3d .om{cursor:pointer}
 @media (max-width:640px){#map3d .maplibregl-ctrl-bottom-right{display:none}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}

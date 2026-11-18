@@ -19,7 +19,8 @@ import type { Picked } from './types';
 import { registerServiceWorker } from './offline/download';
 import { renderDetail } from './ui/detail';
 import { roseSVG } from './ui/icons';
-import { focusObs3D, init3D, is3DOpen, setPick3D, update3D, update3DObs } from './three/view3d';
+import { focusObs3D, init3D, is3DOpen, resetNorth3D, setPick3D, update3D, update3DObs } from './three/view3d';
+import { initCompass } from './ui/compass';
 import { initLocate } from './ui/locate';
 import { initOffline } from './ui/offlinePage';
 import { reportDemError, setStatus } from './ui/status';
@@ -222,6 +223,7 @@ registerServiceWorker();
 initOffline();
 initLocate(pickPoint);
 init3D(pickPoint);
+initCompass(resetNorth3D);
 
 onZoom();
 state.date = isoDate(today);

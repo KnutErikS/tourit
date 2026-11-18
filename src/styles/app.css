@@ -191,6 +191,22 @@ details.ws > div{display:grid;gap:8px;padding-top:8px}
   box-shadow:0 0 0 1px rgba(0,0,0,.25),0 1px 5px rgba(0,0,0,.35);position:relative;cursor:pointer}
 .me::after{content:"";position:absolute;inset:-3px;border-radius:50%;border:2px solid #2a7de1;animation:mepulse 2s ease-out infinite}
 @keyframes mepulse{from{transform:scale(1);opacity:.8}to{transform:scale(2.6);opacity:0}}
+/* ---------- Kompass ---------- */
+#compass{position:absolute;z-index:999;right:calc(12px + env(safe-area-inset-right,0px));bottom:calc(72px + env(safe-area-inset-bottom,0px));
+  width:52px;height:52px;padding:0;border-radius:50%;border:1px solid var(--line);background:var(--panel);box-shadow:var(--shadow);
+  display:grid;place-items:center;cursor:default}
+#compass.rotated{cursor:pointer;border-color:var(--accent)}
+#compass:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#compass svg{width:46px;height:46px;overflow:visible}
+#compass .rose{transform-origin:24px 24px;transform-box:view-box}
+#compass .ring{fill:none;stroke:var(--line);stroke-width:1.5}
+#compass .tick{stroke:var(--muted);stroke-width:1.5;stroke-linecap:round}
+#compass .north{fill:#d92b20}
+#compass .south{fill:var(--muted)}
+#compass .hub{fill:var(--panel);stroke:var(--fg);stroke-width:1}
+#compass .n{font:700 7px var(--f-mono);fill:#fff}
+/* Mobile: right edge, just above the bottom-sheet panel (max 55 % high). */
+@media (max-width:640px){#compass{right:calc(10px + env(safe-area-inset-right,0px));bottom:calc(55% + 12px)}}
 /* ---------- 3D ---------- */
 #map3d{position:absolute;inset:0;z-index:1;background:#e9edf1}
 body.is3d #hint{display:none}

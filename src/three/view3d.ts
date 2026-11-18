@@ -12,6 +12,7 @@ import { obsTime, popupHTML } from '../ui/obsHtml';
 import type { ObsKind } from '../types';
 import { map } from '../map';
 import { state } from '../state';
+import { setCompassBearing } from '../ui/compass';
 import { setStatus } from '../ui/status';
 import { $ } from '../util';
 
@@ -267,12 +268,14 @@ async function create(): Promise<ML.Map> {
     attributionControl: { compact: true },
   });
   m.addControl(new Back2DControl(), 'top-right');
-  m.addControl(new ml.NavigationControl({ visualizePitch: true }), 'top-right');
+  // No compass here: the app's own compass (ui/compass.ts) covers both 2D and 3D.
+  m.addControl(new ml.NavigationControl({ showCompass: false }), 'top-right');
   m.addControl(
     new ml.GeolocateControl({ positionOptions: { enableHighAccuracy: true }, trackUserLocation: true }),
     'top-right',
   );
   m.on('click', (e) => onPick(L.latLng(e.lngLat.lat, e.lngLat.lng)));
+  m.on('rotate', () => setCompassBearing(m.getBearing(), true));
   m.on('error', (e) => console.warn('3D:', e.error?.message ?? e));
   // Attach right away: 'load' can fire before the caller gets the map back.
   m.once('load', () => setStatus('3D-kart: terreng fra Kartverket via AWS Terrain Tiles. Krever nett.', 'ok'));
@@ -297,6 +300,7 @@ export async function open3D(): Promise<void> {
       syncLayers();
     }
     setPick3D(state.picked ? state.picked.ll : null);
+    if (m3) setCompassBearing(m3.getBearing(), true);
   } catch (e) {
     close3D();
     setStatus(`Kunne ikke åpne 3D-kartet (${(e as Error).message}). Krever nett og WebGL.`, 'err');
@@ -310,6 +314,12 @@ export function close3D(): void {
   }
   container().hidden = true;
   document.body.classList.remove('is3d');
+  setCompassBearing(0, false); // 2D is always north-up
+}
+
+/** Turn the 3D map back to north (keeps the tilt). No-op when 3D isn't open. */
+export function resetNorth3D(): void {
+  if (m3 && is3DOpen()) m3.easeTo({ bearing: 0, duration: 400 });
 }
 
 /* ---------- setup ---------- */

@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1f4f86">
+<title>Skredterreng Norge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+</head>
+<body>
+<div id="map" role="application" aria-label="Kart over Norge med skredlag"></div>
+
+<aside id="panel">
+  <header>
+    <div class="brand">
+      <h1>Skredterreng</h1>
+      <button class="btn" id="toggle" aria-expanded="true">Skjul</button>
+      <small>Varsom · NVE · Kartverket</small>
+    </div>
+    <div class="daterow">
+      <input type="date" id="date" aria-label="Varseldato">
+      <button class="btn" id="today">I dag</button>
+      <button class="btn" id="tomorrow">I morgen</button>
+    </div>
+    <div id="status"><span class="dot"></span><span id="statustext">Starter…</span></div>
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tab-btn-layers" aria-selected="true" aria-controls="tab-layers">Kartlag</button>
+      <button role="tab" id="tab-btn-warn" aria-selected="false" aria-controls="tab-warn">Skredvarsel</button>
+    </div>
+  </header>
+  <div class="scroll" id="tab-layers" role="tabpanel">
+    <div class="notice" id="season" hidden>
+      <div><b>Ingen varsler denne dagen.</b> Snøskredvarslingen publiserer daglige varsler fra 1. desember. Velg en dato fra forrige sesong for å se skredlaget i bruk.</div>
+      <div><button class="btn primary" id="demo">Vis 14. mars 2026</button></div>
+    </div>
+
+    <section class="layer">
+      <div class="lhead">
+        <label><input type="checkbox" id="l-skred" checked> Skredfare i terrenget</label>
+        <span class="zoomtag" id="z-skred">terreng fra zoom 10</span>
+      </div>
+      <p class="desc">Regionene fargelegges etter faregrad. Zoomer du inn, viser laget bratte heng som treffer skredproblemenes himmelretninger og høydegrenser.</p>
+      <div class="scale5" aria-label="Faregrad 1 til 5">
+        <div style="background:var(--d1)">1 Liten</div><div style="background:var(--d2)">2 Moderat</div><div style="background:var(--d3)">3 Betydelig</div><div style="background:var(--d4);color:#fff">4 Stor</div><div class="d5">5 Meget stor</div>
+      </div>
+      <div class="ctrl">
+        <span>Bratthet fra</span>
+        <select id="s-thr"><option value="27">27°</option><option value="30" selected>30°</option><option value="35">35°</option></select>
+        <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="s-rest" checked> Vis øvrig bratt terreng svakt</label>
+      </div>
+    </section>
+
+    <section class="layer">
+      <div class="lhead">
+        <label><input type="checkbox" id="l-bratt"> Bratthet</label>
+        <span class="zoomtag">NVE · fra zoom 5</span>
+      </div>
+      <p class="desc">NVEs bratthetskart, samme lag som på varsom.no.</p>
+      <div class="ctrl"><span>Gjennomsiktighet</span><input type="range" id="o-bratt" min="0.2" max="1" step="0.05" value="0.75" aria-label="Opasitet bratthet"></div>
+      <div class="legend" id="bratt-legend"><span class="empty">Henter tegnforklaring…</span></div>
+    </section>
+
+    <section class="layer">
+      <div class="lhead">
+        <label><input type="checkbox" id="l-asp"> Himmelretning</label>
+        <span class="zoomtag" id="z-asp">fra zoom 11</span>
+      </div>
+      <p class="desc">Hvilken retning hellingen vender, beregnet fra Kartverkets terrengmodell.</p>
+      <div class="ctrl">
+        <span>Bare der helningen er minst</span>
+        <select id="a-min"><option value="5">5°</option><option value="15">15°</option><option value="25" selected>25°</option><option value="30">30°</option></select>
+      </div>
+      <div class="rose-legend"><span id="asp-rose"></span><div class="legend" id="asp-legend"></div></div>
+    </section>
+
+    <section class="layer">
+      <div class="lhead">
+        <label><input type="checkbox" id="l-obs" checked> Observasjoner</label>
+        <span class="zoomtag">Regobs</span>
+      </div>
+      <p class="desc">Snøobservasjoner fra Regobs for varseldagen og to døgn før. Trykk på en prikk for bilder og detaljer.</p>
+      <div class="obs-legend"><span><i style="background:#d92b20"></i>Skred / skredaktivitet</span><span><i style="background:#f28a1a"></i>Faretegn</span><span><i style="background:#5f7489"></i>Annen observasjon</span></div>
+      <div class="desc" id="obs-status">Henter observasjoner…</div>
+    </section>
+
+
+    <section class="summary" id="summary"><p class="empty">Trykk i kartet for å se varselet for et sted.</p></section>
+
+    <p class="foot">Data: Snøskredvarsler fra <a href="https://www.varsom.no/snoskred/varsling/" target="_blank" rel="noopener">varsom.no</a> (NVE), bratthet fra NVE, terrengmodell fra Kartverket (hoydedata.no). Terrengtreff er en automatisk tolkning av varselet og erstatter ikke egen vurdering i felt.</p>
+  </div>
+  <div class="scroll" id="tab-warn" role="tabpanel" hidden>
+    <div id="detail" style="padding-top:10px"><p class="empty">Trykk på et sted i kartet. Du får varselet for regionen stedet ligger i, og ser om akkurat det punktet er utsatt for skredproblemene.</p></div>
+  </div>
+</aside>
+<div id="hint" aria-live="polite">zoom 5</div>
+
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>

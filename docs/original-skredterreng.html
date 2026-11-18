@@ -1,0 +1,1520 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>body{margin:0}[hidden]{display:none!important}</style>
+<title>Skredterreng Norge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+
+
+.leaflet-pane,
+.leaflet-tile,
+.leaflet-marker-icon,
+.leaflet-marker-shadow,
+.leaflet-tile-container,
+.leaflet-pane > svg,
+.leaflet-pane > canvas,
+.leaflet-zoom-box,
+.leaflet-image-layer,
+.leaflet-layer {
+	position: absolute;
+	left: 0;
+	top: 0;
+	}
+.leaflet-container {
+	overflow: hidden;
+	}
+.leaflet-tile,
+.leaflet-marker-icon,
+.leaflet-marker-shadow {
+	-webkit-user-select: none;
+	   -moz-user-select: none;
+	        user-select: none;
+	  -webkit-user-drag: none;
+	}
+
+.leaflet-tile::selection {
+	background: transparent;
+}
+
+.leaflet-safari .leaflet-tile {
+	image-rendering: -webkit-optimize-contrast;
+	}
+
+.leaflet-safari .leaflet-tile-container {
+	width: 1600px;
+	height: 1600px;
+	-webkit-transform-origin: 0 0;
+	}
+.leaflet-marker-icon,
+.leaflet-marker-shadow {
+	display: block;
+	}
+
+
+.leaflet-container .leaflet-overlay-pane svg {
+	max-width: none !important;
+	max-height: none !important;
+	}
+.leaflet-container .leaflet-marker-pane img,
+.leaflet-container .leaflet-shadow-pane img,
+.leaflet-container .leaflet-tile-pane img,
+.leaflet-container img.leaflet-image-layer,
+.leaflet-container .leaflet-tile {
+	max-width: none !important;
+	max-height: none !important;
+	width: auto;
+	padding: 0;
+	}
+
+.leaflet-container img.leaflet-tile {
+	
+	mix-blend-mode: plus-lighter;
+}
+
+.leaflet-container.leaflet-touch-zoom {
+	-ms-touch-action: pan-x pan-y;
+	touch-action: pan-x pan-y;
+	}
+.leaflet-container.leaflet-touch-drag {
+	-ms-touch-action: pinch-zoom;
+	
+	touch-action: none;
+	touch-action: pinch-zoom;
+}
+.leaflet-container.leaflet-touch-drag.leaflet-touch-zoom {
+	-ms-touch-action: none;
+	touch-action: none;
+}
+.leaflet-container {
+	-webkit-tap-highlight-color: transparent;
+}
+.leaflet-container a {
+	-webkit-tap-highlight-color: rgba(51, 181, 229, 0.4);
+}
+.leaflet-tile {
+	filter: inherit;
+	visibility: hidden;
+	}
+.leaflet-tile-loaded {
+	visibility: inherit;
+	}
+.leaflet-zoom-box {
+	width: 0;
+	height: 0;
+	-moz-box-sizing: border-box;
+	     box-sizing: border-box;
+	z-index: 800;
+	}
+
+.leaflet-overlay-pane svg {
+	-moz-user-select: none;
+	}
+
+.leaflet-pane         { z-index: 400; }
+
+.leaflet-tile-pane    { z-index: 200; }
+.leaflet-overlay-pane { z-index: 400; }
+.leaflet-shadow-pane  { z-index: 500; }
+.leaflet-marker-pane  { z-index: 600; }
+.leaflet-tooltip-pane   { z-index: 650; }
+.leaflet-popup-pane   { z-index: 700; }
+
+.leaflet-map-pane canvas { z-index: 100; }
+.leaflet-map-pane svg    { z-index: 200; }
+
+.leaflet-vml-shape {
+	width: 1px;
+	height: 1px;
+	}
+.lvml {
+	behavior: url(#default#VML);
+	display: inline-block;
+	position: absolute;
+	}
+
+
+
+
+.leaflet-control {
+	position: relative;
+	z-index: 800;
+	pointer-events: visiblePainted; 
+	pointer-events: auto;
+	}
+.leaflet-top,
+.leaflet-bottom {
+	position: absolute;
+	z-index: 1000;
+	pointer-events: none;
+	}
+.leaflet-top {
+	top: 0;
+	}
+.leaflet-right {
+	right: 0;
+	}
+.leaflet-bottom {
+	bottom: 0;
+	}
+.leaflet-left {
+	left: 0;
+	}
+.leaflet-control {
+	float: left;
+	clear: both;
+	}
+.leaflet-right .leaflet-control {
+	float: right;
+	}
+.leaflet-top .leaflet-control {
+	margin-top: 10px;
+	}
+.leaflet-bottom .leaflet-control {
+	margin-bottom: 10px;
+	}
+.leaflet-left .leaflet-control {
+	margin-left: 10px;
+	}
+.leaflet-right .leaflet-control {
+	margin-right: 10px;
+	}
+
+
+
+
+.leaflet-fade-anim .leaflet-popup {
+	opacity: 0;
+	-webkit-transition: opacity 0.2s linear;
+	   -moz-transition: opacity 0.2s linear;
+	        transition: opacity 0.2s linear;
+	}
+.leaflet-fade-anim .leaflet-map-pane .leaflet-popup {
+	opacity: 1;
+	}
+.leaflet-zoom-animated {
+	-webkit-transform-origin: 0 0;
+	    -ms-transform-origin: 0 0;
+	        transform-origin: 0 0;
+	}
+svg.leaflet-zoom-animated {
+	will-change: transform;
+}
+
+.leaflet-zoom-anim .leaflet-zoom-animated {
+	-webkit-transition: -webkit-transform 0.25s cubic-bezier(0,0,0.25,1);
+	   -moz-transition:    -moz-transform 0.25s cubic-bezier(0,0,0.25,1);
+	        transition:         transform 0.25s cubic-bezier(0,0,0.25,1);
+	}
+.leaflet-zoom-anim .leaflet-tile,
+.leaflet-pan-anim .leaflet-tile {
+	-webkit-transition: none;
+	   -moz-transition: none;
+	        transition: none;
+	}
+
+.leaflet-zoom-anim .leaflet-zoom-hide {
+	visibility: hidden;
+	}
+
+
+
+
+.leaflet-interactive {
+	cursor: pointer;
+	}
+.leaflet-grab {
+	cursor: -webkit-grab;
+	cursor:    -moz-grab;
+	cursor:         grab;
+	}
+.leaflet-crosshair,
+.leaflet-crosshair .leaflet-interactive {
+	cursor: crosshair;
+	}
+.leaflet-popup-pane,
+.leaflet-control {
+	cursor: auto;
+	}
+.leaflet-dragging .leaflet-grab,
+.leaflet-dragging .leaflet-grab .leaflet-interactive,
+.leaflet-dragging .leaflet-marker-draggable {
+	cursor: move;
+	cursor: -webkit-grabbing;
+	cursor:    -moz-grabbing;
+	cursor:         grabbing;
+	}
+
+
+.leaflet-marker-icon,
+.leaflet-marker-shadow,
+.leaflet-image-layer,
+.leaflet-pane > svg path,
+.leaflet-tile-container {
+	pointer-events: none;
+	}
+
+.leaflet-marker-icon.leaflet-interactive,
+.leaflet-image-layer.leaflet-interactive,
+.leaflet-pane > svg path.leaflet-interactive,
+svg.leaflet-image-layer.leaflet-interactive path {
+	pointer-events: visiblePainted; 
+	pointer-events: auto;
+	}
+
+
+
+.leaflet-container {
+	background: #ddd;
+	outline-offset: 1px;
+	}
+.leaflet-container a {
+	color: #0078A8;
+	}
+.leaflet-zoom-box {
+	border: 2px dotted #38f;
+	background: rgba(255,255,255,0.5);
+	}
+
+
+
+.leaflet-container {
+	font-family: "Helvetica Neue", Arial, Helvetica, sans-serif;
+	font-size: 12px;
+	font-size: 0.75rem;
+	line-height: 1.5;
+	}
+
+
+
+
+.leaflet-bar {
+	box-shadow: 0 1px 5px rgba(0,0,0,0.65);
+	border-radius: 4px;
+	}
+.leaflet-bar a {
+	background-color: #fff;
+	border-bottom: 1px solid #ccc;
+	width: 26px;
+	height: 26px;
+	line-height: 26px;
+	display: block;
+	text-align: center;
+	text-decoration: none;
+	color: black;
+	}
+.leaflet-bar a,
+.leaflet-control-layers-toggle {
+	background-position: 50% 50%;
+	background-repeat: no-repeat;
+	display: block;
+	}
+.leaflet-bar a:hover,
+.leaflet-bar a:focus {
+	background-color: #f4f4f4;
+	}
+.leaflet-bar a:first-child {
+	border-top-left-radius: 4px;
+	border-top-right-radius: 4px;
+	}
+.leaflet-bar a:last-child {
+	border-bottom-left-radius: 4px;
+	border-bottom-right-radius: 4px;
+	border-bottom: none;
+	}
+.leaflet-bar a.leaflet-disabled {
+	cursor: default;
+	background-color: #f4f4f4;
+	color: #bbb;
+	}
+
+.leaflet-touch .leaflet-bar a {
+	width: 30px;
+	height: 30px;
+	line-height: 30px;
+	}
+.leaflet-touch .leaflet-bar a:first-child {
+	border-top-left-radius: 2px;
+	border-top-right-radius: 2px;
+	}
+.leaflet-touch .leaflet-bar a:last-child {
+	border-bottom-left-radius: 2px;
+	border-bottom-right-radius: 2px;
+	}
+
+
+
+.leaflet-control-zoom-in,
+.leaflet-control-zoom-out {
+	font: bold 18px 'Lucida Console', Monaco, monospace;
+	text-indent: 1px;
+	}
+
+.leaflet-touch .leaflet-control-zoom-in, .leaflet-touch .leaflet-control-zoom-out  {
+	font-size: 22px;
+	}
+
+
+
+
+.leaflet-control-layers {
+	box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+	background: #fff;
+	border-radius: 5px;
+	}
+.leaflet-control-layers-toggle {
+	background-image: url(images/layers.png);
+	width: 36px;
+	height: 36px;
+	}
+.leaflet-retina .leaflet-control-layers-toggle {
+	background-image: url(images/layers-2x.png);
+	background-size: 26px 26px;
+	}
+.leaflet-touch .leaflet-control-layers-toggle {
+	width: 44px;
+	height: 44px;
+	}
+.leaflet-control-layers .leaflet-control-layers-list,
+.leaflet-control-layers-expanded .leaflet-control-layers-toggle {
+	display: none;
+	}
+.leaflet-control-layers-expanded .leaflet-control-layers-list {
+	display: block;
+	position: relative;
+	}
+.leaflet-control-layers-expanded {
+	padding: 6px 10px 6px 6px;
+	color: #333;
+	background: #fff;
+	}
+.leaflet-control-layers-scrollbar {
+	overflow-y: scroll;
+	overflow-x: hidden;
+	padding-right: 5px;
+	}
+.leaflet-control-layers-selector {
+	margin-top: 2px;
+	position: relative;
+	top: 1px;
+	}
+.leaflet-control-layers label {
+	display: block;
+	font-size: 13px;
+	font-size: 1.08333em;
+	}
+.leaflet-control-layers-separator {
+	height: 0;
+	border-top: 1px solid #ddd;
+	margin: 5px -10px 5px -6px;
+	}
+
+
+.leaflet-default-icon-path { 
+	background-image: url(images/marker-icon.png);
+	}
+
+
+
+
+.leaflet-container .leaflet-control-attribution {
+	background: #fff;
+	background: rgba(255, 255, 255, 0.8);
+	margin: 0;
+	}
+.leaflet-control-attribution,
+.leaflet-control-scale-line {
+	padding: 0 5px;
+	color: #333;
+	line-height: 1.4;
+	}
+.leaflet-control-attribution a {
+	text-decoration: none;
+	}
+.leaflet-control-attribution a:hover,
+.leaflet-control-attribution a:focus {
+	text-decoration: underline;
+	}
+.leaflet-attribution-flag {
+	display: inline !important;
+	vertical-align: baseline !important;
+	width: 1em;
+	height: 0.6669em;
+	}
+.leaflet-left .leaflet-control-scale {
+	margin-left: 5px;
+	}
+.leaflet-bottom .leaflet-control-scale {
+	margin-bottom: 5px;
+	}
+.leaflet-control-scale-line {
+	border: 2px solid #777;
+	border-top: none;
+	line-height: 1.1;
+	padding: 2px 5px 1px;
+	white-space: nowrap;
+	-moz-box-sizing: border-box;
+	     box-sizing: border-box;
+	background: rgba(255, 255, 255, 0.8);
+	text-shadow: 1px 1px #fff;
+	}
+.leaflet-control-scale-line:not(:first-child) {
+	border-top: 2px solid #777;
+	border-bottom: none;
+	margin-top: -2px;
+	}
+.leaflet-control-scale-line:not(:first-child):not(:last-child) {
+	border-bottom: 2px solid #777;
+	}
+
+.leaflet-touch .leaflet-control-attribution,
+.leaflet-touch .leaflet-control-layers,
+.leaflet-touch .leaflet-bar {
+	box-shadow: none;
+	}
+.leaflet-touch .leaflet-control-layers,
+.leaflet-touch .leaflet-bar {
+	border: 2px solid rgba(0,0,0,0.2);
+	background-clip: padding-box;
+	}
+
+
+
+
+.leaflet-popup {
+	position: absolute;
+	text-align: center;
+	margin-bottom: 20px;
+	}
+.leaflet-popup-content-wrapper {
+	padding: 1px;
+	text-align: left;
+	border-radius: 12px;
+	}
+.leaflet-popup-content {
+	margin: 13px 24px 13px 20px;
+	line-height: 1.3;
+	font-size: 13px;
+	font-size: 1.08333em;
+	min-height: 1px;
+	}
+.leaflet-popup-content p {
+	margin: 17px 0;
+	margin: 1.3em 0;
+	}
+.leaflet-popup-tip-container {
+	width: 40px;
+	height: 20px;
+	position: absolute;
+	left: 50%;
+	margin-top: -1px;
+	margin-left: -20px;
+	overflow: hidden;
+	pointer-events: none;
+	}
+.leaflet-popup-tip {
+	width: 17px;
+	height: 17px;
+	padding: 1px;
+
+	margin: -10px auto 0;
+	pointer-events: auto;
+
+	-webkit-transform: rotate(45deg);
+	   -moz-transform: rotate(45deg);
+	    -ms-transform: rotate(45deg);
+	        transform: rotate(45deg);
+	}
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+	background: white;
+	color: #333;
+	box-shadow: 0 3px 14px rgba(0,0,0,0.4);
+	}
+.leaflet-container a.leaflet-popup-close-button {
+	position: absolute;
+	top: 0;
+	right: 0;
+	border: none;
+	text-align: center;
+	width: 24px;
+	height: 24px;
+	font: 16px/24px Tahoma, Verdana, sans-serif;
+	color: #757575;
+	text-decoration: none;
+	background: transparent;
+	}
+.leaflet-container a.leaflet-popup-close-button:hover,
+.leaflet-container a.leaflet-popup-close-button:focus {
+	color: #585858;
+	}
+.leaflet-popup-scrolled {
+	overflow: auto;
+	}
+
+.leaflet-oldie .leaflet-popup-content-wrapper {
+	-ms-zoom: 1;
+	}
+.leaflet-oldie .leaflet-popup-tip {
+	width: 24px;
+	margin: 0 auto;
+
+	-ms-filter: "progid:DXImageTransform.Microsoft.Matrix(M11=0.70710678, M12=0.70710678, M21=-0.70710678, M22=0.70710678)";
+	filter: progid:DXImageTransform.Microsoft.Matrix(M11=0.70710678, M12=0.70710678, M21=-0.70710678, M22=0.70710678);
+	}
+
+.leaflet-oldie .leaflet-control-zoom,
+.leaflet-oldie .leaflet-control-layers,
+.leaflet-oldie .leaflet-popup-content-wrapper,
+.leaflet-oldie .leaflet-popup-tip {
+	border: 1px solid #999;
+	}
+
+
+
+
+.leaflet-div-icon {
+	background: #fff;
+	border: 1px solid #666;
+	}
+
+
+
+
+.leaflet-tooltip {
+	position: absolute;
+	padding: 6px;
+	background-color: #fff;
+	border: 1px solid #fff;
+	border-radius: 3px;
+	color: #222;
+	white-space: nowrap;
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+	pointer-events: none;
+	box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+	}
+.leaflet-tooltip.leaflet-interactive {
+	cursor: pointer;
+	pointer-events: auto;
+	}
+.leaflet-tooltip-top:before,
+.leaflet-tooltip-bottom:before,
+.leaflet-tooltip-left:before,
+.leaflet-tooltip-right:before {
+	position: absolute;
+	pointer-events: none;
+	border: 6px solid transparent;
+	background: transparent;
+	content: "";
+	}
+
+
+
+.leaflet-tooltip-bottom {
+	margin-top: 6px;
+}
+.leaflet-tooltip-top {
+	margin-top: -6px;
+}
+.leaflet-tooltip-bottom:before,
+.leaflet-tooltip-top:before {
+	left: 50%;
+	margin-left: -6px;
+	}
+.leaflet-tooltip-top:before {
+	bottom: 0;
+	margin-bottom: -12px;
+	border-top-color: #fff;
+	}
+.leaflet-tooltip-bottom:before {
+	top: 0;
+	margin-top: -12px;
+	margin-left: -6px;
+	border-bottom-color: #fff;
+	}
+.leaflet-tooltip-left {
+	margin-left: -6px;
+}
+.leaflet-tooltip-right {
+	margin-left: 6px;
+}
+.leaflet-tooltip-left:before,
+.leaflet-tooltip-right:before {
+	top: 50%;
+	margin-top: -6px;
+	}
+.leaflet-tooltip-left:before {
+	right: 0;
+	margin-right: -12px;
+	border-left-color: #fff;
+	}
+.leaflet-tooltip-right:before {
+	left: 0;
+	margin-left: -12px;
+	border-right-color: #fff;
+	}
+
+
+
+@media print {
+	
+	.leaflet-control {
+		-webkit-print-color-adjust: exact;
+		print-color-adjust: exact;
+		}
+	}
+
+/* Layout: full-bleed kart, flytende kontrollpanel til venstre (bunnark på mobil). */
+:root{
+  --bg:#e9edf1; --panel:#fbfcfd; --fg:#16202b; --muted:#5b6876; --line:#d5dce3;
+  --accent:#1f4f86; --accent-ink:#ffffff; --chip:#eef2f6;
+  --d0:#9aa5b1; --d1:#4fae54; --d2:#f5cc12; --d3:#f28a1a; --d4:#d92b20; --d5:#2a1a1a;
+  --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --shadow:0 8px 28px rgba(16,32,48,.18);
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0c1117; --panel:#121a23; --fg:#e6edf3; --muted:#93a1b0; --line:#253241;
+  --accent:#6aa5e8; --accent-ink:#06121f; --chip:#1a2531; --d5:#e9e1df; --shadow:0 8px 28px rgba(0,0,0,.5); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0c1117; --panel:#121a23; --fg:#e6edf3; --muted:#93a1b0; --line:#253241;
+  --accent:#6aa5e8; --accent-ink:#06121f; --chip:#1a2531; --d5:#e9e1df; --shadow:0 8px 28px rgba(0,0,0,.5); color-scheme:dark}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:14px;overflow:hidden}
+#map{position:absolute;inset:0;background:var(--bg)}
+.leaflet-container{font-family:var(--f-body);background:var(--bg)}
+.leaflet-control-attribution{font-size:10px}
+
+#panel{position:absolute;z-index:1000;top:calc(12px + env(safe-area-inset-top,0px));left:calc(12px + env(safe-area-inset-left,0px));
+  width:400px;max-height:calc(100% - 24px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));
+  background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);
+  display:flex;flex-direction:column;overflow:hidden}
+#panel header{padding:14px 16px 10px;border-bottom:1px solid var(--line);display:grid;gap:10px}
+.brand{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+h1{font-family:var(--f-display);font-weight:700;font-size:24px;letter-spacing:.01em;margin:0;line-height:1}
+.brand small{font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+.daterow{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.daterow input{font:inherit;font-family:var(--f-mono);font-size:13px;padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--fg)}
+button{font:inherit;cursor:pointer}
+.btn{border:1px solid var(--line);background:var(--chip);color:var(--fg);padding:5px 10px;border-radius:6px;font-weight:500}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#status{font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:center;min-height:16px}
+#status .dot{width:7px;height:7px;border-radius:50%;background:var(--muted);flex:none}
+#status.ok .dot{background:var(--d1)} #status.busy .dot{background:var(--d2)} #status.err .dot{background:var(--d4)}
+.scroll{overflow-y:auto;padding:4px 16px 16px;display:grid;gap:14px}
+.notice{background:var(--chip);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.45;display:grid;gap:8px}
+.notice b{font-weight:600}
+section.layer{display:grid;gap:8px;padding-top:12px;border-top:1px solid var(--line)}
+section.layer:first-of-type{border-top:0}
+.lhead{display:flex;align-items:center;gap:10px}
+.lhead label{display:flex;align-items:center;gap:8px;font-family:var(--f-display);font-size:18px;font-weight:600;letter-spacing:.02em;cursor:pointer;flex:1}
+.lhead input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent)}
+.zoomtag{font-family:var(--f-mono);font-size:10.5px;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:1px 5px;white-space:nowrap}
+.zoomtag.live{color:var(--fg);border-color:var(--accent)}
+.desc{font-size:12.5px;color:var(--muted);line-height:1.45;margin:0}
+.ctrl{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);flex-wrap:wrap}
+.ctrl select{font:inherit;padding:3px 6px;border:1px solid var(--line);border-radius:5px;background:var(--panel);color:var(--fg)}
+.ctrl input[type=range]{flex:1;accent-color:var(--accent);min-width:80px}
+.legend{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:12px}
+.legend span{display:inline-flex;align-items:center;gap:5px;font-variant-numeric:tabular-nums}
+.sw{width:12px;height:12px;border-radius:2px;display:inline-block;border:1px solid rgba(0,0,0,.15)}
+.legend img{width:14px;height:14px}
+.scale5{display:grid;grid-template-columns:repeat(5,1fr);gap:2px;font-size:11px;text-align:center}
+.scale5 div{padding:4px 0;border-radius:3px;font-weight:600;color:#111}
+.scale5 div.d5{color:#fff;background:#2a1a1a}
+.rose-legend{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:center}
+#detail{display:grid;gap:12px}
+.rhead{display:flex;align-items:center;gap:10px}
+.badge{font-family:var(--f-display);font-weight:700;font-size:26px;width:44px;height:44px;border-radius:6px;display:grid;place-items:center;color:#111;flex:none}
+.rname{font-family:var(--f-display);font-size:22px;font-weight:600;line-height:1.05}
+.rsub{font-size:12px;color:var(--muted);line-height:1.4}
+.maintext{font-size:15px;line-height:1.45;margin:0;font-weight:600;text-wrap:pretty}
+.wtext{font-size:13.5px;line-height:1.55;margin:0;white-space:pre-line}
+.alert{border-left:3px solid var(--d4);background:var(--chip);padding:8px 10px;border-radius:0 6px 6px 0;font-size:13px;line-height:1.5}
+.kicker{font-family:var(--f-display);font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0}
+.probs{display:grid;gap:10px}
+.prob{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel)}
+.prob-top{display:grid;grid-template-columns:76px 1fr;gap:12px;align-items:center;padding:10px 12px 8px}
+.picon{width:76px;height:76px;border-radius:8px;background:var(--chip);display:grid;place-items:center}
+.picon svg{width:68px;height:68px}
+.pnum{font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+.prob h3{margin:2px 0 2px;font-family:var(--f-display);font-size:19px;font-weight:600;line-height:1.1}
+.ptype{font-size:12px;color:var(--muted)}
+.prob-where{display:flex;gap:14px;align-items:center;padding:4px 12px 8px;flex-wrap:wrap}
+.where{display:flex;gap:8px;align-items:center;font-size:12px}
+.where b{display:block;font-family:var(--f-mono);font-size:12px;font-weight:500}
+.where span{color:var(--muted)}
+.facts{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;padding:8px 12px;border-top:1px solid var(--line);font-size:12.5px;margin:0}
+.facts dt{color:var(--muted)}
+.facts dd{margin:0;font-weight:500}
+.ptext{padding:0 12px 10px;font-size:12.5px;line-height:1.5;color:var(--fg);margin:0;white-space:pre-line}
+details.ws{border-top:1px solid var(--line);padding-top:8px}
+details.ws summary{cursor:pointer;font-family:var(--f-display);font-size:15px;font-weight:600;letter-spacing:.02em;list-style:none;display:flex;justify-content:space-between;align-items:center}
+details.ws summary::-webkit-details-marker{display:none}
+details.ws summary::after{content:"+";font-family:var(--f-mono);color:var(--muted)}
+details.ws[open] summary::after{content:"–"}
+details.ws > div{display:grid;gap:8px;padding-top:8px}
+.advice{margin:0;padding-left:18px;display:grid;gap:6px;font-size:13px;line-height:1.5}
+.wx{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:12.5px}
+.wx dt{color:var(--muted)} .wx dd{margin:0;font-family:var(--f-mono);font-size:12px}
+.varsom-link{font-size:12.5px;color:var(--accent);font-weight:600}
+.empty{font-size:12.5px;color:var(--muted)}
+.foot{font-size:11px;color:var(--muted);line-height:1.5}
+.foot a{color:var(--accent)}
+#toggle{display:none}
+.tabs{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.tabs button{border:0;background:var(--panel);color:var(--muted);padding:7px 8px;font-family:var(--f-display);font-size:15px;font-weight:600;letter-spacing:.03em}
+.tabs button+button{border-left:1px solid var(--line)}
+.tabs button[aria-selected="true"]{background:var(--accent);color:var(--accent-ink)}
+.tabs button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.summary{display:grid;gap:8px;padding-top:12px;border-top:1px solid var(--line)}
+.summary .maintext{font-size:13.5px;font-weight:500}
+.pick{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:12.5px;background:var(--chip);border-radius:8px;padding:8px 10px}
+.pick b{font-family:var(--f-mono);font-weight:500}
+.hitchip{display:inline-block;font-size:11px;font-weight:600;padding:2px 7px;border-radius:99px;border:1px solid var(--line);white-space:nowrap}
+.hitchip.yes{background:var(--d4);color:#fff;border-color:var(--d4)}
+.hitchip.no{color:var(--muted)}
+.om{width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(11,18,32,.7),0 1px 4px rgba(0,0,0,.35);background:#5f7489;position:relative}
+.om.skred{background:#d92b20}.om.tegn{background:#f28a1a}
+.om.img::after{content:"";position:absolute;right:-6px;top:-6px;width:8px;height:6px;border-radius:1.5px;background:#fff;border:1.5px solid #0b1220}
+.obs-legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;align-items:center}
+.obs-legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px;border:1.5px solid #fff;box-shadow:0 0 0 1px rgba(11,18,32,.5)}
+.obslist{display:grid;gap:8px}
+.ob{border:1px solid var(--line);border-radius:8px;padding:8px 10px;display:grid;gap:6px;cursor:pointer;background:var(--panel)}
+.ob:hover{border-color:var(--accent)}
+.ob:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.ob-h{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted);flex-wrap:wrap}
+.ob-h b{color:var(--fg);font-weight:600}
+.ob-tag{font-size:10.5px;font-weight:600;padding:1px 6px;border-radius:99px;background:var(--chip);color:var(--fg);white-space:nowrap}
+.ob-tag.skred{background:var(--d4);color:#fff}.ob-tag.tegn{background:var(--d3);color:#111}
+.ob-sum{font-size:12.5px;line-height:1.45;display:grid;gap:2px}
+.ob-sum span{color:var(--muted)}
+.thumbs{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
+.thumbs a{flex:none;display:block;border-radius:6px;overflow:hidden;border:1px solid var(--line);line-height:0}
+.thumbs img{width:96px;height:72px;object-fit:cover;max-width:none;background:var(--chip)}
+.leaflet-popup-content{margin:10px 12px;min-width:240px;max-width:300px;font-family:var(--f-body)}
+.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:var(--panel);color:var(--fg)}
+.leaflet-popup-content .thumbs img{width:120px;height:90px}
+.pop-link{font-weight:600;color:var(--accent)}
+.pin{width:14px;height:14px;border-radius:50%;background:var(--accent);border:3px solid #fff;box-shadow:0 0 0 1.5px #0b1220,0 2px 6px rgba(0,0,0,.4)}
+#hint{position:absolute;z-index:999;right:calc(12px + env(safe-area-inset-right,0px));bottom:calc(28px + env(safe-area-inset-bottom,0px));
+  background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:12px;box-shadow:var(--shadow);font-family:var(--f-mono)}
+@media (max-width:640px){
+  #panel{left:env(safe-area-inset-left,0px);right:env(safe-area-inset-right,0px);top:auto;bottom:0;width:auto;border-radius:12px 12px 0 0;
+    max-height:55%;padding-bottom:env(safe-area-inset-bottom,0px)}
+  #panel.collapsed .scroll{display:none}
+  #toggle{display:inline-block}
+  #hint{bottom:auto;top:calc(10px + env(safe-area-inset-top,0px))}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+</head>
+<body>
+<div id="map" role="application" aria-label="Kart over Norge med skredlag"></div>
+
+<aside id="panel">
+  <header>
+    <div class="brand">
+      <h1>Skredterreng</h1>
+      <button class="btn" id="toggle" aria-expanded="true">Skjul</button>
+      <small>Varsom · NVE · Kartverket</small>
+    </div>
+    <div class="daterow">
+      <input type="date" id="date" aria-label="Varseldato">
+      <button class="btn" id="today">I dag</button>
+      <button class="btn" id="tomorrow">I morgen</button>
+    </div>
+    <div id="status"><span class="dot"></span><span id="statustext">Starter…</span></div>
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tab-btn-layers" aria-selected="true" aria-controls="tab-layers">Kartlag</button>
+      <button role="tab" id="tab-btn-warn" aria-selected="false" aria-controls="tab-warn">Skredvarsel</button>
+    </div>
+  </header>
+  <div class="scroll" id="tab-layers" role="tabpanel">
+    <div class="notice" id="season" hidden>
+      <div><b>Ingen varsler denne dagen.</b> Snøskredvarslingen publiserer daglige varsler fra 1. desember. Velg en dato fra forrige sesong for å se skredlaget i bruk.</div>
+      <div><button class="btn primary" id="demo">Vis 14. mars 2026</button></div>
+    </div>
+
+    <section class="layer">
+      <div class="lhead">
+        <label><input type="checkbox" id="l-skred" checked> Skredfare i terrenget</label>
+        <span class="zoomtag" id="z-skred">terreng fra zoom 10</span>
+      </div>
+      <p class="desc">Regionene fargelegges etter faregrad. Zoomer du inn, viser laget bratte heng som treffer skredproblemenes himmelretninger og høydegrenser.</p>
+      <div class="scale5" aria-label="Faregrad 1 til 5">
+        <div style="background:var(--d1)">1 Liten</div><div style="background:var(--d2)">2 Moderat</div><div style="background:var(--d3)">3 Betydelig</div><div style="background:var(--d4);color:#fff">4 Stor</div><div class="d5">5 Meget stor</div>
+      </div>
+      <div class="ctrl">
+        <span>Bratthet fra</span>
+        <select id="s-thr"><option value="27">27°</option><option value="30" selected>30°</option><option value="35">35°</option></select>
+        <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="s-rest" checked> Vis øvrig bratt terreng svakt</label>
+      </div>
+    </section>
+
+    <section class="layer">
+      <div class="lhead">
+        <label><input type="checkbox" id="l-bratt"> Bratthet</label>
+        <span class="zoomtag">NVE · fra zoom 5</span>
+      </div>
+      <p class="desc">NVEs bratthetskart, samme lag som på varsom.no.</p>
+      <div class="ctrl"><span>Gjennomsiktighet</span><input type="range" id="o-bratt" min="0.2" max="1" step="0.05" value="0.75" aria-label="Opasitet bratthet"></div>
+      <div class="legend" id="bratt-legend"><span class="empty">Henter tegnforklaring…</span></div>
+    </section>
+
+    <section class="layer">
+      <div class="lhead">
+        <label><input type="checkbox" id="l-asp"> Himmelretning</label>
+        <span class="zoomtag" id="z-asp">fra zoom 11</span>
+      </div>
+      <p class="desc">Hvilken retning hellingen vender, beregnet fra Kartverkets terrengmodell.</p>
+      <div class="ctrl">
+        <span>Bare der helningen er minst</span>
+        <select id="a-min"><option value="5">5°</option><option value="15">15°</option><option value="25" selected>25°</option><option value="30">30°</option></select>
+      </div>
+      <div class="rose-legend"><span id="asp-rose"></span><div class="legend" id="asp-legend"></div></div>
+    </section>
+
+    <section class="layer">
+      <div class="lhead">
+        <label><input type="checkbox" id="l-obs" checked> Observasjoner</label>
+        <span class="zoomtag">Regobs</span>
+      </div>
+      <p class="desc">Snøobservasjoner fra Regobs for varseldagen og to døgn før. Trykk på en prikk for bilder og detaljer.</p>
+      <div class="obs-legend"><span><i style="background:#d92b20"></i>Skred / skredaktivitet</span><span><i style="background:#f28a1a"></i>Faretegn</span><span><i style="background:#5f7489"></i>Annen observasjon</span></div>
+      <div class="desc" id="obs-status">Henter observasjoner…</div>
+    </section>
+
+
+    <section class="summary" id="summary"><p class="empty">Trykk i kartet for å se varselet for et sted.</p></section>
+
+    <p class="foot">Data: Snøskredvarsler fra <a href="https://www.varsom.no/snoskred/varsling/" target="_blank" rel="noopener">varsom.no</a> (NVE), bratthet fra NVE, terrengmodell fra Kartverket (hoydedata.no). Terrengtreff er en automatisk tolkning av varselet og erstatter ikke egen vurdering i felt.</p>
+  </div>
+  <div class="scroll" id="tab-warn" role="tabpanel" hidden>
+    <div id="detail" style="padding-top:10px"><p class="empty">Trykk på et sted i kartet. Du får varselet for regionen stedet ligger i, og ser om akkurat det punktet er utsatt for skredproblemene.</p></div>
+  </div>
+</aside>
+<div id="hint" aria-live="polite">zoom 5</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lerc@2.0.0/LercDecode.min.js"></script>
+<script>
+(() => {
+const NVE = 'https://api01.nve.no/hydrology/forecast/avalanche/v6.3.2/api';
+const DTM = 'https://hoydedata.no/arcgis/rest/services/DTM/ImageServer/exportImage';
+const BRATT = 'https://gis3.nve.no/arcgis/rest/services/wmts/Bratthet_2024/MapServer';
+const DANGER = {0:'#9aa5b1',1:'#4fae54',2:'#f5cc12',3:'#f28a1a',4:'#d92b20',5:'#2a1a1a'};
+const DANGER_RGB = {1:[79,174,84],2:[245,204,18],3:[242,138,26],4:[217,43,32],5:[60,10,30]};
+const DNAME = {0:'Ikke vurdert',1:'Liten',2:'Moderat',3:'Betydelig',4:'Stor',5:'Meget stor'};
+const DIRS = ['N','NØ','Ø','SØ','S','SV','V','NV'];
+const ASP_RGB = [[37,99,235],[124,58,237],[217,70,239],[244,63,94],[234,88,12],[234,179,8],[22,163,74],[8,145,178]];
+
+const $ = id => document.getElementById(id);
+const status = (txt, kind) => { $('statustext').textContent = txt; $('status').className = kind || ''; };
+const iso = d => new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+
+/* ---------- kart ---------- */
+const map = L.map('map', {zoomControl:false, minZoom:4, maxZoom:17, worldCopyJump:false}).setView([64.6, 13.5], 5);
+L.control.zoom({position:'topright'}).addTo(map);
+L.tileLayer('https://cache.kartverket.no/v1/wmts/1.0.0/topograatone/default/webmercator/{z}/{y}/{x}.png',
+  {maxZoom:17, maxNativeZoom:17, attribution:'© <a href="https://www.kartverket.no" target="_blank" rel="noopener">Kartverket</a>'}).addTo(map);
+
+map.createPane('terrain'); map.getPane('terrain').style.zIndex = 380;
+map.createPane('regions'); map.getPane('regions').style.zIndex = 420;
+
+const brattLayer = L.tileLayer(BRATT + '/tile/{z}/{y}/{x}', {minZoom:5, maxNativeZoom:16, maxZoom:17, opacity:0.75, pane:'terrain',
+  attribution:'Bratthet © <a href="https://www.nve.no" target="_blank" rel="noopener">NVE</a>'});
+
+/* ---------- høydedata fra Kartverket (LERC float32) ---------- */
+const demCache = new Map();
+const CIRC = 40075016.68557849, ORIG = 20037508.342789244;
+// f = oversampling: hent f×f høydepunkter per skjermpiksel, så bratte heng ikke glattes bort på lav zoom
+function getDem(x, y, z, f = 1) {
+  const k = z + '/' + x + '/' + y + '/' + f;
+  if (demCache.has(k)) return demCache.get(k);
+  const n = 256*f, size = CIRC / 2**z, res = size/n;
+  const xmin = -ORIG + x*size, ymax = ORIG - y*size;
+  const bbox = [xmin-res, ymax-size-res, xmin+size+res, ymax+res].join(',');
+  const url = `${DTM}?bbox=${bbox}&bboxSR=3857&imageSR=3857&size=${n+2},${n+2}&format=lerc&pixelType=F32&interpolation=RSP_BilinearInterpolation&f=image`;
+  const p = fetch(url).then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); })
+    .then(buf => analyze(Lerc.decode(buf), res, ymax + res, n));
+  demCache.set(k, p);
+  p.catch(() => demCache.delete(k));
+  if (demCache.size > 500) demCache.delete(demCache.keys().next().value);
+  return p;
+}
+// Helning (Horn) og himmelretning for n×n punkter fra et (n+2)×(n+2) rutenett
+function analyze(d, res, ytop, n) {
+  const W = d.width, Z = d.pixels[0], M = d.mask;
+  const N = n*n, slope = new Float32Array(N), sector = new Uint8Array(N), elev = new Float32Array(N), ok = new Uint8Array(N);
+  if (W !== n+2 || d.height !== n+2) return {n, slope, sector, elev, ok};
+  const good = i => (!M || M[i]) && Z[i] > -500 && Z[i] < 9000;
+  for (let r = 0; r < n; r++) {
+    const ym = ytop - (r + 1.5)*res;
+    const g = res * Math.cos(Math.atan(Math.sinh(ym / 6378137)));
+    for (let c = 0; c < n; c++) {
+      const i = (r+1)*W + (c+1), o = r*n + c;
+      const a=i-W-1,b=i-W,cc=i-W+1,dd=i-1,f=i+1,gg=i+W-1,h=i+W,ii=i+W+1;
+      if (!(good(i)&&good(a)&&good(b)&&good(cc)&&good(dd)&&good(f)&&good(gg)&&good(h)&&good(ii))) continue;
+      const dzx = ((Z[cc]+2*Z[f]+Z[ii]) - (Z[a]+2*Z[dd]+Z[gg])) / (8*g);   // stigning mot øst
+      const dzr = ((Z[gg]+2*Z[h]+Z[ii]) - (Z[a]+2*Z[b]+Z[cc])) / (8*g);    // stigning mot sør (radretning)
+      slope[o] = Math.atan(Math.hypot(dzx, dzr)) * 180/Math.PI;
+      let asp = Math.atan2(-dzx, dzr) * 180/Math.PI; if (asp < 0) asp += 360;
+      sector[o] = Math.floor(((asp + 22.5) % 360) / 45);
+      elev[o] = Z[i]; ok[o] = 1;
+    }
+  }
+  return {n, slope, sector, elev, ok};
+}
+
+let demErrors = 0;
+function computedLayer(minZoom, draw, factor) {
+  const Layer = L.GridLayer.extend({
+    createTile(coords, done) {
+      const t = document.createElement('canvas'); t.width = t.height = 256;
+      getDem(coords.x, coords.y, coords.z, factor ? factor(coords.z) : 1).then(an => { draw(t, an, coords); done(null, t); })
+        .catch(e => { demErrors++; if (demErrors < 3) status('Fikk ikke hentet høydedata fra Kartverket (' + e.message + ').', 'err'); done(null, t); });
+      return t;
+    }
+  });
+  return new Layer({minZoom, maxNativeZoom:15, maxZoom:17, pane:'terrain', keepBuffer:1,
+    attribution:'Høydedata © <a href="https://hoydedata.no" target="_blank" rel="noopener">Kartverket</a>'});
+}
+
+/* ---------- himmelretning ---------- */
+let aspMin = 25;
+const aspectLayer = computedLayer(11, (t, an) => {
+  const ctx = t.getContext('2d'), img = ctx.createImageData(256, 256), px = img.data;
+  for (let o = 0; o < 65536; o++) {
+    if (!an.ok[o] || an.slope[o] < aspMin) continue;
+    const col = ASP_RGB[an.sector[o]], j = o*4;
+    px[j]=col[0]; px[j+1]=col[1]; px[j+2]=col[2]; px[j+3] = an.slope[o] >= 30 ? 200 : 140;
+  }
+  ctx.putImageData(img, 0, 0);
+});
+
+/* ---------- skredfare i terrenget ---------- */
+let regions = [];          // {id,name,type,rings:[[lat,lng]...], warn}
+let thr = 30, showRest = true;
+function heightTest(p) {
+  const h1 = +p.ExposedHeight1 || 0, h2 = +p.ExposedHeight2 || 0, lo = Math.min(h1,h2), hi = Math.max(h1,h2);
+  switch (+p.ExposedHeightFill) {
+    case 1: return z => z >= h1;                 // svart øverst: over H1
+    case 2: return z => z < h1;                  // svart nederst: under H1
+    case 3: return z => z < lo || z >= hi;       // hvit i midten
+    case 4: return z => z >= lo && z < hi;       // svart i midten
+    default: return () => true;
+  }
+}
+function expArray(s) { s = String(s || ''); return s.length === 8 ? [...s].map(ch => ch === '1') : null; }
+
+// Zoom 10–11: hent dobbel oppløsning og slå sammen 2×2 punkter per piksel (sterkeste treff vinner)
+const skredLayer = computedLayer(10, (t, an, coords) => {
+  const active = regions.filter(r => r.warn && r.warn.level >= 1);
+  if (!active.length) return;
+  // Rasteriser regionpolygonene for flisa: rød kanal = regionindeks
+  const off = document.createElement('canvas'); off.width = off.height = 256;
+  const oc = off.getContext('2d');
+  const ox = coords.x*256, oy = coords.y*256;
+  const tb = L.latLngBounds(map.unproject([ox, oy+256], coords.z), map.unproject([ox+256, oy], coords.z));
+  active.forEach((r, idx) => {
+    if (!r.bounds.intersects(tb)) return;
+    oc.fillStyle = `rgb(${(idx+1)*4},0,0)`;
+    oc.beginPath();
+    r.rings.forEach(ring => ring.forEach((ll, k) => {
+      const p = map.project(ll, coords.z); const x = p.x - ox, y = p.y - oy;
+      k ? oc.lineTo(x, y) : oc.moveTo(x, y);
+    }));
+    oc.fill('evenodd');
+  });
+  const rid = oc.getImageData(0, 0, 256, 256).data;
+  const ctx = t.getContext('2d'), img = ctx.createImageData(256, 256), px = img.data;
+  const n = an.n, f = n / 256;
+  for (let o = 0; o < 65536; o++) {
+    const ri = Math.round(rid[o*4] / 4) - 1; const r = active[ri];
+    if (!r) continue;
+    const w = r.warn, j = o*4, pr = Math.floor(o / 256), pc = o % 256;
+    // 0 ingenting · 1 øvrig bratt · 2 bratt uten skredproblem · 3 treff · 4 treff ≥35°
+    let best = 0;
+    for (let dy = 0; dy < f && best < 4; dy++) for (let dx = 0; dx < f && best < 4; dx++) {
+      const s = (pr*f + dy)*n + pc*f + dx;
+      if (!an.ok[s] || an.slope[s] < thr) continue;
+      let v;
+      if (!w.problems.length) v = 2;
+      else if (w.problems.some(p => (!p.exp || p.exp[an.sector[s]]) && p.height(an.elev[s]))) v = an.slope[s] >= 35 ? 4 : 3;
+      else v = 1;
+      if (v > best) best = v;
+    }
+    if (best >= 2) {
+      const col = DANGER_RGB[w.level]; px[j]=col[0]; px[j+1]=col[1]; px[j+2]=col[2];
+      px[j+3] = best === 4 ? 225 : best === 3 ? 185 : 110;
+    } else if (best === 1 && showRest) {
+      px[j]=90; px[j+1]=105; px[j+2]=120; px[j+3]=70;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+}, z => z < 12 ? 2 : 1);
+
+/* ---------- regionpolygoner ---------- */
+const regionGroup = L.layerGroup().addTo(map);
+let selected = null;
+function regionStyle(r) {
+  const lvl = r.warn ? r.warn.level : 0, z = map.getZoom();
+  const sel = selected === r;
+  return {pane:'regions', color: sel ? '#0b1220' : (lvl ? DANGER[lvl] : '#7d8894'), weight: sel ? 3 : (lvl ? 1.5 : 1),
+    dashArray: r.type === 'B' ? '4 4' : null, fillColor: DANGER[lvl], fillOpacity: lvl ? (z >= 10 ? 0.04 : 0.38) : 0.06, opacity: 0.9};
+}
+function restyle() { regions.forEach(r => r.poly && r.poly.setStyle(regionStyle(r))); }
+
+async function loadRegions() {
+  const res = await fetch(NVE + '/Region/0', {headers:{Accept:'application/json'}});
+  if (!res.ok) throw new Error('Regioner: HTTP ' + res.status);
+  const data = await res.json();
+  regions = data.map(d => {
+    const rings = (d.Polygon || []).map(s => String(s).trim().split(/\s+/).map(pr => pr.split(',').map(Number)).filter(p => p.length === 2 && p.every(Number.isFinite)));
+    return {id:d.Id, name:d.Name, type:d.TypeName, rings, warn:null, bounds:L.latLngBounds(rings.flat())};
+  }).filter(r => r.rings.length);
+  regions.forEach(r => {
+    r.poly = L.polygon(r.rings, regionStyle(r)).addTo(regionGroup);
+    r.poly.bindTooltip(() => `${r.name} · ${r.warn ? r.warn.level + ' ' + DNAME[r.warn.level] : 'ikke vurdert'}`, {sticky:true});
+  });
+}
+
+async function loadWarnings(date) {
+  status('Henter snøskredvarsler for ' + fmtDate(date) + '…', 'busy');
+  const res = await fetch(`${NVE}/RegionSummary/Detail/1/${date}/${date}`, {headers:{Accept:'application/json'}});
+  if (!res.ok) throw new Error('Varsler: HTTP ' + res.status);
+  const data = await res.json();
+  const byId = new Map();
+  data.forEach(reg => {
+    const w = (reg.AvalancheWarningList || []).find(x => String(x.ValidFrom || '').slice(0,10) === date) || (reg.AvalancheWarningList || [])[0];
+    if (!w) return;
+    const level = parseInt(w.DangerLevel, 10) || 0;
+    const problems = (w.AvalancheProblems || []).map(p => ({
+      raw:p, exp: expArray(p.ValidExpositions), height: heightTest(p)
+    }));
+    byId.set(reg.Id, {level, problems, w});
+  });
+  regions.forEach(r => r.warn = byId.get(r.id) || null);
+  restyle();
+  skredLayer.redraw();
+  renderDetail(); renderSummary();
+  const warned = regions.filter(r => r.warn && r.warn.level >= 1);
+  $('season').hidden = warned.length > 0;
+  if (warned.length) {
+    const max = Math.max(...warned.map(r => r.warn.level));
+    status(`${warned.length} regioner varslet ${fmtDate(date)} · høyeste faregrad ${max} (${DNAME[max].toLowerCase()})`, 'ok');
+  } else status('Ingen regioner har varsel ' + fmtDate(date) + '.', 'ok');
+}
+
+/* ---------- detaljer for valgt region ---------- */
+function roseSVG(exp, color, size) {
+  size = size || 56; const c = size/2, R = c - 2, r0 = R*0.28;
+  let s = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" role="img" aria-label="Utsatte himmelretninger">`;
+  for (let k = 0; k < 8; k++) {
+    const a0 = (k*45 - 22.5 - 90) * Math.PI/180, a1 = (k*45 + 22.5 - 90) * Math.PI/180;
+    const P = (rad, a) => (c + rad*Math.cos(a)).toFixed(2) + ',' + (c + rad*Math.sin(a)).toFixed(2);
+    const fill = Array.isArray(color) ? `rgb(${color[k].join(',')})` : (exp && exp[k] ? color : 'var(--chip)');
+    s += `<path d="M${P(r0,a0)} L${P(R,a0)} A${R},${R} 0 0 1 ${P(R,a1)} L${P(r0,a1)} A${r0},${r0} 0 0 0 ${P(r0,a0)}Z" style="fill:${fill};stroke:var(--line);stroke-width:1"/>`;
+  }
+  s += `<text x="${c}" y="9" text-anchor="middle" font-size="8" font-family="IBM Plex Mono, monospace" style="fill:var(--fg)">N</text></svg>`;
+  return s;
+}
+function heightText(p) {
+  const h1 = p.ExposedHeight1, h2 = p.ExposedHeight2;
+  switch (+p.ExposedHeightFill) {
+    case 1: return `over ${h1} moh.`;
+    case 2: return `under ${h1} moh.`;
+    case 3: return `under ${Math.min(h1,h2)} og over ${Math.max(h1,h2)} moh.`;
+    case 4: return `mellom ${Math.min(h1,h2)} og ${Math.max(h1,h2)} moh.`;
+    default: return 'alle høyder';
+  }
+}
+// Fjellsilhuett med utsatt høydebånd farget
+function heightSVG(p, color) {
+  const fill = +p.ExposedHeightFill, W = 54, H = 46, base = 42, top = 4;
+  const yAt = t => base - (base - top) * t;           // t = andel av fjellhøyden
+  const one = yAt(0.5), lo = yAt(0.33), hi = yAt(0.66);
+  let bands;
+  switch (fill) {
+    case 1: bands = [[top, one]]; break;
+    case 2: bands = [[one, base]]; break;
+    case 3: bands = [[top, hi], [lo, base]]; break;
+    case 4: bands = [[hi, lo]]; break;
+    default: bands = [[top, base]];
+  }
+  const id = 'm' + Math.random().toString(36).slice(2, 8);
+  const mtn = `M2,${base} L27,${top} L52,${base} Z`;
+  let s = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true"><defs><clipPath id="${id}"><path d="${mtn}"/></clipPath></defs>`;
+  s += `<path d="${mtn}" style="fill:var(--chip);stroke:var(--line)"/>`;
+  s += `<g clip-path="url(#${id})">` + bands.map(([y0, y1]) => `<rect x="0" y="${y0}" width="${W}" height="${y1 - y0}" style="fill:${color}"/>`).join('') + '</g>';
+  s += `<path d="${mtn}" style="fill:none;stroke:var(--fg);stroke-width:1.2;stroke-linejoin:round"/></svg>`;
+  return s;
+}
+
+/* Skredproblem-piktogrammer (egne tegninger i stil med EAWS-ikonene) */
+function problemKind(p) {
+  const t = ((p.AvalancheProblemTypeName || '') + ' ' + (p.AvalancheExtName || '')).toLowerCase();
+  const loose = /løssnø/.test(t);
+  if (/glide/.test(t)) return {k:'glide', loose:false};
+  if (/våt/.test(t)) return {k:'wet', loose};
+  if (/vedvarende|svakt lag/.test(t)) return {k:'pwl', loose:false};
+  if (/fokk|vind/.test(t)) return {k:'wind', loose:false};
+  if (/nysnø/.test(t)) return {k:'new', loose};
+  return {k:'generic', loose};
+}
+function problemIcon(p, color) {
+  const {k, loose} = problemKind(p);
+  const slope = 'M4,60 L60,60 L60,14 Z';
+  const ink = 'var(--fg)';
+  let g = `<path d="${slope}" style="fill:var(--panel);stroke:${ink};stroke-width:2;stroke-linejoin:round"/>`;
+  // snødekke langs hellingen
+  const snow = (off, w, extra) => `<path d="M${4+off*0.8},${60-off} L60,${14-off*0.3}" style="fill:none;stroke:${extra||ink};stroke-width:${w};stroke-linecap:round"/>`;
+  // flak som har løsnet, eller løssnødråpe
+  const release = loose
+    ? `<path d="M44,24 C40,30 36,36 30,44 C27,48 31,52 35,49 C40,44 44,34 44,24 Z" style="fill:${color};stroke:${ink};stroke-width:1.5"/>`
+    : `<path d="M30,38 L50,24 L53,28 L33,42 Z" style="fill:${color};stroke:${ink};stroke-width:1.5;stroke-linejoin:round"/>`;
+  if (k === 'new') {
+    g += snow(4, 3);
+    g += release;
+    const flake = (cx, cy, r) => [0,60,120].map(a => { const x = r*Math.cos(a*Math.PI/180), y = r*Math.sin(a*Math.PI/180); return `<line x1="${cx-x}" y1="${cy-y}" x2="${cx+x}" y2="${cy+y}" style="stroke:${ink};stroke-width:1.8;stroke-linecap:round"/>`; }).join('');
+    g += flake(14, 14, 7) + flake(28, 8, 4.5);
+  } else if (k === 'wind') {
+    g += snow(4, 3);
+    g += `<path d="M60,10 C66,10 64,18 58,16" style="fill:${color};stroke:${ink};stroke-width:1.5"/>`;
+    g += release;
+    g += [12, 20, 28].map((y, i) => `<path d="M4,${y} C14,${y-4} 20,${y+4} ${30-i*4},${y}" style="fill:none;stroke:${ink};stroke-width:2;stroke-linecap:round"/>`).join('');
+  } else if (k === 'pwl') {
+    g += snow(4, 2.5) + snow(9, 2.5);
+    g += `<path d="M${4+6.5*0.8},${60-6.5} L60,${14-6.5*0.3}" style="fill:none;stroke:var(--d4);stroke-width:2.2;stroke-dasharray:3 3"/>`;
+    g += release;
+    g += `<rect x="8" y="10" width="18" height="12" rx="2" style="fill:var(--chip);stroke:${ink};stroke-width:1.2"/>` +
+         [13,16,19].map((y,i) => `<line x1="10" y1="${y}" x2="24" y2="${y}" style="stroke:${i===2?'var(--d4)':ink};stroke-width:1.4;${i===2?'stroke-dasharray:2 2':''}"/>`).join('');
+  } else if (k === 'wet') {
+    g += snow(4, 3);
+    g += release;
+    g += `<path d="M17,8 C21,15 24,18 24,22 A7,7 0 0 1 10,22 C10,18 13,15 17,8 Z" style="fill:#3b82c4;stroke:${ink};stroke-width:1.5"/>`;
+  } else if (k === 'glide') {
+    // tykt snødekke som har glidd fra hverandre: åpen glidesprekk ned mot bakken
+    g += `<path d="M8,55 L30,39" style="fill:none;stroke:${ink};stroke-width:6;stroke-linecap:butt"/>`;
+    g += `<path d="M37,34 L60,18" style="fill:none;stroke:${ink};stroke-width:6;stroke-linecap:butt"/>`;
+    g += `<path d="M30,39 L37,34 L37,30 L30,35 Z" style="fill:${color};stroke:${ink};stroke-width:1.2"/>`;
+    g += `<path d="M14,22 C20,18 22,26 28,22" style="fill:none;stroke:${ink};stroke-width:1.8;stroke-linecap:round"/>`;
+    g += `<path d="M24,18 l4,4 l-4,3" style="fill:none;stroke:${ink};stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"/>`;
+  } else {
+    g += snow(4, 3) + release;
+  }
+  return `<svg viewBox="0 0 64 64" role="img" aria-label="${esc(p.AvalancheProblemTypeName || 'Skredproblem')}">${g}</svg>`;
+}
+
+const esc = s => String(s ?? '').replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
+const txt = s => { s = String(s ?? '').trim(); return s && !/^ikke gitt\.?$/i.test(s) ? s : ''; };
+const fmtTime = s => s ? new Date(s).toLocaleString('nb-NO', {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'}) : '';
+function block(title, body, open) {
+  return body ? `<details class="ws"${open ? ' open' : ''}><summary>${title}</summary><div>${body}</div></details>` : '';
+}
+function renderDetail() {
+  const el = $('detail');
+  if (!selected) { el.innerHTML = (picked ? pointLine() + '<p class="empty">Punktet ligger utenfor varslingsregionene.</p>' : '<p class="empty">Trykk på et sted i kartet. Du får varselet for regionen stedet ligger i, og ser om akkurat det punktet er utsatt for skredproblemene.</p>'); return; }
+  const r = selected, w = r.warn, lvl = w ? w.level : 0, W = w ? w.w : {};
+  const col = DANGER[lvl];
+  let html = `<div class="rhead"><div class="badge" style="background:${col};${lvl>=4?'color:#fff':''}">${lvl || '–'}</div>
+    <div><div class="rname">${esc(r.name)}</div><div class="rsub">Faregrad ${lvl ? lvl + ' · ' + DNAME[lvl].toLowerCase() : 'ikke vurdert'} · ${fmtDate($('date').value)}${W.PublishTime && lvl ? `<br>Publisert ${esc(fmtTime(W.PublishTime))}${W.Author ? ' av ' + esc(W.Author) : ''}` : ''}</div></div></div>`;
+  html += pointLine();
+  if (txt(W.MainText)) html += `<p class="maintext">${esc(W.MainText)}</p>`;
+  if (txt(W.EmergencyWarning)) html += `<div class="alert"><b>Varsel om naturlig utløste skred.</b> ${esc(W.EmergencyWarning)}</div>`;
+  if (txt(W.AvalancheDanger)) html += `<p class="wtext">${esc(W.AvalancheDanger)}</p>`;
+
+  if (w && w.problems.length) {
+    html += `<p class="kicker">Skredproblemer</p><div class="probs">` + w.problems.map((p, i) => {
+      const raw = p.raw;
+      const dirs = p.exp ? (p.exp.every(Boolean) ? 'alle retninger' : DIRS.filter((_, k) => p.exp[k]).join(', ')) : 'alle retninger';
+      const facts = [
+        ['Svakt lag', raw.AvalCauseName], ['Utløsning', raw.AvalTriggerSensitivityName || raw.AvalTriggerSimpleName],
+        ['Utbredelse', raw.AvalPropagationName], ['Sannsynlighet', raw.AvalProbabilityName],
+        ['Størrelse', raw.DestructiveSizeExtName || raw.DestructiveSizeName], ['Skredtype', raw.AvalancheExtName || raw.AvalancheTypeName]
+      ].filter(([, v]) => txt(v)).map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join('');
+      return `<article class="prob">
+        <div class="prob-top"><div class="picon">${problemIcon(raw, col)}</div>
+          <div><div class="pnum">Problem ${i + 1} av ${w.problems.length}</div><h3>${esc(raw.AvalancheProblemTypeName || raw.AvalancheExtName || 'Skredproblem')}</h3>${pointHit(p)}</div></div>
+        <div class="prob-where">
+          <div class="where">${roseSVG(p.exp || Array(8).fill(true), col, 50)}<div><span>Utsatt</span><b>${esc(dirs)}</b></div></div>
+          <div class="where">${heightSVG(raw, col)}<div><span>Høyde</span><b>${esc(heightText(raw))}</b></div></div>
+        </div>
+        ${facts ? `<dl class="facts">${facts}</dl>` : ''}
+        ${txt(raw.TriggerSenitivityPropagationDestuctiveSizeText) ? `<p class="ptext">${esc(raw.TriggerSenitivityPropagationDestuctiveSizeText)}</p>` : ''}
+      </article>`;
+    }).join('') + `</div>`;
+  } else if (lvl) html += '<p class="empty">Varselet har ingen skredproblemer med retning og høyde. Kartet viser da alt bratt terreng i regionen i svak farge.</p>';
+
+  const adv = (W.AvalancheAdvices || []).map(a => txt(a.Text)).filter(Boolean);
+  html += block('Ferdselsråd', adv.length ? `<ul class="advice">${adv.map(a => `<li>${esc(a)}</li>`).join('')}</ul>` : '', true);
+  html += block('Snødekke', [txt(W.SnowSurface) && `<p class="wtext">${esc(W.SnowSurface)}</p>`, txt(W.CurrentWeaklayers) && `<p class="kicker">Svake lag</p><p class="wtext">${esc(W.CurrentWeaklayers)}</p>`].filter(Boolean).join(''));
+  html += block('Skredaktivitet og observasjoner', [txt(W.LatestAvalancheActivity) && `<p class="wtext">${esc(W.LatestAvalancheActivity)}</p>`, txt(W.LatestObservations) && `<p class="kicker">Siste observasjoner</p><p class="wtext">${esc(W.LatestObservations)}</p>`].filter(Boolean).join(''));
+  const mw = W.MountainWeather;
+  if (mw) {
+    const rows = [];
+    if (txt(mw.CloudCoverName)) rows.push(['Skydekke', mw.CloudCoverName]);
+    (mw.MeasurementTypes || []).forEach(t => {
+      const v = (t.MeasurementSubTypes || []).filter(st => st.Value != null && st.Value !== '').map(st => `${st.Name.toLowerCase()} ${st.Value}`).join(', ');
+      if (v) rows.push([t.Name, v]);
+    });
+    const texts = (mw.MeasurementTexts || []).map(t => txt(t.Text)).filter(Boolean);
+    html += block('Fjellvær', (rows.length ? `<dl class="wx">${rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>` : '') + texts.map(t => `<p class="wtext">${esc(t)}</p>`).join(''));
+  }
+  const ro = regionObs(r);
+  html += block(`Observasjoner fra Regobs (${ro.length})`, regionObsHTML(r), true);
+  if (lvl) html += `<a class="varsom-link" href="https://www.varsom.no/snoskred/varsling/" target="_blank" rel="noopener">Sammenlign med varsom.no ↗</a>`;
+  el.innerHTML = html;
+  wireObsList(el);
+}
+
+/* ---------- observasjoner fra Regobs ---------- */
+const REGOBS = 'https://api.regobs.no/v5';
+let obs = [];
+const obsGroup = L.layerGroup();
+const obsMarkers = new Map();
+const NO_ACTIVITY = /ingen skredaktivitet/i;
+function obsKind(o) {
+  if (o.AvalancheObs) return 'skred';
+  if ((o.AvalancheActivityObs2 || []).some(a => !NO_ACTIVITY.test(a.EstimatedNumName || ''))) return 'skred';
+  if ((o.DangerObs || []).some(d => d.DangerSignTID && d.DangerSignTID % 100 !== 1)) return 'tegn';
+  return 'obs';
+}
+const KIND_LABEL = {skred:'Skred', tegn:'Faretegn', obs:'Observasjon'};
+const images = o => (o.Attachments || []).filter(a => !a.AttachmentMimeType || /^image\//.test(a.AttachmentMimeType));
+function genericValue(v) {
+  if (v == null) return '';
+  if (typeof v === 'string' || typeof v === 'number') return String(v);
+  if (Array.isArray(v)) return v.map(genericValue).filter(Boolean).join('; ');
+  if (typeof v === 'object') return Object.values(v).map(genericValue).filter(Boolean).join(', ');
+  return '';
+}
+function obsSummary(o, max) {
+  const rows = [];
+  (o.Summaries || []).forEach(sm => (sm.Summaries || []).forEach(g => {
+    const v = genericValue(g.Value); if (v) rows.push([g.Header || sm.RegistrationName, v]);
+  }));
+  return rows.slice(0, max || 99).map(([h, v]) => `<div><span>${esc(h)}:</span> ${esc(v.length > 220 ? v.slice(0, 217) + '…' : v)}</div>`).join('');
+}
+function thumbsHTML(o, n) {
+  const imgs = images(o).slice(0, n || 6);
+  if (!imgs.length) return '';
+  return `<div class="thumbs">` + imgs.map(a => {
+    const f = a.UrlFormats || {}, big = f.Large || f.Original || a.Url, th = f.Thumbnail || f.Medium || a.Url;
+    const cap = [a.RegistrationName, a.Comment, a.Photographer && '© ' + a.Photographer].filter(Boolean).join(' · ');
+    return `<a href="${esc(big)}" target="_blank" rel="noopener" title="${esc(cap)}"><img src="${esc(th)}" alt="${esc(cap || 'Bilde fra Regobs')}" loading="lazy"></a>`;
+  }).join('') + `</div>`;
+}
+const obsTime = o => new Date(o.DtObsTime).toLocaleString('nb-NO', {weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'});
+function obsHead(o) {
+  const L_ = o.ObsLocation || {}, k = obsKind(o);
+  const place = L_.Title || L_.LocationName || L_.MunicipalName || '';
+  const who = o.Observer ? (o.Observer.NickName || '') + (o.Observer.CompetenceLevelName ? ' (' + o.Observer.CompetenceLevelName.replace(/\s*\(.*\)/, '') + ')' : '') : '';
+  return `<div class="ob-h"><span><b>${esc(obsTime(o))}</b>${place ? ' · ' + esc(place) : ''}${L_.Height ? ' · ' + L_.Height + ' moh.' : ''}</span><span class="ob-tag ${k}">${KIND_LABEL[k]}</span></div>
+    ${who ? `<div class="ob-h"><span>${esc(who)}</span></div>` : ''}`;
+}
+function popupHTML(o) {
+  return `${obsHead(o)}<div class="ob-sum" style="margin:6px 0">${obsSummary(o, 8)}</div>${thumbsHTML(o, 8)}
+    <div style="margin-top:6px"><a class="pop-link" href="https://www.regobs.no/registration/${o.RegId}" target="_blank" rel="noopener">Åpne i Regobs ↗</a></div>`;
+}
+function drawObs() {
+  obsGroup.clearLayers(); obsMarkers.clear();
+  const order = {obs:0, tegn:1, skred:2};
+  obs.slice().sort((a, b) => order[obsKind(a)] - order[obsKind(b)]).forEach(o => {
+    const L_ = o.ObsLocation; if (!L_ || !Number.isFinite(L_.Latitude)) return;
+    const k = obsKind(o), hasImg = images(o).length > 0;
+    const m = L.marker([L_.Latitude, L_.Longitude], {icon: L.divIcon({className:'', html:`<div class="om ${k}${hasImg ? ' img' : ''}"></div>`, iconSize:[14,14], iconAnchor:[7,7]}),
+      zIndexOffset: order[k] * 100, title: KIND_LABEL[k] + ' · ' + obsTime(o)});
+    m.bindPopup(() => popupHTML(o), {maxWidth: 320});
+    m.addTo(obsGroup); obsMarkers.set(o.RegId, m);
+  });
+}
+async function loadObs(date) {
+  $('obs-status').textContent = 'Henter observasjoner…';
+  const from = new Date(date + 'T12:00:00'); from.setDate(from.getDate() - 2);
+  const body = {LangKey:1, SelectedGeoHazards:[10], FromDtObsTime: iso(from) + 'T00:00:00', ToDtObsTime: date + 'T23:59:59', NumberOfRecords:500, Offset:0, OrderBy:'DtObsTime'};
+  let all = [];
+  for (let page = 0; page < 4; page++) {
+    body.Offset = page * 500;
+    const r = await fetch(REGOBS + '/Search', {method:'POST', headers:{'Content-Type':'application/json', Accept:'application/json'}, body: JSON.stringify(body)});
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const j = await r.json(); all = all.concat(j);
+    if (j.length < 500) break;
+  }
+  if (dateEl.value !== date) return;
+  obs = all; drawObs();
+  const nSkred = obs.filter(o => obsKind(o) === 'skred').length, nImg = obs.reduce((n, o) => n + images(o).length, 0);
+  $('obs-status').textContent = obs.length ? `${obs.length} observasjoner · ${nSkred} med skred · ${nImg} bilder` : 'Ingen snøobservasjoner i perioden.';
+  renderDetail(); renderSummary();
+}
+function regionObs(r) {
+  if (!r) return [];
+  return obs.filter(o => o.ObsLocation && (o.ObsLocation.ForecastRegionTID === r.id ||
+    (o.ObsLocation.ForecastRegionTID == null && Number.isFinite(o.ObsLocation.Latitude) && regionAt(L.latLng(o.ObsLocation.Latitude, o.ObsLocation.Longitude)) === r)))
+    .sort((a, b) => {
+      const order = {skred:0, tegn:1, obs:2}; return order[obsKind(a)] - order[obsKind(b)] || new Date(b.DtObsTime) - new Date(a.DtObsTime);
+    });
+}
+function regionObsHTML(r) {
+  const list = regionObs(r);
+  if (!list.length) return '<p class="empty">Ingen snøobservasjoner fra Regobs i regionen de siste tre døgnene.</p>';
+  return `<div class="obslist">` + list.slice(0, 25).map(o => `<div class="ob" tabindex="0" data-regid="${o.RegId}">${obsHead(o)}<div class="ob-sum">${obsSummary(o, 3)}</div>${thumbsHTML(o, 6)}</div>`).join('') +
+    (list.length > 25 ? `<p class="empty">Viser 25 av ${list.length}. Resten ligger som prikker i kartet.</p>` : '') + `</div>`;
+}
+function wireObsList(root) {
+  root.querySelectorAll('.ob[data-regid]').forEach(el => {
+    const open = e => {
+      if (e.target.closest('a')) return;
+      const m = obsMarkers.get(+el.dataset.regid); if (!m) return;
+      if (!map.hasLayer(obsGroup)) { $('l-obs').checked = true; obsGroup.addTo(map); }
+      map.setView(m.getLatLng(), Math.max(map.getZoom(), 12)); m.openPopup();
+    };
+    el.addEventListener('click', open);
+    el.addEventListener('keydown', e => { if (e.key === 'Enter') open(e); });
+  });
+}
+
+/* ---------- tegnforklaringer ---------- */
+$('asp-rose').innerHTML = roseSVG(null, ASP_RGB, 64);
+$('asp-legend').innerHTML = DIRS.map((d, k) => `<span><i class="sw" style="background:rgb(${ASP_RGB[k].join(',')})"></i>${d}</span>`).join('');
+fetch(BRATT + '/legend?f=json').then(r => r.json()).then(j => {
+  const items = (j.layers || [])[0]?.legend || [];
+  if (!items.length) throw 0;
+  $('bratt-legend').innerHTML = items.map(it => `<span><img alt="" src="data:${it.contentType};base64,${it.imageData}">${esc(it.label)}</span>`).join('');
+}).catch(() => { $('bratt-legend').innerHTML = '<span class="empty">27° til over 45°, i trinn som på varsom.no.</span>'; });
+
+/* ---------- kontroller ---------- */
+const fmtDate = s => new Date(s + 'T12:00:00').toLocaleDateString('nb-NO', {weekday:'short', day:'numeric', month:'long', year:'numeric'});
+function setLayer(id, layer) {
+  const apply = () => $(id).checked ? layer.addTo(map) : map.removeLayer(layer);
+  $(id).addEventListener('change', apply); apply();
+}
+setLayer('l-skred', skredLayer);
+$('l-skred').addEventListener('change', () => $('l-skred').checked ? regionGroup.addTo(map) : map.removeLayer(regionGroup));
+setLayer('l-bratt', brattLayer);
+setLayer('l-asp', aspectLayer);
+setLayer('l-obs', obsGroup);
+$('o-bratt').addEventListener('input', e => brattLayer.setOpacity(+e.target.value));
+$('a-min').addEventListener('change', e => { aspMin = +e.target.value; aspectLayer.redraw(); });
+$('s-thr').addEventListener('change', e => { thr = +e.target.value; skredLayer.redraw(); renderDetail(); renderSummary(); });
+$('s-rest').addEventListener('change', e => { showRest = e.target.checked; skredLayer.redraw(); });
+
+function zoomInfo() {
+  const z = map.getZoom();
+  $('hint').textContent = 'zoom ' + z + (z < 10 && $('l-skred').checked ? ' · zoom inn for terrengtreff' : '');
+  $('z-skred').classList.toggle('live', z >= 10);
+  $('z-asp').classList.toggle('live', z >= 11);
+  restyle();
+}
+map.on('zoomend', zoomInfo);
+
+const dateEl = $('date');
+const today = new Date(), tomorrow = new Date(Date.now() + 864e5);
+dateEl.value = iso(today);
+const obsFail = e => { $('obs-status').textContent = 'Fikk ikke hentet observasjoner fra Regobs (' + (e && e.message || 'nettverksfeil') + ').'; };
+const go = v => { dateEl.value = v; loadWarnings(v).catch(fail); loadObs(v).catch(obsFail); };
+dateEl.addEventListener('change', () => dateEl.value && go(dateEl.value));
+$('today').onclick = () => go(iso(today));
+$('tomorrow').onclick = () => go(iso(tomorrow));
+$('demo').onclick = () => { go('2026-03-14'); map.flyTo([69.55, 20.1], 10); };
+
+/* ---------- faner og valgt punkt ---------- */
+let tab = 'layers', picked = null, pickMarker = null;
+function setTab(t) {
+  tab = t;
+  $('tab-layers').hidden = t !== 'layers'; $('tab-warn').hidden = t !== 'warn';
+  $('tab-btn-layers').setAttribute('aria-selected', String(t === 'layers'));
+  $('tab-btn-warn').setAttribute('aria-selected', String(t === 'warn'));
+  expandPanel();
+}
+$('tab-btn-layers').onclick = () => setTab('layers');
+$('tab-btn-warn').onclick = () => setTab('warn');
+
+function inRing(lat, lng, ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [yi, xi] = ring[i], [yj, xj] = ring[j];
+    if ((yi > lat) !== (yj > lat) && lng < (xj - xi) * (lat - yi) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+function regionAt(ll) {
+  return regions.find(r => r.bounds.contains(ll) && r.rings.reduce((acc, ring) => acc !== inRing(ll.lat, ll.lng, ring), false)) || null;
+}
+// Høyde, helning og himmelretning i ett punkt, fra en zoom-14-flis
+async function terrainAt(ll) {
+  const z = 14, p = map.project(ll, z), x = Math.floor(p.x / 256), y = Math.floor(p.y / 256);
+  const an = await getDem(x, y, z, 1);
+  const o = (Math.floor(p.y) - y*256) * 256 + (Math.floor(p.x) - x*256);
+  return an.ok[o] ? {elev: an.elev[o], slope: an.slope[o], sector: an.sector[o]} : null;
+}
+map.on('click', async e => {
+  const ll = e.latlng;
+  if (!pickMarker) pickMarker = L.marker(ll, {icon: L.divIcon({className:'', html:'<div class="pin"></div>', iconSize:[14,14], iconAnchor:[7,7]}), keyboard:false, interactive:false}).addTo(map);
+  else pickMarker.setLatLng(ll);
+  const r = regionAt(ll);
+  picked = {ll, terrain: undefined};
+  selected = r; restyle(); renderDetail(); renderSummary();
+  const mine = picked;
+  try { mine.terrain = await terrainAt(ll); } catch (_) { mine.terrain = null; }
+  if (picked === mine) { renderDetail(); renderSummary(); }
+});
+
+function pointLine() {
+  if (!picked) return '';
+  const t = picked.terrain, pos = `${picked.ll.lat.toFixed(4)}° N, ${picked.ll.lng.toFixed(4)}° Ø`;
+  if (t === undefined) return `<div class="pick"><span>Valgt punkt</span><b>${pos}</b><span>henter terreng…</span></div>`;
+  if (!t) return `<div class="pick"><span>Valgt punkt</span><b>${pos}</b><span>ingen høydedata her</span></div>`;
+  return `<div class="pick"><span>Valgt punkt</span><b>${Math.round(t.elev)} moh.</b><b>${t.slope.toFixed(0)}°</b><b>${DIRS[t.sector]}-vendt</b></div>`;
+}
+function pointHit(p) {
+  const t = picked && picked.terrain;
+  if (!t) return '';
+  const dirOk = !p.exp || p.exp[t.sector], hOk = p.height(t.elev), steep = t.slope >= thr;
+  if (dirOk && hOk && steep) return '<span class="hitchip yes">Gjelder punktet</span>';
+  const why = !dirOk ? 'feil retning' : !hOk ? 'utenfor høydebåndet' : `slakere enn ${thr}°`;
+  return `<span class="hitchip no">Ikke her · ${why}</span>`;
+}
+function renderSummary() {
+  const el = $('summary');
+  if (!selected) { el.innerHTML = picked ? pointLine() + '<p class="empty">Punktet ligger utenfor varslingsregionene.</p>' : '<p class="empty">Trykk i kartet for å se varselet for et sted.</p>'; return; }
+  const w = selected.warn, lvl = w ? w.level : 0, W = w ? w.w : {};
+  const hits = picked && picked.terrain && w ? w.problems.filter(p => { const t = picked.terrain; return (!p.exp || p.exp[t.sector]) && p.height(t.elev) && t.slope >= thr; }).length : 0;
+  el.innerHTML = `<div class="rhead"><div class="badge" style="background:${DANGER[lvl]};${lvl>=4?'color:#fff':''}">${lvl || '–'}</div>
+    <div><div class="rname">${esc(selected.name)}</div><div class="rsub">${lvl ? 'Faregrad ' + lvl + ' · ' + DNAME[lvl].toLowerCase() : 'Ikke vurdert'}${w && w.problems.length ? ' · ' + w.problems.length + ' skredproblem' + (w.problems.length > 1 ? 'er' : '') : ''}</div></div></div>
+    ${pointLine()}
+    ${txt(W.MainText) ? `<p class="maintext">${esc(W.MainText)}</p>` : ''}
+    ${picked && picked.terrain && w && w.problems.length ? `<div class="rsub">${hits ? `<b>${hits}</b> av ${w.problems.length} skredproblemer gjelder punktet du valgte.` : 'Ingen av skredproblemene gjelder punktet du valgte.'}</div>` : ''}
+    ${(() => { const ro = regionObs(selected); if (!ro.length) return ''; const sk = ro.filter(o => obsKind(o) === 'skred').length, im = ro.reduce((n, o) => n + images(o).length, 0); return `<div class="rsub">${ro.length} observasjoner i regionen siste tre døgn · ${sk} med skred · ${im} bilder</div>`; })()}
+    ${lvl || regionObs(selected).length ? '<div><button class="btn primary" id="open-warn">Les hele varselet</button></div>' : ''}`;
+  const b = $('open-warn'); if (b) b.onclick = () => setTab('warn');
+}
+
+function expandPanel() { $('panel').classList.remove('collapsed'); $('toggle').textContent = 'Skjul'; $('toggle').setAttribute('aria-expanded', 'true'); }
+$('toggle').onclick = () => {
+  const c = $('panel').classList.toggle('collapsed');
+  $('toggle').textContent = c ? 'Vis' : 'Skjul'; $('toggle').setAttribute('aria-expanded', String(!c));
+};
+
+function fail(e) {
+  status('Fikk ikke kontakt med NVE sitt varsel-API (' + (e && e.message || 'nettverksfeil') + '). Prøv igjen om litt.', 'err');
+}
+zoomInfo();
+status('Henter varslingsregioner…', 'busy');
+loadRegions().then(() => { loadObs(dateEl.value).catch(obsFail); return loadWarnings(dateEl.value); }).catch(fail);
+})();
+</script>
+
+</body>
+</html>

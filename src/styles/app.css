@@ -9,14 +9,14 @@ body{margin:0}[hidden]{display:none!important}
   --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
   --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
-  --shadow:0 8px 28px rgba(16,32,48,.18);
+  --shadow:0 8px 28px rgba(16,32,48,.18); --icon-filter:none;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#0c1117; --panel:#121a23; --fg:#e6edf3; --muted:#93a1b0; --line:#253241;
-  --accent:#6aa5e8; --accent-ink:#06121f; --chip:#1a2531; --d5:#e9e1df; --shadow:0 8px 28px rgba(0,0,0,.5); color-scheme:dark}}
+  --accent:#6aa5e8; --accent-ink:#06121f; --chip:#1a2531; --d5:#e9e1df; --shadow:0 8px 28px rgba(0,0,0,.5); --icon-filter:invert(1) hue-rotate(180deg); color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0c1117; --panel:#121a23; --fg:#e6edf3; --muted:#93a1b0; --line:#253241;
-  --accent:#6aa5e8; --accent-ink:#06121f; --chip:#1a2531; --d5:#e9e1df; --shadow:0 8px 28px rgba(0,0,0,.5); color-scheme:dark}
+  --accent:#6aa5e8; --accent-ink:#06121f; --chip:#1a2531; --d5:#e9e1df; --shadow:0 8px 28px rgba(0,0,0,.5); --icon-filter:invert(1) hue-rotate(180deg); color-scheme:dark}
 html,body{height:100%}
 body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:14px;overflow:hidden}
 /* The basemap tiles are partly transparent and designed for a light backdrop,
@@ -24,6 +24,18 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:14
 #map{position:absolute;inset:0;background:#e9edf1;z-index:0}
 .leaflet-container{font-family:var(--f-body);background:#e9edf1}
 .leaflet-control-attribution{font-size:10px}
+/* Map controls (Leaflet + MapLibre in 3D) follow the light/dark theme like the panel. */
+.leaflet-bar,.leaflet-touch .leaflet-bar{border-color:var(--line);box-shadow:var(--shadow)}
+.leaflet-bar a,.leaflet-bar a:hover,.leaflet-bar a:focus{background-color:var(--panel);color:var(--fg);border-bottom-color:var(--line)}
+.leaflet-bar a:hover,.leaflet-bar a:focus{background-color:var(--chip)}
+.leaflet-bar a.leaflet-disabled{background-color:var(--chip);color:var(--muted)}
+.leaflet-container .leaflet-control-attribution,#map3d .maplibregl-ctrl.maplibregl-ctrl-attrib{background:color-mix(in srgb,var(--panel) 85%,transparent);color:var(--muted)}
+.leaflet-control-attribution a,#map3d .maplibregl-ctrl-attrib a{color:var(--accent)}
+#map3d .maplibregl-ctrl-group{background-color:var(--panel)}
+#map3d .maplibregl-ctrl-group button+button{border-top-color:var(--line)}
+#map3d .maplibregl-ctrl-group:not(:empty){box-shadow:0 0 0 1px var(--line)}
+#map3d .maplibregl-ctrl button:not(:disabled):hover{background-color:var(--chip)}
+#map3d .maplibregl-ctrl button .maplibregl-ctrl-icon{filter:var(--icon-filter)}
 
 #panel{position:absolute;z-index:1000;top:calc(12px + env(safe-area-inset-top,0px));left:calc(12px + env(safe-area-inset-left,0px));
   width:400px;max-height:calc(100% - 24px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));
@@ -155,10 +167,10 @@ details.ws > div{display:grid;gap:8px;padding-top:8px}
 /* ---------- Lagrede områder ---------- */
 .btn:disabled{opacity:.5;cursor:default}
 .btn.danger{background:var(--d4);border-color:var(--d4);color:#fff}
-.offctl a{display:grid!important;place-items:center;position:relative;color:#16202b}
+.offctl a{display:grid!important;place-items:center;position:relative;color:var(--fg)}
 .offctl svg{width:17px;height:17px}
 .offbadge{position:absolute;top:-6px;right:-7px;min-width:15px;height:15px;padding:0 3px;border-radius:99px;background:var(--accent);color:var(--accent-ink);
-  font:600 10px/15px var(--f-mono);text-align:center;box-shadow:0 0 0 2px #fff}
+  font:600 10px/15px var(--f-mono);text-align:center;box-shadow:0 0 0 2px var(--panel)}
 #offline{position:absolute;z-index:1001;top:calc(12px + env(safe-area-inset-top,0px));right:calc(58px + env(safe-area-inset-right,0px));
   width:360px;max-height:calc(100% - 24px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));
   background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden}
@@ -187,7 +199,7 @@ details.ws > div{display:grid;gap:8px;padding-top:8px}
     max-height:70%;padding-bottom:env(safe-area-inset-bottom,0px);z-index:1002}
 }
 /* ---------- Min posisjon ---------- */
-.locctl a{display:grid!important;place-items:center;color:#16202b}
+.locctl a{display:grid!important;place-items:center;color:var(--fg)}
 .locctl svg{width:17px;height:17px}
 .locctl a.on{color:#2a7de1}
 .locctl a.follow{background:#2a7de1!important;color:#fff}
@@ -289,8 +301,8 @@ body.panel-hidden #coord{left:calc(72px + env(safe-area-inset-left,0px))}
 /* ---------- 3D ---------- */
 #map3d{position:absolute;inset:0;z-index:1;background:#e9edf1}
 body.is3d #hint{display:none}
-.ctl3dbar a.ctl3d{font:700 13px/30px var(--f-display);letter-spacing:.03em;color:#16202b}
-.maplibregl-ctrl button.ctl3d{font:700 13px var(--f-display);letter-spacing:.03em;color:#16202b}
+.ctl3dbar a.ctl3d{font:700 13px/30px var(--f-display);letter-spacing:.03em;color:var(--fg)}
+#map3d .maplibregl-ctrl button.ctl3d{font:700 13px var(--f-display);letter-spacing:.03em;color:var(--fg)}
 #map3d .maplibregl-ctrl-top-right{top:calc(env(safe-area-inset-top,0px))}
 .maplibregl-popup-content{background:var(--panel);color:var(--fg);border-radius:12px;padding:10px 12px;box-shadow:0 3px 14px rgba(0,0,0,.4);font-family:var(--f-body);min-width:240px}
 .maplibregl-popup-content .thumbs img{width:120px;height:90px}

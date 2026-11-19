@@ -82,7 +82,7 @@ section.layer:first-of-type{border-top:0}
 .legend{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:12px}
 .legend span{display:inline-flex;align-items:center;gap:5px;font-variant-numeric:tabular-nums}
 .sw{width:12px;height:12px;border-radius:2px;display:inline-block;border:1px solid rgba(0,0,0,.15)}
-.legend img{width:14px;height:14px}
+.legend img,#snow-legend .sw{width:14px;height:14px}
 .scale5{display:grid;grid-template-columns:repeat(5,1fr);gap:2px;font-size:11px;text-align:center}
 .scale5 div{padding:4px 0;border-radius:3px;font-weight:600;color:#111}
 .scale5 div.d5{color:#fff;background:#2a1a1a}
@@ -140,6 +140,17 @@ details.ws > div{display:grid;gap:8px;padding-top:8px}
 .wxp-fl{stroke:#2563eb;stroke-width:1.5;stroke-dasharray:3 2;vector-effect:non-scaling-stroke}
 .wxk{display:inline-block;width:12px;height:0;vertical-align:middle;border-top:2px solid var(--accent)}
 .wxk-fl{border-top:1.5px dashed #2563eb}
+/* Sun card: one row per aspect */
+.sun-sub{font-size:11.5px;margin-top:4px}
+.sun-tab{display:grid;gap:2px;font:12px var(--f-mono)}
+.sun-row{display:grid;grid-template-columns:2.4em 1fr 64px 3.2em;gap:8px;align-items:center;padding:2px 4px;border-radius:4px}
+.sun-row b{font-weight:500}
+.sun-row.me{background:var(--chip);outline:1px solid var(--accent)}
+.sun-t{font-size:11.5px}
+.wxcard .nw{white-space:nowrap}
+.sun-bar{height:6px;background:var(--chip);border-radius:3px;overflow:hidden}
+.sun-bar i{display:block;height:100%;background:#f2a71a;border-radius:3px}
+.sun-w{text-align:right;color:var(--muted);font-size:11px}
 .varsom-link{font-size:12.5px;color:var(--accent);font-weight:600}
 .empty{font-size:12.5px;color:var(--muted)}
 .foot{font-size:11px;color:var(--muted);line-height:1.5}

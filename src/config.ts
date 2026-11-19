@@ -10,6 +10,11 @@ export const OPEN_METEO_API = 'https://api.open-meteo.com/v1';
 export const DTM_URL = 'https://hoydedata.no/arcgis/rest/services/DTM/ImageServer/exportImage';
 export const BRATT_URL = 'https://gis3.nve.no/arcgis/rest/services/wmts/Bratthet_2024/MapServer';
 export const BRATT_TILE_URL = `${BRATT_URL}/tile/{z}/{y}/{x}`;
+/**
+ * NVE's seNorge snow maps (modelled, 1 km grid, also a few days ahead) as a
+ * WMS with a TIME parameter: the same service senorge.no draws from.
+ */
+export const SNOW_WMS_URL = 'https://kart.nve.no/enterprise/services/seNorgeGrid_png/ImageServer/WMSServer';
 export const BASEMAP_URL =
   'https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/{z}/{y}/{x}.png';
 
@@ -44,6 +49,8 @@ export const DEMO = { date: '2026-03-14', center: [69.55, 20.1] as [number, numb
 export const BASEMAP_MAX_NATIVE = 17;
 export const BRATT_MAX_NATIVE = 16;
 export const DEM_MAX_NATIVE = 15;
+/** seNorge is a 1 km grid: past this zoom, scale up instead of asking for more images. */
+export const SNOW_MAX_NATIVE = 11;
 
 /**
  * Cache Storage name for saved map areas. Must match CACHE in public/sw.js.

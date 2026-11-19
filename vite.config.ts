@@ -21,6 +21,7 @@ const HOSTS = {
   stedsnavn: 'https://ws.geonorge.no', // place-name search (Kartverket)
   met: 'https://api.met.no', // point weather forecast (yr's data)
   openMeteo: 'https://api.open-meteo.com', // cloud heights + freezing level, recent wind
+  nveKart: 'https://kart.nve.no', // seNorge snow maps (WMS)
   openMeteoHistory: 'https://historical-forecast-api.open-meteo.com', // wind before older warning dates
 };
 
@@ -41,7 +42,7 @@ function csp(): Plugin {
         "script-src 'self' 'wasm-unsafe-eval'",
         // Leaflet and the app set inline style attributes; CSS can't run code.
         "style-src 'self' 'unsafe-inline'",
-        `img-src 'self' data: blob: ${HOSTS.kartverket} ${HOSTS.nveGis} ${HOSTS.regobs}`,
+        `img-src 'self' data: blob: ${HOSTS.kartverket} ${HOSTS.nveGis} ${HOSTS.nveKart} ${HOSTS.regobs}`,
         `connect-src ${connect.join(' ')}`,
         "font-src 'self'",
         "worker-src 'self' blob:",

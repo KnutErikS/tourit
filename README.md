@@ -6,11 +6,13 @@ Avalanche terrain map for Norway. A static web app (no backend, no API keys) bui
 
 - **Skredfare i terrenget** – forecast regions coloured by today's danger level. From zoom 10, slopes steeper than 27/30/35° that match the aspect and height band of the day's avalanche problems are coloured.
 - **Bratthet** – NVE's steepness map.
+- **Snø (seNorge)** – NVE's modelled snow maps for the chosen date (also a few days ahead): new snow over the last 1 or 3 days, or snow depth. 1 km grid, so it shows the pattern across a region, not single slopes.
 - **Himmelretning** – slope aspect, computed in the browser from Kartverket's terrain model (zoom 11+).
 - **Observasjoner** – Regobs snow observations for the chosen day and the two days before, with photos.
 - **Skredvarsel tab** – the full warning for a region, with avalanche problems, advice and weather.
 - **Tap the map** – elevation, slope and aspect at that point, and whether each avalanche problem applies there.
 - **Vær tab** – MET Norway's forecast (yr's data) for the tapped point, with the temperature adjusted to the point's height: sky (low/middle/high cloud), precipitation split into snow/sleet/rain with estimated new snow, temperature, wind, and a 3-hourly timeline for the chosen day. From Open-Meteo (DWD's ICON model, ~7 days): cloud cover by height, so the tab says whether the point is in, above or below the cloud and where the lowest layer is, plus the freezing level and the snow line.
+- **Sol og dagslys** (Vær tab) – sunrise, sunset and daylight (civil twilight) for the tapped point and date, polar night and midnight sun included, plus when direct sun reaches the point's own slope and 30° slopes of each aspect, with the strongest clear-sky sun in W/m². Computed on the device, so it works offline and for any date.
 - **Place search** – mountains, peaks, valleys, towns etc. from Kartverket's place-name register. Choosing a hit flies there and selects it.
 - **MGRS** – coordinate of the selected point or your own position (live, with accuracy) in a chip on the map; tap to copy.
 - **Own position** – with accuracy circle and follow mode.
@@ -55,9 +57,9 @@ src/
   util.ts               DOM helper, esc(), safeUrl(), dates, fetch
   map.ts                Leaflet map + Kartverket topo basemap
   api/                  NVE warnings/regions, Regobs search, Kartverket place names, MET point forecast, Open-Meteo air profile
-  domain/               Pure logic: problem matching, point-in-polygon, observation types, MGRS, weather (rain/snow split, cloud layers, snow line, summaries)
+  domain/               Pure logic: problem matching, point-in-polygon, observation types, MGRS, weather (rain/snow split, cloud layers, snow line, summaries), sun position and sun on slopes
   terrain/              Elevation tiles (LERC) → slope/aspect; canvas layer base
-  layers/               2D layers: avalanche terrain, aspect, steepness, regions, observations
+  layers/               2D layers: avalanche terrain, aspect, steepness, seNorge snow, regions, observations
   three/view3d.ts       3D view (MapLibre, loaded on demand)
   offline/              Saved areas: tile lists, download/delete, metadata
   ui/                   Panel content, search, MGRS chip, saved-areas page, position, compass, bottom sheet, icons
@@ -74,6 +76,8 @@ The aspect and avalanche-terrain layers share the same drawing functions in 2D (
 - **Elevation load:** zoom 10–11 fetches elevation at 2× resolution so steep slopes aren't smoothed away; first load of an area can take a few seconds.
 - **MapLibre worker** is set explicitly with `setWorkerUrl` (Vite doesn't follow MapLibre's own lookup). In dev, `window.__map3d` exposes the 3D map.
 - **Weather:** MET gives the steps (temperature at the point's height, wind, precipitation, cloud in low/middle/high bands). Open-Meteo's ICON profile is merged in by time (`withProfile` in `domain/weather.ts`): pressure levels 1000–500 hPa (~0–5 km), each with cloud cover, temperature and humidity. A level with ≥ 50 % cover counts as cloud; layer base/top are interpolated between levels, so heights are good to a few hundred metres at best, and cloud above ~5 km only shows in MET's "high" band. ICON is used because it is the only model on Open-Meteo with every level here (ECMWF/MET Nordic only have 1000/850/700 hPa). Rain/snow uses wet-bulb temperature (all snow ≤ 0.5 °C, all rain ≥ 1.5 °C), at the point and up the profile for the snow line; new snow is mm × 0.8–1.5 cm/mm by temperature. ICON's own snowfall isn't used: it comes from another model than MET's precipitation, so amounts wouldn't match. MET forbids custom request headers from browsers (no CORS preflight), so caching relies on the browser's HTTP cache plus an in-memory copy until `Expires`; Open-Meteo is kept for an hour.
+- **seNorge snow:** a WMS at `kart.nve.no` (`seNorgeGrid_png`, the service senorge.no itself draws from) with `TIME=YYYY-MM-DD`. It isn't a documented public API, so it may change. The legend colours are copied from seNorge's legend and match the map images (`SNOW_LEGEND` in `layers/snow.ts`); 7-day new snow (`sdfsw7d`) isn't offered because this service returns it blank. The layer needs network and isn't part of saved areas.
+- **Sun:** solar position from the standard low-precision formulas (`domain/sun.ts`), sampled once a minute. Terrain shadow is not included: with a low sun and in narrow valleys, the real sun window on a slope is shorter than shown. W/m² is a simple clear-sky direct beam, only meant for comparing aspects and times.
 - Problem icons are our own drawings in EAWS style. Terrain hits are an automatic reading of the warning, not a replacement for your own assessment.
 
 ## Security
@@ -85,4 +89,4 @@ The aspect and avalanche-terrain layers share the same drawing functions in 2D (
 
 ## Data
 
-Avalanche warnings and steepness © NVE / varsom.no · Terrain model and basemap © Kartverket · 3D terrain: AWS Terrain Tiles (© Kartverket) · Observations © Regobs and the observers · Place names © Kartverket (Sentralt stedsnavnregister) · MGRS via [proj4js/mgrs](https://github.com/proj4js/mgrs). `docs/` holds the original single-file prototype and the prompts it came from.
+Avalanche warnings and steepness © NVE / varsom.no · Snow maps © NVE / seNorge (NLOD) · Terrain model and basemap © Kartverket · 3D terrain: AWS Terrain Tiles (© Kartverket) · Observations © Regobs and the observers · Place names © Kartverket (Sentralt stedsnavnregister) · MGRS via [proj4js/mgrs](https://github.com/proj4js/mgrs). `docs/` holds the original single-file prototype and the prompts it came from.

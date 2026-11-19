@@ -88,6 +88,20 @@
 
     <section class="layer">
       <div class="lhead">
+        <label><input type="checkbox" id="l-snow"> Snø (seNorge)</label>
+        <span class="zoomtag">NVE · 1 km rute</span>
+      </div>
+      <p class="desc">NVEs modellerte snøkart for valgt dato, samme som på senorge.no. Beregnet fra værdata, så det viser mønsteret i en region, ikke enkeltheng. Finnes også noen dager fram (prognose).</p>
+      <div class="ctrl">
+        <span>Vis</span>
+        <select id="n-kind"><option value="sdfsw">Nysnø siste døgn</option><option value="sdfsw3d" selected>Nysnø siste 3 døgn</option><option value="sd">Snødybde</option></select>
+      </div>
+      <div class="ctrl"><span>Gjennomsiktighet</span><input type="range" id="o-snow" min="0.2" max="1" step="0.05" value="0.6" aria-label="Opasitet snø"></div>
+      <div class="legend" id="snow-legend"></div>
+    </section>
+
+    <section class="layer">
+      <div class="lhead">
         <label><input type="checkbox" id="l-asp"> Himmelretning</label>
         <span class="zoomtag" id="z-asp">fra zoom 11</span>
       </div>

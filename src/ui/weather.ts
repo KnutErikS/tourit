@@ -6,6 +6,7 @@ import {
 import { state } from '../state';
 import { $, esc, fmtTime, isoDate } from '../util';
 import { pointLine } from './point';
+import { sunCard } from './sun';
 
 /** Daytime on a touring day, local time. */
 const DAY_FROM_H = 6, DAY_TO_H = 18;
@@ -166,6 +167,6 @@ export function pointWeather(): string {
 /** The "Vær" tab: the picked point and its forecast. */
 export function renderWeather(): void {
   $('weather').innerHTML = state.picked
-    ? pointLine() + pointWeather()
+    ? pointLine() + pointWeather() + sunCard()
     : '<p class="empty">Trykk på et sted i kartet for å se værvarselet der.</p>';
 }

@@ -25,6 +25,7 @@ import { createAvalancheTerrainLayer } from './layers/avalancheTerrain';
 import { drawObservations, focusObservation, obsGroup } from './layers/observations';
 import { drawRegions, regionGroup, restyleRegions } from './layers/regions';
 import { renderSteepnessLegend, steepnessLayer } from './layers/steepness';
+import { isSnowKind, renderSnowLegend, setSnow, snowLayer, type SnowKind } from './layers/snow';
 import { map } from './map';
 import { state } from './state';
 import { terrainAt } from './terrain/dem';
@@ -33,7 +34,7 @@ import { registerServiceWorker } from './offline/download';
 import { NotStoredError, storedKeys } from './offline/dataCache';
 import { renderDetail } from './ui/detail';
 import { roseSVG } from './ui/icons';
-import { flyTo3D, focusObs3D, init3D, is3DOpen, resetNorth3D, setPick3D, update3D, update3DObs } from './three/view3d';
+import { flyTo3D, focusObs3D, init3D, is3DOpen, resetNorth3D, setPick3D, syncSnow3D, update3D, update3DObs } from './three/view3d';
 import { initCompass } from './ui/compass';
 import { coordSource, initCoords, setCoordInfo, showCoord } from './ui/coords';
 import { pointFacts } from './ui/point';
@@ -226,6 +227,7 @@ function go(date: string): void {
   loadObservations(date).catch(obsFail);
   state.regions.forEach((r) => (r.wind = undefined));
   loadWind(date).catch(windFail);
+  applySnow();
   // Weather follows the date shown, and gets refreshed along with the warning.
   if (state.picked && state.picked.terrain !== undefined) void loadWeather(state.picked);
 }
@@ -261,6 +263,20 @@ state.aspMin = +$<HTMLSelectElement>('a-min').value;
 state.showRest = $<HTMLInputElement>('s-rest').checked;
 state.showLee = $<HTMLInputElement>('s-lee').checked;
 steepnessLayer.setOpacity(+$<HTMLInputElement>('o-bratt').value);
+snowLayer.setOpacity(+$<HTMLInputElement>('o-snow').value);
+
+/** seNorge snow map: the chosen kind for the warning date shown. */
+function snowKind(): SnowKind {
+  const k = $<HTMLSelectElement>('n-kind').value;
+  return isSnowKind(k) ? k : 'sdfsw3d';
+}
+function applySnow(): void {
+  const kind = snowKind();
+  setSnow(kind, state.date || startDate);
+  renderSnowLegend($('snow-legend'), kind);
+  syncSnow3D();
+}
+applySnow();
 
 function bindToggle(id: string, ...layers: L.Layer[]): void {
   const box = $<HTMLInputElement>(id);
@@ -270,10 +286,13 @@ function bindToggle(id: string, ...layers: L.Layer[]): void {
 }
 bindToggle('l-skred', avalancheLayer, regionGroup);
 bindToggle('l-bratt', steepnessLayer);
+bindToggle('l-snow', snowLayer);
 bindToggle('l-asp', aspectLayer);
 bindToggle('l-obs', obsGroup);
 
 $<HTMLInputElement>('o-bratt').addEventListener('input', (e) => steepnessLayer.setOpacity(+(e.target as HTMLInputElement).value));
+$<HTMLInputElement>('o-snow').addEventListener('input', (e) => snowLayer.setOpacity(+(e.target as HTMLInputElement).value));
+$<HTMLSelectElement>('n-kind').addEventListener('change', applySnow);
 $<HTMLSelectElement>('a-min').addEventListener('change', (e) => {
   state.aspMin = +(e.target as HTMLSelectElement).value;
   aspectLayer.redraw();

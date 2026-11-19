@@ -2,8 +2,9 @@ import * as L from 'leaflet';
 import type * as ML from 'maplibre-gl';
 import {
   ASPECT_MIN_ZOOM, BASEMAP_MAX_NATIVE, BASEMAP_URL, BRATT_MAX_NATIVE, BRATT_TILE_URL, DANGER, DEM_MAX_NATIVE, DNAME, SKRED_MIN_ZOOM,
-  TERRAIN_3D_MAX_ZOOM, TERRAIN_3D_URL,
+  SNOW_MAX_NATIVE, TERRAIN_3D_MAX_ZOOM, TERRAIN_3D_URL,
 } from '../config';
+import { isSnowKind, SNOW_ATTRIBUTION, snowTileUrl } from '../layers/snow';
 import { drawAspect } from '../layers/aspect';
 import { avalancheOversample, drawAvalancheTerrain } from '../layers/avalancheTerrain';
 import { KIND_LABEL, images, obsKind } from '../domain/observations';
@@ -62,8 +63,23 @@ async function overlayTile(params: ML.RequestParameters, abort: AbortController)
 }
 
 /** Redraw the app-drawn overlays (new warnings, threshold, aspect filter …). */
+/** The seNorge snow tiles for the chosen map and date. */
+function snowUrl(): string {
+  const k = $<HTMLSelectElement>('n-kind').value;
+  return snowTileUrl(isSnowKind(k) ? k : 'sdfsw3d', state.date);
+}
+let snowShown = '';
+/** Point the 3D snow layer at the current map and date (no-op if unchanged). */
+export function syncSnow3D(): void {
+  const snow = snowUrl();
+  if (!m3 || snow === snowShown) return;
+  snowShown = snow;
+  m3.getSource<ML.RasterTileSource>('snow')?.setTiles([snow]);
+}
+
 function refreshOverlays(): void {
   if (!m3) return;
+  syncSnow3D();
   overlayVersion++;
   m3.getSource<ML.RasterTileSource>('aspect')?.setTiles([overlayUrl('aspect')]);
   m3.getSource<ML.RasterTileSource>('skred')?.setTiles([overlayUrl('skred')]);
@@ -111,6 +127,7 @@ function style(): ML.StyleSpecification {
         maxzoom: BRATT_MAX_NATIVE,
         attribution: 'Bratthet © <a href="https://www.nve.no" target="_blank" rel="noopener">NVE</a>',
       },
+      snow: { type: 'raster', tiles: [(snowShown = snowUrl())], tileSize: 256, maxzoom: SNOW_MAX_NATIVE, attribution: SNOW_ATTRIBUTION },
       // Separate DEM sources for terrain and hillshade, as MapLibre recommends.
       terrain: {
         type: 'raster-dem',
@@ -136,6 +153,13 @@ function style(): ML.StyleSpecification {
         source: 'bratt',
         layout: { visibility: vis(checked('l-bratt')) },
         paint: { 'raster-opacity': +$<HTMLInputElement>('o-bratt').value },
+      },
+      {
+        id: 'snow',
+        type: 'raster',
+        source: 'snow',
+        layout: { visibility: vis(checked('l-snow')) },
+        paint: { 'raster-opacity': +$<HTMLInputElement>('o-snow').value },
       },
       { id: 'aspect', type: 'raster', source: 'aspect', layout: { visibility: vis(checked('l-asp')) } },
       { id: 'skred', type: 'raster', source: 'skred', layout: { visibility: vis(checked('l-skred')) } },
@@ -171,6 +195,8 @@ function syncLayers(): void {
   if (!m3) return;
   m3.setLayoutProperty('bratt', 'visibility', vis(checked('l-bratt')));
   m3.setPaintProperty('bratt', 'raster-opacity', +$<HTMLInputElement>('o-bratt').value);
+  m3.setLayoutProperty('snow', 'visibility', vis(checked('l-snow')));
+  m3.setPaintProperty('snow', 'raster-opacity', +$<HTMLInputElement>('o-snow').value);
   m3.setLayoutProperty('aspect', 'visibility', vis(checked('l-asp')));
   for (const id of ['skred', 'regions-fill', 'regions-line']) m3.setLayoutProperty(id, 'visibility', vis(checked('l-skred')));
   update3DObs();
@@ -347,8 +373,9 @@ const Toggle3DControl = L.Control.extend({
 export function init3D(pick: (ll: L.LatLng) => void): void {
   onPick = pick;
   new Toggle3DControl({ position: 'topright' }).addTo(map);
-  for (const id of ['l-bratt', 'l-skred', 'l-asp', 'l-obs']) $(id).addEventListener('change', syncLayers);
+  for (const id of ['l-bratt', 'l-snow', 'l-skred', 'l-asp', 'l-obs']) $(id).addEventListener('change', syncLayers);
   // main.ts updates state on these first (its listeners are registered earlier).
   for (const id of ['s-thr', 's-rest', 'a-min']) $(id).addEventListener('change', refreshOverlays);
   $('o-bratt').addEventListener('input', syncLayers);
+  $('o-snow').addEventListener('input', syncLayers);
 }

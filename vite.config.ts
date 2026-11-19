@@ -16,6 +16,7 @@ const HOSTS = {
   nveGis: 'https://gis3.nve.no', // steepness tiles + legend
   regobs: 'https://api.regobs.no', // observations + their images
   kartverket: 'https://cache.kartverket.no', // basemap tiles
+  npolar: 'https://geodata.npolar.no', // Svalbard basemap tiles (Norsk Polarinstitutt)
   hoydedata: 'https://hoydedata.no', // elevation (DTM) for computed layers
   awsTerrain: 'https://s3.amazonaws.com', // 3D terrain tiles
   stedsnavn: 'https://ws.geonorge.no', // place-name search (Kartverket)
@@ -42,7 +43,7 @@ function csp(): Plugin {
         "script-src 'self' 'wasm-unsafe-eval'",
         // Leaflet and the app set inline style attributes; CSS can't run code.
         "style-src 'self' 'unsafe-inline'",
-        `img-src 'self' data: blob: ${HOSTS.kartverket} ${HOSTS.nveGis} ${HOSTS.nveKart} ${HOSTS.regobs}`,
+        `img-src 'self' data: blob: ${HOSTS.kartverket} ${HOSTS.npolar} ${HOSTS.nveGis} ${HOSTS.nveKart} ${HOSTS.regobs}`,
         `connect-src ${connect.join(' ')}`,
         "font-src 'self'",
         "worker-src 'self' blob:",

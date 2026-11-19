@@ -1,6 +1,6 @@
 import { OFFLINE_CACHE } from '../config';
 import { type SavedArea, listAreas, putArea, removeArea } from './store';
-import { areaTiles } from './tiles';
+import { SPARSE_KINDS, areaTiles } from './tiles';
 
 const CONCURRENCY = 6;
 
@@ -34,17 +34,21 @@ export async function downloadArea(
 
   async function worker() {
     while (next < jobs.length && !signal.aborted) {
-      const { url } = jobs[next++];
+      const { url, kind } = jobs[next++];
       try {
         const hit = await cache.match(url);
         if (hit) {
           p.bytes += (await hit.blob()).size;
         } else {
           const res = await fetch(url, { mode: 'cors', signal });
-          if (!res.ok) throw new Error('HTTP ' + res.status);
-          const blob = await res.clone().blob();
-          await cache.put(url, res);
-          p.bytes += blob.size;
+          // A 404 on a sparse source (sea on the Svalbard map) means no tile there: nothing to store, nothing missing.
+          const empty = res.status === 404 && SPARSE_KINDS.has(kind);
+          if (!res.ok && !empty) throw new Error('HTTP ' + res.status);
+          if (!empty) {
+            const blob = await res.clone().blob();
+            await cache.put(url, res);
+            p.bytes += blob.size;
+          }
         }
       } catch {
         if (signal.aborted) return;

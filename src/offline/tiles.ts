@@ -1,5 +1,8 @@
 import * as L from 'leaflet';
-import { BASEMAP_MAX_NATIVE, BASEMAP_URL, BRATT_MAX_NATIVE, BRATT_TILE_URL, BRATT_UTLOP_TILE_URL, DEM_MAX_NATIVE, SKRED_MIN_ZOOM } from '../config';
+import {
+  BASEMAP_MAX_NATIVE, BASEMAP_URL, BRATT_MAX_NATIVE, BRATT_TILE_URL, BRATT_UTLOP_TILE_URL, DEM_MAX_NATIVE, SKRED_MIN_ZOOM,
+  SVALBARD_BASEMAP_URL, SVALBARD_BOUNDS, SVALBARD_MAX_NATIVE,
+} from '../config';
 import { demUrl } from '../terrain/dem';
 
 /**
@@ -23,7 +26,7 @@ export interface AreaSpec {
 export const MIN_ZOOM = 5;
 
 /** Rough average sizes measured against the live services (bytes per tile). */
-const AVG_BYTES = { base: 65_000, bratt: 12_000, dem1: 150_000, dem2: 500_000 };
+const AVG_BYTES = { base: 65_000, svalbard: 25_000, bratt: 12_000, dem1: 150_000, dem2: 500_000 };
 
 const CRS = L.CRS.EPSG3857;
 
@@ -43,12 +46,22 @@ function* tilesAt(b: Bounds, z: number) {
   for (let y = r.y0; y <= r.y1; y++) for (let x = r.x0; x <= r.x1; x++) yield { x, y, z };
 }
 
+/** The overlap of two bounds, or null if they don't meet. */
+function intersect(a: Bounds, b: Bounds): Bounds | null {
+  const s = Math.max(a[0][0], b[0][0]), w = Math.max(a[0][1], b[0][1]);
+  const n = Math.min(a[1][0], b[1][0]), e = Math.min(a[1][1], b[1][1]);
+  return s < n && w < e ? [[s, w], [n, e]] : null;
+}
+
 const fill = (tpl: string, t: { x: number; y: number; z: number }) => L.Util.template(tpl, t);
 
 export interface TileJob {
   url: string;
   kind: keyof typeof AVG_BYTES;
 }
+
+/** Kinds where a 404 just means "no tile here" (Polarinstitutt has none over the sea), not a failure. */
+export const SPARSE_KINDS: ReadonlySet<TileJob['kind']> = new Set(['svalbard']);
 
 /** Every tile URL for an area, de-duplicated. */
 export function areaTiles(a: AreaSpec): TileJob[] {
@@ -57,6 +70,11 @@ export function areaTiles(a: AreaSpec): TileJob[] {
 
   for (let z = MIN_ZOOM; z <= Math.min(a.maxZoom, BASEMAP_MAX_NATIVE); z++)
     for (const t of tilesAt(a.bounds, z)) add(fill(BASEMAP_URL, t), 'base');
+
+  const sv = intersect(a.bounds, SVALBARD_BOUNDS);
+  if (sv)
+    for (let z = MIN_ZOOM; z <= Math.min(a.maxZoom, SVALBARD_MAX_NATIVE); z++)
+      for (const t of tilesAt(sv, z)) add(fill(SVALBARD_BASEMAP_URL, t), 'svalbard');
 
   if (a.bratt)
     for (let z = MIN_ZOOM; z <= Math.min(a.maxZoom, BRATT_MAX_NATIVE); z++)

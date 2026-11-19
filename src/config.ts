@@ -36,6 +36,19 @@ export const RUNOUT: Record<RunoutClass, { rgb: RGB; label: string; share: strin
 export const SNOW_WMS_URL = 'https://kart.nve.no/enterprise/services/seNorgeGrid_png/ImageServer/WMSServer';
 export const BASEMAP_URL =
   'https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/{z}/{y}/{x}.png';
+export const BASEMAP_ATTRIBUTION = '© <a href="https://www.kartverket.no" target="_blank" rel="noopener">Kartverket</a>';
+/**
+ * Kartverket's topo map is empty over Svalbard, so there we draw Norsk
+ * Polarinstitutt's base map on top (CC BY 4.0). Same Web Mercator tile grid.
+ * It only has tiles over land/glaciers (sea tiles are 404) and nothing past zoom 15.
+ */
+export const SVALBARD_BASEMAP_URL =
+  'https://geodata.npolar.no/arcgis/rest/services/Basisdata/NP_Basiskart_Svalbard_WMTS_3857/MapServer/tile/{z}/{y}/{x}';
+export const SVALBARD_BASEMAP_ATTRIBUTION =
+  '© <a href="https://www.npolar.no" target="_blank" rel="noopener">Norsk Polarinstitutt</a>';
+/** The service's full extent, [[south, west], [north, east]]. Tiles are only requested inside it. */
+export const SVALBARD_BOUNDS: [[number, number], [number, number]] = [[73.73, 7.46], [81.16, 36.06]];
+export const SVALBARD_MAX_NATIVE = 15;
 
 /** Danger level colours (0 = not assessed). */
 export const DANGER: Record<number, string> = {

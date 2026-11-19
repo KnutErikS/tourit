@@ -3,6 +3,7 @@ import type * as ML from 'maplibre-gl';
 import {
   ASPECT_MIN_ZOOM, BASEMAP_MAX_NATIVE, BASEMAP_URL, BRATT_MAX_NATIVE, BRATT_TILE_URL, BRATT_UTLOP_TILE_URL, DANGER, DEM_MAX_NATIVE, DNAME, SKRED_MIN_ZOOM,
   SNOW_MAX_NATIVE, TERRAIN_3D_MAX_ZOOM, TERRAIN_3D_URL,
+  BASEMAP_ATTRIBUTION, SVALBARD_BASEMAP_ATTRIBUTION, SVALBARD_BASEMAP_URL, SVALBARD_BOUNDS, SVALBARD_MAX_NATIVE,
 } from '../config';
 import { isSnowKind, SNOW_ATTRIBUTION, snowTileUrl } from '../layers/snow';
 import { drawAspect } from '../layers/aspect';
@@ -120,7 +121,15 @@ function style(): ML.StyleSpecification {
         tiles: [BASEMAP_URL],
         tileSize: 256,
         maxzoom: BASEMAP_MAX_NATIVE,
-        attribution: '© <a href="https://www.kartverket.no" target="_blank" rel="noopener">Kartverket</a>',
+        attribution: BASEMAP_ATTRIBUTION,
+      },
+      svalbard: {
+        type: 'raster',
+        tiles: [SVALBARD_BASEMAP_URL],
+        tileSize: 256,
+        maxzoom: SVALBARD_MAX_NATIVE,
+        bounds: [SVALBARD_BOUNDS[0][1], SVALBARD_BOUNDS[0][0], SVALBARD_BOUNDS[1][1], SVALBARD_BOUNDS[1][0]],
+        attribution: SVALBARD_BASEMAP_ATTRIBUTION,
       },
       bratt: {
         type: 'raster',
@@ -155,6 +164,7 @@ function style(): ML.StyleSpecification {
     layers: [
       { id: 'bg', type: 'background', paint: { 'background-color': '#e9edf1' } },
       { id: 'topo', type: 'raster', source: 'topo' },
+      { id: 'svalbard', type: 'raster', source: 'svalbard' },
       { id: 'shade', type: 'hillshade', source: 'shade', paint: { 'hillshade-exaggeration': 0.25 } },
       {
         id: 'bratt',

@@ -17,7 +17,7 @@
  * latest ones itself (src/offline/dataCache.ts), so it can say how old they are.
  */
 const TILE_CACHE = 'tourit-tiles-v1';
-const TILE_HOSTS = new Set(['cache.kartverket.no', 'gis3.nve.no', 'hoydedata.no']);
+const TILE_HOSTS = new Set(['cache.kartverket.no', 'gis3.nve.no', 'hoydedata.no', 'geodata.npolar.no']);
 
 /* Filled in by the build: built files to store, and a version for the shell cache. */
 const PRECACHE = [];

@@ -42,8 +42,9 @@ Position and saved areas need **https** (or localhost).
 ## Code map
 
 ```
-index.html              Markup for the panel and map buttons
+index.html              Markup for the panel and map buttons, icon/manifest links
 public/sw.js            Service worker: serves saved tiles from Cache Storage, else network
+public/manifest.webmanifest, public/icons/   App name + icons (source: docs/app-icon-source.svg)
 vite.config.ts          Build config + Content Security Policy
 src/
   main.ts               Entry: wires layers, controls, data loading, point picking, panel

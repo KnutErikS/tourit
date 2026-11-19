@@ -1,6 +1,7 @@
 {
   "version": "0.0.1",
   "configurations": [
-    { "name": "tourit-dev", "runtimeExecutable": "sh", "runtimeArgs": ["-c", "BROWSER=none npm run dev"], "port": 5173 }
+    { "name": "tourit-dev", "runtimeExecutable": "sh", "runtimeArgs": ["-c", "BROWSER=none npm run dev"], "port": 5173 },
+    { "name": "tourit-preview", "runtimeExecutable": "sh", "runtimeArgs": ["-c", "npm run build && npx vite preview --port 4173 --strictPort"], "port": 4173 }
   ]
 }

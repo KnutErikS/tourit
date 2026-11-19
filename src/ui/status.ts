@@ -1,6 +1,7 @@
 import { $ } from '../util';
 
-export type StatusKind = 'ok' | 'busy' | 'err' | '';
+/** stale = showing a copy stored on the device (no network). */
+export type StatusKind = 'ok' | 'busy' | 'err' | 'stale' | '';
 
 /** The status line at the top of the panel. */
 export function setStatus(text: string, kind: StatusKind = ''): void {

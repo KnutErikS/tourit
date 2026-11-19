@@ -26,6 +26,7 @@ import { state } from './state';
 import { terrainAt } from './terrain/dem';
 import type { Picked } from './types';
 import { registerServiceWorker } from './offline/download';
+import { NotStoredError, storedKeys } from './offline/dataCache';
 import { renderDetail } from './ui/detail';
 import { roseSVG } from './ui/icons';
 import { flyTo3D, focusObs3D, init3D, is3DOpen, resetNorth3D, setPick3D, update3D, update3DObs } from './three/view3d';
@@ -41,7 +42,7 @@ import { reportDemError, setStatus } from './ui/status';
 import { renderSummary } from './ui/summary';
 import { initShare } from './ui/share';
 import { initRoute, isDrawing } from './ui/routePage';
-import { $, fmtDate, isoDate } from './util';
+import { $, fmtDate, fmtTime, isoDate } from './util';
 import { restoreView, saveView, trackView } from './viewState';
 
 /* ---------- layers ---------- */
@@ -75,10 +76,16 @@ function openObservation(regId: number): void {
 
 /* ---------- data loading ---------- */
 
+/** "Uten nett · lagret tor. 19. nov. kl. 17:02" when data came from the device, else ''. */
+const storedNote = (savedAt: number | null) => (savedAt === null ? '' : `Uten nett · lagret ${fmtTime(new Date(savedAt).toISOString())} · `);
+/** Something on screen is a stored copy: fetch again as soon as the network is back. */
+let showingStored = false;
+
 async function loadWarnings(date: string): Promise<void> {
   setStatus(`Henter snøskredvarsler for ${fmtDate(date)}…`, 'busy');
-  const byId = await fetchWarnings(date);
+  const { data: byId, savedAt } = await fetchWarnings(date);
   if (state.date !== date) return; // user picked another date meanwhile
+  if (savedAt !== null) showingStored = true;
   state.regions.forEach((r) => (r.warn = byId.get(r.id) ?? null));
   restyleRegions();
   avalancheLayer.redraw();
@@ -87,32 +94,58 @@ async function loadWarnings(date: string): Promise<void> {
 
   const warned = state.regions.filter((r) => r.warn && r.warn.level >= 1);
   $('season').hidden = warned.length > 0;
+  const note = storedNote(savedAt);
+  const kind = savedAt === null ? 'ok' : 'stale';
   if (warned.length) {
     const max = Math.max(...warned.map((r) => r.warn!.level));
-    setStatus(`${warned.length} regioner varslet ${fmtDate(date)} · høyeste faregrad ${max} (${DNAME[max].toLowerCase()})${tomorrowHint()}`, 'ok');
+    setStatus(`${note}${warned.length} regioner varslet ${fmtDate(date)} · høyeste faregrad ${max} (${DNAME[max].toLowerCase()})${tomorrowHint()}`, kind);
   } else {
-    setStatus(`Ingen regioner har varsel ${fmtDate(date)}.${tomorrowHint()}`, 'ok');
+    setStatus(`${note}Ingen regioner har varsel ${fmtDate(date)}.${tomorrowHint()}`, kind);
   }
+  // Tomorrow's warning is out: store it too, so it's there on the trip tomorrow without signal.
+  if (savedAt === null && tomorrowIsOut()) fetchWarnings(tomorrowIso()).catch(() => {});
 }
 
 async function loadObservations(date: string): Promise<void> {
   const el = $('obs-status');
   el.textContent = 'Henter observasjoner…';
-  const obs = await fetchObservations(date);
+  const { data: obs, savedAt } = await fetchObservations(date);
   if (state.date !== date) return;
+  if (savedAt !== null) showingStored = true;
   state.obs = obs;
   drawObservations(obs);
   update3DObs();
   const nSkred = obs.filter((o) => obsKind(o) === 'skred').length;
   const nImg = obs.reduce((n, o) => n + images(o).length, 0);
-  el.textContent = obs.length ? `${obs.length} observasjoner · ${nSkred} med skred · ${nImg} bilder` : 'Ingen snøobservasjoner i perioden.';
+  el.textContent =
+    storedNote(savedAt) +
+    (obs.length ? `${obs.length} observasjoner · ${nSkred} med skred · ${nImg} bilder` : 'Ingen snøobservasjoner i perioden.');
   renderPanels();
 }
 
-const warnFail = (e: unknown) =>
-  setStatus(`Fikk ikke kontakt med NVE sitt varsel-API (${(e as Error)?.message || 'nettverksfeil'}). Prøv igjen om litt.`, 'err');
+/** "fre. 20. nov." etc. for the dates that have a stored warning, soonest first. */
+async function storedDates(): Promise<string> {
+  const dates = (await storedKeys('warnings')).filter((d) => d >= todayIso()).sort();
+  return dates.map((d) => new Date(d + 'T12:00:00').toLocaleDateString('nb-NO', { weekday: 'short', day: 'numeric', month: 'short' })).join(', ');
+}
+
+const warnFail = async (e: unknown) => {
+  showingStored = true;
+  if (e instanceof NotStoredError && e.kind === 'warnings') {
+    const other = await storedDates();
+    setStatus(`Uten nett, og varselet for ${fmtDate(e.key)} er ikke lagret på enheten.${other ? ` Lagret: ${other.replace(/\.$/, '')}.` : ''}`, 'err');
+  } else if (e instanceof NotStoredError) {
+    setStatus('Uten nett, og varslingsregionene er ikke lagret på enheten ennå. Åpne appen med nett én gang først.', 'err');
+  } else {
+    setStatus(`Fikk ikke kontakt med NVE sitt varsel-API (${(e as Error)?.message || 'nettverksfeil'}). Prøv igjen om litt.`, 'err');
+  }
+};
 const obsFail = (e: unknown) => {
-  $('obs-status').textContent = `Fikk ikke hentet observasjoner fra Regobs (${(e as Error)?.message || 'nettverksfeil'}).`;
+  showingStored = true;
+  $('obs-status').textContent =
+    e instanceof NotStoredError
+      ? 'Uten nett, og observasjonene for denne dagen er ikke lagret på enheten.'
+      : `Fikk ikke hentet observasjoner fra Regobs (${(e as Error)?.message || 'nettverksfeil'}).`;
 };
 
 /* ---------- dates ---------- */
@@ -147,6 +180,7 @@ let followToday = false;
 let loadedAt = 0;
 function go(date: string): void {
   state.date = date;
+  showingStored = false;
   followToday = date === todayIso();
   loadedAt = Date.now();
   dateEl.value = date;
@@ -169,10 +203,12 @@ function syncClock(): boolean {
 /** Back in the foreground (phone unlocked, tab switched back): new day or stale data → fetch again. */
 function onForeground(): void {
   if (document.visibilityState !== 'visible' || !state.regions.length) return;
-  if (!syncClock() && Date.now() - loadedAt > STALE_MS) go(state.date);
+  if (!syncClock() && (showingStored || Date.now() - loadedAt > STALE_MS)) go(state.date);
 }
 document.addEventListener('visibilitychange', onForeground);
 window.addEventListener('pageshow', (e) => e.persisted && onForeground());
+// Signal is back: replace stored copies with fresh data.
+window.addEventListener('online', () => showingStored && state.regions.length && go(state.date));
 // While open and visible, notice midnight and 16:00 without waiting for a reload.
 setInterval(() => document.visibilityState === 'visible' && state.regions.length && syncClock(), 60_000);
 

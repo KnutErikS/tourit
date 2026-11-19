@@ -1,12 +1,20 @@
 import { REGOBS_API } from '../config';
 import type { RegobsObs } from '../types';
+import { type Fetched, withStored } from '../offline/dataCache';
 import { getJson, isoDate } from '../util';
 
 const PAGE = 500;
 const MAX_PAGES = 4;
 
-/** Snow observations (geo hazard 10) for the date and the two days before. */
-export async function fetchObservations(date: string): Promise<RegobsObs[]> {
+/**
+ * Snow observations (geo hazard 10) for the date and the two days before.
+ * Stored on the device; without network the stored ones come back with `savedAt`.
+ */
+export function fetchObservations(date: string): Promise<Fetched<RegobsObs[]>> {
+  return withStored('observations', date, () => searchObservations(date));
+}
+
+async function searchObservations(date: string): Promise<RegobsObs[]> {
   const from = new Date(date + 'T12:00:00');
   from.setDate(from.getDate() - 2);
   const body = {

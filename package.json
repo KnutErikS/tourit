@@ -15,7 +15,7 @@
     "@fontsource/barlow-condensed": "^5.2.0",
     "@fontsource/ibm-plex-mono": "^5.2.0",
     "leaflet": "^1.9.4",
-    "lerc": "2.0.0",
+    "lerc": "4.3.0",
     "maplibre-gl": "^6.0.0",
     "mgrs": "^2.1.0"
   },

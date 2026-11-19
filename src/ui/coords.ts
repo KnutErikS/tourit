@@ -39,7 +39,7 @@ export function clearCoord(src?: CoordSource): void {
 }
 
 /** Older copy method, for browsers/webviews where the Clipboard API is blocked. */
-function legacyCopy(text: string): boolean {
+export function legacyCopy(text: string): boolean {
   const ta = document.createElement('textarea');
   ta.value = text;
   ta.setAttribute('readonly', '');

@@ -38,7 +38,9 @@ import { initLocate } from './ui/locate';
 import { initOffline } from './ui/offlinePage';
 import { reportDemError, setStatus } from './ui/status';
 import { renderSummary } from './ui/summary';
+import { initShare } from './ui/share';
 import { $, fmtDate, isoDate } from './util';
+import { restoreView, saveView, trackView } from './viewState';
 
 /* ---------- layers ---------- */
 
@@ -115,11 +117,19 @@ const dateEl = $<HTMLInputElement>('date');
 function go(date: string): void {
   state.date = date;
   dateEl.value = date;
+  saveView();
   loadWarnings(date).catch(warnFail);
   loadObservations(date).catch(obsFail);
 }
 
 /* ---------- layer controls ---------- */
+
+// Map view, layer checkboxes and settings from the link or the last visit.
+const startDate = restoreView();
+state.thr = +$<HTMLSelectElement>('s-thr').value;
+state.aspMin = +$<HTMLSelectElement>('a-min').value;
+state.showRest = $<HTMLInputElement>('s-rest').checked;
+steepnessLayer.setOpacity(+$<HTMLInputElement>('o-bratt').value);
 
 function bindToggle(id: string, ...layers: L.Layer[]): void {
   const box = $<HTMLInputElement>(id);
@@ -258,7 +268,7 @@ registerServiceWorker();
 initOffline();
 initLocate(pickPoint);
 init3D(pickPoint);
-initCompass(resetNorth3D, '.ctl3dbar');
+initCompass(resetNorth3D, '.leaflet-top.leaflet-right > .leaflet-control');
 initCoords();
 
 /* Place search: fly there and select the place like a map tap. */
@@ -272,6 +282,7 @@ function panelInsets(): { left: number; bottom: number } {
 }
 
 initHeaderTools();
+initShare();
 initSearch((place) => {
   const ll = L.latLng(place.lat, place.lng);
   const z = Math.max(map.getZoom(), SEARCH_ZOOM);
@@ -288,8 +299,9 @@ initSearch((place) => {
 });
 
 onZoom();
-state.date = isoDate(today);
+state.date = startDate;
 dateEl.value = state.date;
+trackView(go);
 setStatus('Henter varslingsregioner…', 'busy');
 fetchRegions()
   .then((regions) => {

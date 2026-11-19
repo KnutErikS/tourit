@@ -48,13 +48,17 @@ export function setCompassBearing(b: number, rotatable: boolean): void {
 const PHONE = window.matchMedia('(max-width: 640px)');
 
 /**
- * On phones, place the compass right under `anchorSelector` (the 3D button),
- * measured from the live layout so it follows the map buttons above it.
- * On larger screens the CSS position (bottom right) is used.
+ * On phones, place the compass right under the lowest visible element matching
+ * `anchorSelector` (the map buttons on the right), measured from the live layout
+ * so it follows whatever buttons are above it. On larger screens the CSS
+ * position (bottom right) is used.
  */
 function placeCompass(anchorSelector: string): void {
   const el = $('compass');
-  const anchor = document.querySelector(anchorSelector);
+  const anchor = [...document.querySelectorAll(anchorSelector)]
+    .filter((a) => a.getBoundingClientRect().height)
+    .sort((a, b) => a.getBoundingClientRect().bottom - b.getBoundingClientRect().bottom)
+    .pop();
   if (!PHONE.matches || !anchor) {
     el.style.top = el.style.right = '';
     return;
@@ -76,4 +80,11 @@ export function initCompass(onResetNorth: () => void, anchorSelector: string): v
   requestAnimationFrame(place);
   window.addEventListener('resize', place);
   PHONE.addEventListener('change', place);
+  // Re-place when map buttons are added, removed or change size.
+  const corner = document.querySelector('.leaflet-top.leaflet-right');
+  if (corner) {
+    new MutationObserver(place).observe(corner, { childList: true });
+    const ro = new ResizeObserver(place);
+    ro.observe(corner);
+  }
 }

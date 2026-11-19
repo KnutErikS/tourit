@@ -1,6 +1,7 @@
 import { OPEN_METEO_API } from '../config';
 import { withStored, type Fetched } from '../offline/dataCache';
 import type { AirLevel, AirProfile } from '../domain/weather';
+import type { WindHour } from '../domain/wind';
 
 /*
  * Open-Meteo: the atmosphere above the point, which MET's point forecast doesn't
@@ -58,5 +59,49 @@ export async function fetchAirProfile(lat: number, lon: number): Promise<Fetched
     const data = fromOpenMeteo((await res.json()) as OmResponse);
     memory.set(key, { data, expires: Date.now() + TTL_MS });
     return data;
+  });
+}
+
+/* ---------- wind history, for wind-loaded slopes ---------- */
+
+/** The forecast API keeps about three months of past hours; older dates go to the archive of past forecasts. */
+const OPEN_METEO_HISTORY_API = 'https://historical-forecast-api.open-meteo.com/v1';
+const RECENT_DAYS = 80;
+const DAY = 86_400_000;
+
+interface OmPoint {
+  hourly: { time: number[]; wind_speed_850hPa: (number | null)[]; wind_direction_850hPa: (number | null)[] };
+}
+
+export interface WindPoint {
+  lat: number;
+  lon: number;
+}
+
+/** UTC date, YYYY-MM-DD (Open-Meteo's start/end dates are in GMT unless a timezone is given). */
+const utcDate = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+
+/**
+ * Hourly 850 hPa wind for many points in one request, from `start` to `end` (ms).
+ * `key` names the stored copy (one per warning date), for use without network.
+ */
+export async function fetchWindHistory(points: WindPoint[], start: number, end: number, key: string): Promise<Fetched<WindHour[][]>> {
+  return withStored('wind', key, async () => {
+    const api = start < Date.now() - RECENT_DAYS * DAY ? OPEN_METEO_HISTORY_API : OPEN_METEO_API;
+    const url =
+      `${api}/forecast?latitude=${points.map((p) => p.lat.toFixed(2)).join(',')}` +
+      `&longitude=${points.map((p) => p.lon.toFixed(2)).join(',')}` +
+      `&hourly=wind_speed_850hPa,wind_direction_850hPa&models=${MODEL}&wind_speed_unit=ms&timeformat=unixtime` +
+      `&start_date=${utcDate(start)}&end_date=${utcDate(end)}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const raw = (await res.json()) as OmPoint | OmPoint[];
+    // One point gives an object, several give an array.
+    return (Array.isArray(raw) ? raw : [raw]).map(({ hourly: h }) =>
+      h.time.flatMap((t, i) => {
+        const speed = h.wind_speed_850hPa[i], from = h.wind_direction_850hPa[i];
+        return speed == null || from == null ? [] : [{ time: t * 1000, speed, from }];
+      }),
+    );
   });
 }

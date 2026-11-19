@@ -20,7 +20,8 @@ const HOSTS = {
   awsTerrain: 'https://s3.amazonaws.com', // 3D terrain tiles
   stedsnavn: 'https://ws.geonorge.no', // place-name search (Kartverket)
   met: 'https://api.met.no', // point weather forecast (yr's data)
-  openMeteo: 'https://api.open-meteo.com', // cloud heights + freezing level
+  openMeteo: 'https://api.open-meteo.com', // cloud heights + freezing level, recent wind
+  openMeteoHistory: 'https://historical-forecast-api.open-meteo.com', // wind before older warning dates
 };
 
 function csp(): Plugin {

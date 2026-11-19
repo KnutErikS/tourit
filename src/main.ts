@@ -14,7 +14,8 @@ import * as L from 'leaflet';
 import { fetchRegions, fetchWarnings } from './api/nve';
 import { fetchObservations } from './api/regobs';
 import { fetchPointWeather } from './api/met';
-import { fetchAirProfile } from './api/openMeteo';
+import { fetchAirProfile, fetchWindHistory } from './api/openMeteo';
+import { LOOKBACK_H, windLoading, windowEnd } from './domain/wind';
 import { withProfile } from './domain/weather';
 import { ASP_RGB, ASPECT_MIN_ZOOM, DEMO, DIRS, DNAME, SKRED_MIN_ZOOM } from './config';
 import { images, obsKind } from './domain/observations';
@@ -111,6 +112,34 @@ async function loadWarnings(date: string): Promise<void> {
   if (savedAt === null && tomorrowIsOut()) fetchWarnings(tomorrowIso()).catch(() => {});
 }
 
+/**
+ * Wind over the 72 hours before the warning date, one point per region (the
+ * middle of its bounds; the 850 hPa wind varies slowly), turned into lee
+ * aspects for the hatch in the aspect and avalanche layers.
+ */
+async function loadWind(date: string): Promise<void> {
+  const regions = state.regions;
+  if (!regions.length) return;
+  const end = windowEnd(date), start = end - LOOKBACK_H * 3_600_000;
+  const points = regions.map((r) => {
+    const c = r.bounds.getCenter();
+    return { lat: c.lat, lon: c.lng };
+  });
+  const { data, savedAt } = await fetchWindHistory(points, start, end, date);
+  if (state.date !== date || state.regions !== regions) return;
+  if (savedAt !== null) showingStored = true;
+  regions.forEach((r, i) => (r.wind = data.length === regions.length ? windLoading(data[i], end) : null));
+  redrawLee();
+}
+const windFail = () => state.regions.forEach((r) => (r.wind = null));
+
+function redrawLee(): void {
+  aspectLayer.redraw();
+  avalancheLayer.redraw();
+  update3D();
+  renderPanels();
+}
+
 async function loadObservations(date: string): Promise<void> {
   const el = $('obs-status');
   el.textContent = 'Henter observasjoner…';
@@ -193,6 +222,8 @@ function go(date: string): void {
   suggestTomorrow();
   loadWarnings(date).catch(warnFail);
   loadObservations(date).catch(obsFail);
+  state.regions.forEach((r) => (r.wind = undefined));
+  loadWind(date).catch(windFail);
   // Weather follows the date shown, and gets refreshed along with the warning.
   if (state.picked && state.picked.terrain !== undefined) void loadWeather(state.picked);
 }
@@ -226,6 +257,7 @@ const startDate = restoreView();
 state.thr = +$<HTMLSelectElement>('s-thr').value;
 state.aspMin = +$<HTMLSelectElement>('a-min').value;
 state.showRest = $<HTMLInputElement>('s-rest').checked;
+state.showLee = $<HTMLInputElement>('s-lee').checked;
 steepnessLayer.setOpacity(+$<HTMLInputElement>('o-bratt').value);
 
 function bindToggle(id: string, ...layers: L.Layer[]): void {
@@ -253,6 +285,15 @@ $<HTMLInputElement>('s-rest').addEventListener('change', (e) => {
   state.showRest = (e.target as HTMLInputElement).checked;
   avalancheLayer.redraw();
 });
+
+// One setting, shown under both layers it affects.
+for (const id of ['s-lee', 'a-lee']) {
+  $<HTMLInputElement>(id).addEventListener('change', (e) => {
+    state.showLee = (e.target as HTMLInputElement).checked;
+    $<HTMLInputElement>('s-lee').checked = $<HTMLInputElement>('a-lee').checked = state.showLee;
+    redrawLee();
+  });
+}
 
 /* ---------- legends ---------- */
 
@@ -432,6 +473,7 @@ fetchRegions()
     state.regions = regions;
     drawRegions(regions);
     loadObservations(state.date).catch(obsFail);
+    loadWind(state.date).catch(windFail);
     return loadWarnings(state.date);
   })
   .catch(warnFail);

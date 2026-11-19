@@ -19,4 +19,6 @@ export const state = {
   showRest: true,
   /** Aspect layer: only colour slopes at least this steep. */
   aspMin: 25,
+  /** Aspect + avalanche layers: hatch lee slopes of the last days' wind. */
+  showLee: true,
 };

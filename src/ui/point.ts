@@ -3,7 +3,7 @@ import { pointVerdict } from '../domain/problems';
 import { toMgrs } from '../domain/mgrs';
 import { state } from '../state';
 import { esc } from '../util';
-import type { Problem } from '../types';
+import type { Problem, Region } from '../types';
 
 /** Terrain facts for the picked point as `<b>`/`<span>` items: "1180 moh. · 34° · NØ-vendt" (or a status while loading). */
 export function pointFacts(): string {
@@ -38,4 +38,19 @@ export function pointHitCount(problems: Problem[]): number | null {
   const t = state.picked?.terrain;
   if (!t) return null;
   return problems.filter((p) => pointVerdict(p, t, state.thr).hit).length;
+}
+
+/** Compass name of a direction in degrees ("SV"). */
+export const dirName = (deg: number) => DIRS[Math.round(deg / 45) % 8];
+
+/** "Vind siste tre døgn: fra SV, opptil 18 m/s · lesider NØ, Ø · punktet ligger i le" for a region, or ''. */
+export function windLine(r: Region): string {
+  const w = r.wind;
+  if (!w) return '';
+  const lee = DIRS.filter((_, k) => w.lee[k]);
+  const head = `Vind siste tre døgn: <b>fra ${dirName(w.from)}</b>, opptil ${Math.round(w.max)} m/s`;
+  if (!lee.length) return `<div class="rsub">${head} · lite vindtransport</div>`;
+  const t = state.picked?.terrain;
+  const here = t ? (w.lee[t.sector] ? ' · <b>punktet ligger i le</b>' : ' · punktet ligger ikke i le') : '';
+  return `<div class="rsub">${head} · ${w.strong ? 'mye vindtransport, ' : ''}lesider <b>${lee.join(', ')}</b>${here}</div>`;
 }

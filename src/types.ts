@@ -1,5 +1,6 @@
 import type { Fetched } from './offline/dataCache';
 import type { PointWeather } from './domain/weather';
+import type { WindLoading } from './domain/wind';
 import type * as L from 'leaflet';
 
 /* ---------- NVE avalanche warning API (only the fields we use) ---------- */
@@ -85,6 +86,8 @@ export interface Region {
   rings: LatLngTuple[][];
   bounds: L.LatLngBounds;
   warn: Warning | null;
+  /** Lee aspects from the wind before the warning date; undefined until loaded, null if no data. */
+  wind?: WindLoading | null;
   poly?: L.Polygon;
 }
 

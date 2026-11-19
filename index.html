@@ -72,6 +72,8 @@
         <select id="s-thr"><option value="27">27°</option><option value="30" selected>30°</option><option value="35">35°</option></select>
         <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="s-rest" checked> Vis øvrig bratt terreng svakt</label>
       </div>
+      <div class="ctrl"><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="s-lee" checked> Skraver lesider (vind siste tre døgn)</label><i class="lee-sw" aria-hidden="true"></i></div>
+      <p class="desc">Skravur: bratte heng i le for vinden de siste tre døgnene (vind i fjellhøyde, ca. 1500 moh.). Tett skravur betyr mye vindtransport. Grov tommelfingerregel – den vet ikke om det var løs snø å flytte.</p>
     </section>
 
     <section class="layer">
@@ -94,6 +96,7 @@
         <span>Bare der helningen er minst</span>
         <select id="a-min"><option value="5">5°</option><option value="15">15°</option><option value="25" selected>25°</option><option value="30">30°</option></select>
       </div>
+      <div class="ctrl"><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="a-lee" checked> Skraver lesider (vind siste tre døgn)</label><i class="lee-sw" aria-hidden="true"></i></div>
       <div class="rose-legend"><span id="asp-rose"></span><div class="legend" id="asp-legend"></div></div>
     </section>
 

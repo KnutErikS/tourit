@@ -6,7 +6,7 @@ import type { NveWarningRaw } from '../types';
 import { $, esc, fmtDate, fmtTime, txt } from '../util';
 import { heightSVG, problemIcon, roseSVG } from './icons';
 import { obsListHTML, wireObsList } from './obsHtml';
-import { pointHit, pointLine } from './point';
+import { pointHit, pointLine, windLine } from './point';
 
 const EMPTY_HINT =
   '<p class="empty">Trykk på et sted i kartet. Du får varselet for regionen stedet ligger i, og ser om akkurat det punktet er utsatt for skredproblemene.</p>';
@@ -51,6 +51,7 @@ export function renderDetail(onOpenObs: (regId: number) => void): void {
       W.PublishTime && lvl ? `<br>Publisert ${esc(fmtTime(W.PublishTime))}${W.Author ? ' av ' + esc(W.Author) : ''}` : ''
     }</div></div></div>`;
   html += pointLine();
+  html += windLine(r);
   if (txt(W.MainText)) html += `<p class="maintext">${esc(W.MainText)}</p>`;
   if (txt(W.EmergencyWarning)) html += `<div class="alert"><b>Varsel om naturlig utløste skred.</b> ${esc(W.EmergencyWarning)}</div>`;
   if (txt(W.AvalancheDanger)) html += `<p class="wtext">${esc(W.AvalancheDanger)}</p>`;

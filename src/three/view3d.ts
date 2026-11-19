@@ -54,7 +54,7 @@ async function overlayTile(params: ML.RequestParameters, abort: AbortController)
   if (abort.signal.aborted) throw new DOMException('Aborted', 'AbortError');
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = 256;
-  if (kind === 'aspect') drawAspect(canvas, an);
+  if (kind === 'aspect') drawAspect(canvas, an, { x, y, z });
   else drawAvalancheTerrain(canvas, an, { x, y, z });
   const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, 'image/png'));
   if (!blob) throw new Error('Kunne ikke tegne flis');

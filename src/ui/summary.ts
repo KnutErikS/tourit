@@ -2,7 +2,7 @@ import { DANGER, DNAME } from '../config';
 import { images, obsKind, regionObs } from '../domain/observations';
 import { state } from '../state';
 import { $, esc, txt } from '../util';
-import { pointHitCount, pointLine } from './point';
+import { pointHitCount, pointLine, windLine } from './point';
 
 /** The short summary at the bottom of the "Kartlag" tab. */
 export function renderSummary(onOpenWarning: () => void): void {
@@ -32,6 +32,7 @@ export function renderSummary(onOpenWarning: () => void): void {
         ? `<div class="rsub">${hits ? `<b>${hits}</b> av ${nProb} skredproblemer gjelder punktet du valgte.` : 'Ingen av skredproblemene gjelder punktet du valgte.'}</div>`
         : ''
     }
+    ${state.showLee ? windLine(r) : ''}
     ${ro.length ? `<div class="rsub">${ro.length} observasjoner i regionen siste tre døgn · ${nSkred} med skred · ${nImg} bilder</div>` : ''}
     ${lvl || ro.length ? '<div><button class="btn primary" id="open-warn">Les hele varselet</button></div>' : ''}`;
 

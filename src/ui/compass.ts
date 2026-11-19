@@ -45,9 +45,35 @@ export function setCompassBearing(b: number, rotatable: boolean): void {
   update();
 }
 
-export function initCompass(onResetNorth: () => void): void {
+const PHONE = window.matchMedia('(max-width: 640px)');
+
+/**
+ * On phones, place the compass right under `anchorSelector` (the 3D button),
+ * measured from the live layout so it follows the map buttons above it.
+ * On larger screens the CSS position (bottom right) is used.
+ */
+function placeCompass(anchorSelector: string): void {
+  const el = $('compass');
+  const anchor = document.querySelector(anchorSelector);
+  if (!PHONE.matches || !anchor) {
+    el.style.top = el.style.right = '';
+    return;
+  }
+  const r = anchor.getBoundingClientRect();
+  if (!r.height) return; // not laid out yet
+  const gap = 10;
+  el.style.top = `${Math.round(r.bottom + gap)}px`;
+  // Centre the compass under the button.
+  el.style.right = `${Math.round(window.innerWidth - (r.left + r.right) / 2 - el.offsetWidth / 2)}px`;
+}
+
+export function initCompass(onResetNorth: () => void, anchorSelector: string): void {
   const el = $('compass');
   el.innerHTML = SVG;
   el.addEventListener('click', () => onResetNorth());
   update();
+  const place = () => placeCompass(anchorSelector);
+  requestAnimationFrame(place);
+  window.addEventListener('resize', place);
+  PHONE.addEventListener('change', place);
 }

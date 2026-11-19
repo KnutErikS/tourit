@@ -3,6 +3,7 @@ import { DANGER, DNAME } from '../config';
 import { map } from '../map';
 import { state } from '../state';
 import type { Region } from '../types';
+import { esc } from '../util';
 
 /** Forecast region polygons, filled by danger level. */
 export const regionGroup = L.layerGroup();
@@ -28,7 +29,7 @@ export function drawRegions(regions: Region[]): void {
   for (const r of regions) {
     r.poly = L.polygon(r.rings, regionStyle(r)).addTo(regionGroup);
     r.poly.bindTooltip(
-      () => `${r.name} · ${r.warn ? r.warn.level + ' ' + DNAME[r.warn.level] : 'ikke vurdert'}`,
+      () => `${esc(r.name)} · ${r.warn ? r.warn.level + ' ' + DNAME[r.warn.level] : 'ikke vurdert'}`,
       { sticky: true },
     );
   }

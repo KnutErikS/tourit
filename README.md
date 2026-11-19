@@ -108,6 +108,14 @@ Data flow: `main.ts` → `api/*` fetches → results stored in `state` → `laye
 
 - **MapLibre's worker** is imported with Vite's `?url` and set with `setWorkerUrl` (see `src/three/view3d.ts`). MapLibre normally finds the worker relative to its own file, which Vite's dep pre-bundling and build don't follow; without this the 3D map shows terrain but no regions and never finishes loading. In dev, `window.__map3d` gives the MapLibre map in the console.
 
+## Security
+
+- **Content Security Policy** is injected as a `<meta>` tag by a small plugin in `vite.config.ts` (GitHub Pages can't set headers). It only allows the app's own scripts and the listed data hosts. **New data source → add its host to `HOSTS` in `vite.config.ts`**, or the browser blocks it.
+- **API data is untrusted.** Text from NVE/Regobs goes through `esc()` and URLs through `safeUrl()` (https only) in `src/util.ts` before it's put into HTML. Keep doing that for anything new.
+- **Fonts are bundled** (`@fontsource/*`), so there are no third-party requests besides the data services.
+- **Shared origin:** every GitHub Pages project site on the same account shares the origin `<user>.github.io` (storage, cache, service worker scope). Only host trusted code there, or give the app its own domain.
+- **Dependabot:** `mv docs/dependabot.yml .github/dependabot.yml` and turn on Dependabot alerts in the repo settings.
+
 ## Data and attribution
 
 Snøskredvarsler and bratthet © NVE / varsom.no · Terrengmodell and basemap © Kartverket · Observations © Regobs (NVE) and the individual observers.

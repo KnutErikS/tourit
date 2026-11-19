@@ -92,7 +92,8 @@ function clearPreview(): void {
 
 function areaMeta(a: SavedArea): string {
   const layers = ['kart', a.bratt && 'bratthet', a.terrain && 'terreng'].filter(Boolean).join(' · ');
-  return `${fmtDay(a.createdAt)} · zoom til ${a.maxZoom} · ${layers}`;
+  // Stored in localStorage, which other sites on the same origin could touch: keep it to numbers/escaped text.
+  return `${esc(fmtDay(a.createdAt))} · zoom til ${Math.round(Number(a.maxZoom)) || '?'} · ${layers}`;
 }
 
 function areaHTML(a: SavedArea): string {

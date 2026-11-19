@@ -1,6 +1,6 @@
 import { KIND_LABEL, images, obsKind } from '../domain/observations';
 import type { RegobsObs } from '../types';
-import { esc } from '../util';
+import { esc, safeUrl } from '../util';
 
 export const obsTime = (o: RegobsObs): string =>
   new Date(o.DtObsTime).toLocaleString('nb-NO', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
@@ -29,15 +29,19 @@ export function obsSummary(o: RegobsObs, max = 99): string {
 }
 
 export function thumbsHTML(o: RegobsObs, n = 6): string {
-  const imgs = images(o).slice(0, n);
+  // Only images with https: URLs (data comes from Regobs users via the API).
+  const imgs = images(o)
+    .map((a) => {
+      const f = a.UrlFormats ?? {};
+      return { a, big: safeUrl(f.Large || f.Original || a.Url), th: safeUrl(f.Thumbnail || f.Medium || a.Url) };
+    })
+    .filter((x) => x.big && x.th)
+    .slice(0, n);
   if (!imgs.length) return '';
   return (
     `<div class="thumbs">` +
     imgs
-      .map((a) => {
-        const f = a.UrlFormats ?? {};
-        const big = f.Large || f.Original || a.Url;
-        const th = f.Thumbnail || f.Medium || a.Url;
+      .map(({ a, big, th }) => {
         const cap = [a.RegistrationName, a.Comment, a.Photographer && '© ' + a.Photographer].filter(Boolean).join(' · ');
         return `<a href="${esc(big)}" target="_blank" rel="noopener" title="${esc(cap)}"><img src="${esc(th)}" alt="${esc(cap || 'Bilde fra Regobs')}" loading="lazy"></a>`;
       })
@@ -53,13 +57,13 @@ export function obsHead(o: RegobsObs): string {
     ? (o.Observer.NickName ?? '') +
       (o.Observer.CompetenceLevelName ? ` (${o.Observer.CompetenceLevelName.replace(/\s*\(.*\)/, '')})` : '')
     : '';
-  return `<div class="ob-h"><span><b>${esc(obsTime(o))}</b>${place ? ' · ' + esc(place) : ''}${loc.Height ? ' · ' + loc.Height + ' moh.' : ''}</span><span class="ob-tag ${k}">${KIND_LABEL[k]}</span></div>
+  return `<div class="ob-h"><span><b>${esc(obsTime(o))}</b>${place ? ' · ' + esc(place) : ''}${Number.isFinite(Number(loc.Height)) && loc.Height ? ' · ' + Math.round(Number(loc.Height)) + ' moh.' : ''}</span><span class="ob-tag ${k}">${KIND_LABEL[k]}</span></div>
     ${who ? `<div class="ob-h"><span>${esc(who)}</span></div>` : ''}`;
 }
 
 export function popupHTML(o: RegobsObs): string {
   return `${obsHead(o)}<div class="ob-sum" style="margin:6px 0">${obsSummary(o, 8)}</div>${thumbsHTML(o, 8)}
-    <div style="margin-top:6px"><a class="pop-link" href="https://www.regobs.no/registration/${o.RegId}" target="_blank" rel="noopener">Åpne i Regobs ↗</a></div>`;
+    <div style="margin-top:6px"><a class="pop-link" href="https://www.regobs.no/registration/${encodeURIComponent(String(o.RegId))}" target="_blank" rel="noopener">Åpne i Regobs ↗</a></div>`;
 }
 
 const LIST_MAX = 25;
@@ -70,7 +74,7 @@ export function obsListHTML(list: RegobsObs[]): string {
     `<div class="obslist">` +
     list
       .slice(0, LIST_MAX)
-      .map((o) => `<div class="ob" tabindex="0" data-regid="${o.RegId}">${obsHead(o)}<div class="ob-sum">${obsSummary(o, 3)}</div>${thumbsHTML(o, 6)}</div>`)
+      .map((o) => `<div class="ob" tabindex="0" data-regid="${esc(o.RegId)}">${obsHead(o)}<div class="ob-sum">${obsSummary(o, 3)}</div>${thumbsHTML(o, 6)}</div>`)
       .join('') +
     (list.length > LIST_MAX ? `<p class="empty">Viser ${LIST_MAX} av ${list.length}. Resten ligger som prikker i kartet.</p>` : '') +
     `</div>`

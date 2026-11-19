@@ -30,7 +30,8 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:14
   background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);
   display:flex;flex-direction:column;overflow:hidden}
 #panel header{padding:14px 16px 10px;border-bottom:1px solid var(--line);display:grid;gap:10px}
-.brand{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.brand{display:flex;align-items:center;gap:10px}
+.brand h1{flex:1}
 h1{font-family:var(--f-display);font-weight:700;font-size:24px;letter-spacing:.01em;margin:0;line-height:1}
 .brand small{font-family:var(--f-mono);font-size:11px;color:var(--muted)}
 .daterow{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
@@ -103,7 +104,6 @@ details.ws > div{display:grid;gap:8px;padding-top:8px}
 .empty{font-size:12.5px;color:var(--muted)}
 .foot{font-size:11px;color:var(--muted);line-height:1.5}
 .foot a{color:var(--accent)}
-#toggle{display:none}
 .tabs{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--line);border-radius:7px;overflow:hidden}
 .tabs button{border:0;background:var(--panel);color:var(--muted);padding:7px 8px;font-family:var(--f-display);font-size:15px;font-weight:600;letter-spacing:.03em}
 .tabs button+button{border-left:1px solid var(--line)}
@@ -142,11 +142,15 @@ details.ws > div{display:grid;gap:8px;padding-top:8px}
 #hint{position:absolute;z-index:999;right:calc(12px + env(safe-area-inset-right,0px));bottom:calc(28px + env(safe-area-inset-bottom,0px));
   background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:12px;box-shadow:var(--shadow);font-family:var(--f-mono)}
 @media (max-width:640px){
+  /* Bottom sheet (see ui/sheet.ts): 55 % by default, fullscreen when dragged up. */
   #panel{left:env(safe-area-inset-left,0px);right:env(safe-area-inset-right,0px);top:auto;bottom:0;width:auto;border-radius:12px 12px 0 0;
-    max-height:55%;padding-bottom:env(safe-area-inset-bottom,0px)}
-  #panel.collapsed .scroll{display:none}
-  #toggle{display:inline-block}
-  #hint{bottom:auto;top:calc(10px + env(safe-area-inset-top,0px))}
+    height:55%;max-height:none;padding-bottom:env(safe-area-inset-bottom,0px);transition:height .22s cubic-bezier(.2,.8,.2,1)}
+  #panel.sheet-full{height:calc(100% - env(safe-area-inset-top,0px) - 8px)}
+  #panel.sheet-dragging{transition:none}
+  #panel header{touch-action:none;padding-top:6px}
+  #panel .scroll{flex:1;min-height:0}
+  /* Top-left, so it doesn't cover the zoom buttons on the right. */
+  #hint{bottom:auto;top:calc(10px + env(safe-area-inset-top,0px));right:auto;left:calc(10px + env(safe-area-inset-left,0px))}
 }
 /* ---------- Lagrede områder ---------- */
 .btn:disabled{opacity:.5;cursor:default}
@@ -191,6 +195,29 @@ details.ws > div{display:grid;gap:8px;padding-top:8px}
   box-shadow:0 0 0 1px rgba(0,0,0,.25),0 1px 5px rgba(0,0,0,.35);position:relative;cursor:pointer}
 .me::after{content:"";position:absolute;inset:-3px;border-radius:50%;border:2px solid #2a7de1;animation:mepulse 2s ease-out infinite}
 @keyframes mepulse{from{transform:scale(1);opacity:.8}to{transform:scale(2.6);opacity:0}}
+/* ---------- Grab bar for the bottom sheet (phones only) ---------- */
+#grabber{display:none;justify-self:center;width:64px;height:20px;margin:-2px 0 -6px;padding:0;border:0;background:none;cursor:grab}
+#grabber::before{content:"";display:block;width:40px;height:5px;margin:0 auto;border-radius:99px;background:var(--line)}
+#grabber:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+@media (max-width:640px){#grabber{display:block}}
+/* ---------- Burger (skjul/vis panelet) ---------- */
+.burger-in,#burger{padding:0;border:1px solid var(--line);color:var(--fg);display:grid;place-items:center;cursor:pointer;flex:none}
+.burger-in svg,#burger svg{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.burger-in:hover,#burger:hover{border-color:var(--accent)}
+.burger-in:focus-visible,#burger:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+/* In the panel header, in front of the title. */
+.burger-in{width:36px;height:36px;border-radius:8px;background:var(--chip)}
+.burger-in svg{width:20px;height:20px}
+/* Floating, while the panel is hidden: top-left on PC … */
+#burger{position:absolute;z-index:1001;top:calc(12px + env(safe-area-inset-top,0px));left:calc(12px + env(safe-area-inset-left,0px));
+  width:48px;height:48px;border-radius:12px;background:var(--panel);box-shadow:var(--shadow)}
+#burger svg{width:24px;height:24px}
+/* … and bottom-left on phones, within reach of the thumb. */
+@media (max-width:640px){
+  #burger{top:auto;bottom:calc(16px + env(safe-area-inset-bottom,0px));left:calc(16px + env(safe-area-inset-left,0px));width:56px;height:56px;border-radius:16px}
+  #burger svg{width:26px;height:26px}
+  .burger-in{width:40px;height:40px}
+}
 /* ---------- Kompass ---------- */
 #compass{position:absolute;z-index:999;right:calc(12px + env(safe-area-inset-right,0px));bottom:calc(72px + env(safe-area-inset-bottom,0px));
   width:52px;height:52px;padding:0;border-radius:50%;border:1px solid var(--line);background:var(--panel);box-shadow:var(--shadow);
@@ -206,7 +233,8 @@ details.ws > div{display:grid;gap:8px;padding-top:8px}
 #compass .hub{fill:var(--panel);stroke:var(--fg);stroke-width:1}
 #compass .n{font:700 7px var(--f-mono);fill:#fff}
 /* Mobile: right edge, just above the bottom-sheet panel (max 55 % high). */
-@media (max-width:640px){#compass{right:calc(10px + env(safe-area-inset-right,0px));bottom:calc(55% + 12px)}}
+/* Phones: right under the 3D button. compass.ts sets top/right from the button's position; this is the fallback. */
+@media (max-width:640px){#compass{width:44px;height:44px;bottom:auto;top:calc(270px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px))}#compass svg{width:40px;height:40px}}
 /* ---------- 3D ---------- */
 #map3d{position:absolute;inset:0;z-index:1;background:#e9edf1}
 body.is3d #hint{display:none}

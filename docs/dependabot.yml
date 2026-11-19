@@ -1,0 +1,19 @@
+# Dependabot: weekly pull requests for outdated or vulnerable dependencies.
+# Move into place (remote tools can't write to .github/):
+#   mv docs/dependabot.yml .github/dependabot.yml
+# Also turn on "Dependabot alerts" under Settings → Code security.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      # One PR for all minor/patch updates instead of one per package.
+      minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

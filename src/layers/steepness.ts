@@ -21,7 +21,10 @@ export async function renderSteepnessLegend(el: HTMLElement): Promise<void> {
   try {
     const r = await fetch(`${BRATT_URL}/legend?f=json`);
     const j = (await r.json()) as ArcgisLegend;
-    const items = j.layers?.[0]?.legend ?? [];
+    // Validate before building data: URLs from the response.
+    const items = (j.layers?.[0]?.legend ?? []).filter(
+      (it) => /^image\/(png|jpeg|gif)$/.test(it.contentType) && /^[A-Za-z0-9+/=]+$/.test(it.imageData),
+    );
     if (!items.length) throw new Error('empty legend');
     el.innerHTML = items
       .map((it) => `<span><img alt="" src="data:${it.contentType};base64,${it.imageData}">${esc(it.label)}</span>`)

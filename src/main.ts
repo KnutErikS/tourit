@@ -1,3 +1,12 @@
+// Fonts are bundled with the app (no Google Fonts: no third-party request, works offline).
+import '@fontsource/barlow/400.css';
+import '@fontsource/barlow/500.css';
+import '@fontsource/barlow/600.css';
+import '@fontsource/barlow-condensed/500.css';
+import '@fontsource/barlow-condensed/600.css';
+import '@fontsource/barlow-condensed/700.css';
+import '@fontsource/ibm-plex-mono/400.css';
+import '@fontsource/ibm-plex-mono/500.css';
 import 'leaflet/dist/leaflet.css';
 import './styles/app.css';
 
@@ -21,6 +30,7 @@ import { renderDetail } from './ui/detail';
 import { roseSVG } from './ui/icons';
 import { focusObs3D, init3D, is3DOpen, resetNorth3D, setPick3D, update3D, update3DObs } from './three/view3d';
 import { initCompass } from './ui/compass';
+import { initSheet, resetSheet } from './ui/sheet';
 import { initLocate } from './ui/locate';
 import { initOffline } from './ui/offlinePage';
 import { reportDemError, setStatus } from './ui/status';
@@ -177,16 +187,37 @@ function setTab(t: Tab): void {
 $('tab-btn-layers').addEventListener('click', () => setTab('layers'));
 $('tab-btn-warn').addEventListener('click', () => setTab('warn'));
 
-function expandPanel(): void {
-  $('panel').classList.remove('collapsed');
-  $('toggle').textContent = 'Skjul';
-  $('toggle').setAttribute('aria-expanded', 'true');
+/*
+ * Burger: hides/shows the whole side panel (remembered between visits).
+ * Panel open → the burger sits first in the panel header (#burger-in).
+ * Panel hidden → a floating burger (#burger): top-left on PC, bottom-left on phones.
+ */
+const PANEL_HIDDEN_KEY = 'tourit.panelHidden';
+function setPanelHidden(hidden: boolean): void {
+  $('panel').hidden = hidden;
+  $('burger').hidden = !hidden;
+  if (hidden) resetSheet(); // reopen at the normal size
+  document.body.classList.toggle('panel-hidden', hidden);
+  try {
+    localStorage.setItem(PANEL_HIDDEN_KEY, hidden ? '1' : '0');
+  } catch {
+    /* storage unavailable: just don't remember */
+  }
+  // Keep keyboard focus on the visible burger.
+  if (document.activeElement?.closest('#burger, #burger-in')) $(hidden ? 'burger' : 'burger-in').focus();
 }
-$('toggle').addEventListener('click', () => {
-  const collapsed = $('panel').classList.toggle('collapsed');
-  $('toggle').textContent = collapsed ? 'Vis' : 'Skjul';
-  $('toggle').setAttribute('aria-expanded', String(!collapsed));
-});
+$('burger').addEventListener('click', () => setPanelHidden(false));
+$('burger-in').addEventListener('click', () => setPanelHidden(true));
+initSheet(() => setPanelHidden(true));
+try {
+  if (localStorage.getItem(PANEL_HIDDEN_KEY) === '1') setPanelHidden(true);
+} catch {
+  /* ignore */
+}
+
+function expandPanel(): void {
+  if ($('panel').hidden) setPanelHidden(false);
+}
 
 /* ---------- picking a point ---------- */
 
@@ -223,7 +254,7 @@ registerServiceWorker();
 initOffline();
 initLocate(pickPoint);
 init3D(pickPoint);
-initCompass(resetNorth3D);
+initCompass(resetNorth3D, '.ctl3dbar');
 
 onZoom();
 state.date = isoDate(today);

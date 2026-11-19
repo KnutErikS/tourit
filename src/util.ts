@@ -8,6 +8,19 @@ export const $ = <T extends HTMLElement = HTMLElement>(id: string): T => {
 export const esc = (s: unknown): string =>
   String(s ?? '').replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]!);
 
+/**
+ * Only allow https: URLs from API data in href/src (blocks javascript:, data: etc.).
+ * Returns '' for anything else, so callers can skip the element.
+ */
+export const safeUrl = (u: unknown): string => {
+  try {
+    const url = new URL(String(u ?? ''));
+    return url.protocol === 'https:' ? url.href : '';
+  } catch {
+    return '';
+  }
+};
+
 /** Trimmed text, or '' for empty / NVE's "Ikke gitt" placeholder. */
 export const txt = (s: unknown): string => {
   const t = String(s ?? '').trim();

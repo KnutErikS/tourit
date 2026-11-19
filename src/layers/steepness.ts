@@ -16,6 +16,20 @@ interface ArcgisLegend {
   layers?: { legend?: { label: string; contentType: string; imageData: string }[] }[];
 }
 
+/**
+ * NVE labels its classes "1"–"7"; show the slope range instead. Class 1 (under 27°)
+ * is transparent on the map, so it is left out of the legend. Ranges as on varsom.no.
+ */
+const CLASS_DEGREES: Record<string, string | null> = {
+  '1': null,
+  '2': '27–30°',
+  '3': '30–35°',
+  '4': '35–40°',
+  '5': '40–45°',
+  '6': '45–50°',
+  '7': '50°+',
+};
+
 /** Fetch the legend straight from NVE's MapServer and render it into `el`. */
 export async function renderSteepnessLegend(el: HTMLElement): Promise<void> {
   try {
@@ -27,7 +41,11 @@ export async function renderSteepnessLegend(el: HTMLElement): Promise<void> {
     );
     if (!items.length) throw new Error('empty legend');
     el.innerHTML = items
-      .map((it) => `<span><img alt="" src="data:${it.contentType};base64,${it.imageData}">${esc(it.label)}</span>`)
+      .filter((it) => CLASS_DEGREES[it.label] !== null)
+      .map((it) => {
+        const label = CLASS_DEGREES[it.label] ?? it.label; // unknown class: keep NVE's own label
+        return `<span><img alt="" src="data:${it.contentType};base64,${it.imageData}">${esc(label)}</span>`;
+      })
       .join('');
   } catch {
     el.innerHTML = '<span class="empty">27° til over 45°, i trinn som på varsom.no.</span>';

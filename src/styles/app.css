@@ -288,6 +288,8 @@ body.panel-hidden #coord{left:calc(72px + env(safe-area-inset-left,0px))}
   .brand small{display:none} /* sources are credited in the footer and the map attribution */
   #panel header{gap:8px;padding-bottom:8px}
   #panel:not(.show-search) #search-row,#panel:not(.show-date) #date-row{display:none}
+  /* Half-open sheet: slimmer layer rows; the descriptions come back when the sheet is fully open. */
+  #panel:not(.sheet-full) section.layer p.desc{display:none}
 }
 /* ---------- Kompass ---------- */
 #compass{position:absolute;z-index:999;right:calc(12px + env(safe-area-inset-right,0px));bottom:calc(72px + env(safe-area-inset-bottom,0px));

@@ -18,12 +18,20 @@ body{margin:0}[hidden]{display:none!important}
   --bg:#0c1117; --panel:#121a23; --fg:#e6edf3; --muted:#93a1b0; --line:#253241;
   --accent:#6aa5e8; --accent-ink:#06121f; --chip:#1a2531; --d5:#e9e1df; --shadow:0 8px 28px rgba(0,0,0,.5); --icon-filter:invert(1) hue-rotate(180deg); color-scheme:dark}
 html,body{height:100%}
+/* iPhone Home Screen app (black-translucent status bar): iOS makes 100 % shorter by the
+   status-bar height, leaving a black band at the bottom. Add the top inset back. */
+@media (display-mode:standalone){html,body{height:calc(100% + env(safe-area-inset-top,0px))}}
 body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:14px;overflow:hidden}
 /* The basemap tiles are partly transparent and designed for a light backdrop,
    so the map background stays light in both themes (only the panel goes dark). */
 #map{position:absolute;inset:0;background:#e9edf1;z-index:0}
 .leaflet-container{font-family:var(--f-body);background:#e9edf1}
 .leaflet-control-attribution{font-size:10px}
+/* Keep the Leaflet controls clear of the notch / status bar / home indicator (viewport-fit=cover). */
+.leaflet-top{top:env(safe-area-inset-top,0px)}
+.leaflet-bottom{bottom:env(safe-area-inset-bottom,0px)}
+.leaflet-left{left:env(safe-area-inset-left,0px)}
+.leaflet-right{right:env(safe-area-inset-right,0px)}
 /* Map controls (Leaflet + MapLibre in 3D) follow the light/dark theme like the panel. */
 .leaflet-bar,.leaflet-touch .leaflet-bar{border-color:var(--line);box-shadow:var(--shadow)}
 .leaflet-bar a,.leaflet-bar a:hover,.leaflet-bar a:focus{background-color:var(--panel);color:var(--fg);border-bottom-color:var(--line)}

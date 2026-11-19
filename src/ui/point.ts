@@ -43,13 +43,20 @@ export function pointHitCount(problems: Problem[]): number | null {
 /** Compass name of a direction in degrees ("SV"). */
 export const dirName = (deg: number) => DIRS[Math.round(deg / 45) % 8];
 
-/** "Vind siste tre døgn: fra SV, opptil 18 m/s · lesider NØ, Ø · punktet ligger i le" for a region, or ''. */
+/** Why the wind moved little snow, for the wind line. */
+const STUCK_TEXT = { crust: 'lite løs snø å flytte (skare etter mildvær/regn)', wet: 'lite snøtransport (våt snø i mildværet)' } as const;
+
+/**
+ * "Vind siste tre døgn: fra SV, opptil 18 m/s · 12 cm nysnø · lesider NØ, Ø · punktet ligger i le"
+ * for a region, or ''.
+ */
 export function windLine(r: Region): string {
   const w = r.wind;
   if (!w) return '';
   const lee = DIRS.filter((_, k) => w.lee[k]);
-  const head = `Vind siste tre døgn: <b>fra ${dirName(w.from)}</b>, opptil ${Math.round(w.max)} m/s`;
-  if (!lee.length) return `<div class="rsub">${head} · lite vindtransport</div>`;
+  const snow = w.snowCm >= 1 ? ` · ${Math.round(w.snowCm)} cm nysnø siste fem døgn` : ' · ingen nysnø siste fem døgn';
+  const head = `Vind siste tre døgn: <b>fra ${dirName(w.from)}</b>, opptil ${Math.round(w.max)} m/s${snow}`;
+  if (!lee.length) return `<div class="rsub">${head} · ${w.stuck ? STUCK_TEXT[w.stuck] : 'lite vindtransport'}</div>`;
   const t = state.picked?.terrain;
   const here = t ? (w.lee[t.sector] ? ' · <b>punktet ligger i le</b>' : ' · punktet ligger ikke i le') : '';
   return `<div class="rsub">${head} · ${w.strong ? 'mye vindtransport, ' : ''}lesider <b>${lee.join(', ')}</b>${here}</div>`;

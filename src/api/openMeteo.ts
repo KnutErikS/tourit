@@ -70,7 +70,13 @@ const RECENT_DAYS = 80;
 const DAY = 86_400_000;
 
 interface OmPoint {
-  hourly: { time: number[]; wind_speed_850hPa: (number | null)[]; wind_direction_850hPa: (number | null)[] };
+  hourly: {
+    time: number[];
+    wind_speed_850hPa: (number | null)[];
+    wind_direction_850hPa: (number | null)[];
+    temperature_850hPa?: (number | null)[];
+    precipitation?: (number | null)[];
+  };
 }
 
 export interface WindPoint {
@@ -82,16 +88,17 @@ export interface WindPoint {
 const utcDate = (ms: number) => new Date(ms).toISOString().slice(0, 10);
 
 /**
- * Hourly 850 hPa wind for many points in one request, from `start` to `end` (ms).
+ * Hourly 850 hPa wind and temperature, and precipitation, for many points in one request, from `start` to `end` (ms).
  * `key` names the stored copy (one per warning date), for use without network.
  */
 export async function fetchWindHistory(points: WindPoint[], start: number, end: number, key: string): Promise<Fetched<WindHour[][]>> {
-  return withStored('wind', key, async () => {
+  // v2: hours carry temperature + precipitation; a stored v1 copy would lack them.
+  return withStored('wind', `v2:${key}`, async () => {
     const api = start < Date.now() - RECENT_DAYS * DAY ? OPEN_METEO_HISTORY_API : OPEN_METEO_API;
     const url =
       `${api}/forecast?latitude=${points.map((p) => p.lat.toFixed(2)).join(',')}` +
       `&longitude=${points.map((p) => p.lon.toFixed(2)).join(',')}` +
-      `&hourly=wind_speed_850hPa,wind_direction_850hPa&models=${MODEL}&wind_speed_unit=ms&timeformat=unixtime` +
+      `&hourly=wind_speed_850hPa,wind_direction_850hPa,temperature_850hPa,precipitation&models=${MODEL}&wind_speed_unit=ms&timeformat=unixtime` +
       `&start_date=${utcDate(start)}&end_date=${utcDate(end)}`;
     const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -100,7 +107,8 @@ export async function fetchWindHistory(points: WindPoint[], start: number, end: 
     return (Array.isArray(raw) ? raw : [raw]).map(({ hourly: h }) =>
       h.time.flatMap((t, i) => {
         const speed = h.wind_speed_850hPa[i], from = h.wind_direction_850hPa[i];
-        return speed == null || from == null ? [] : [{ time: t * 1000, speed, from }];
+        if (speed == null || from == null) return [];
+        return [{ time: t * 1000, speed, from, temp: h.temperature_850hPa?.[i] ?? undefined, precip: h.precipitation?.[i] ?? undefined }];
       }),
     );
   });

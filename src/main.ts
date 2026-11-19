@@ -15,7 +15,7 @@ import { fetchRegions, fetchWarnings } from './api/nve';
 import { fetchObservations } from './api/regobs';
 import { fetchPointWeather } from './api/met';
 import { fetchAirProfile, fetchWindHistory } from './api/openMeteo';
-import { LOOKBACK_H, windLoading, windowEnd } from './domain/wind';
+import { FETCH_H, windLoading, windowEnd } from './domain/wind';
 import { withProfile } from './domain/weather';
 import { ASP_RGB, ASPECT_MIN_ZOOM, DEMO, DIRS, DNAME, SKRED_MIN_ZOOM } from './config';
 import { images, obsKind } from './domain/observations';
@@ -113,14 +113,16 @@ async function loadWarnings(date: string): Promise<void> {
 }
 
 /**
- * Wind over the 72 hours before the warning date, one point per region (the
- * middle of its bounds; the 850 hPa wind varies slowly), turned into lee
- * aspects for the hatch in the aspect and avalanche layers.
+ * Weather over the five days before the warning date, one point per region
+ * (the middle of its bounds; the 850 hPa wind varies slowly): the last 72 h
+ * of wind, and the snow and temperature before it to tell whether there was
+ * loose snow to move. Turned into lee aspects for the hatch in the aspect and
+ * avalanche layers.
  */
 async function loadWind(date: string): Promise<void> {
   const regions = state.regions;
   if (!regions.length) return;
-  const end = windowEnd(date), start = end - LOOKBACK_H * 3_600_000;
+  const end = windowEnd(date), start = end - FETCH_H * 3_600_000;
   const points = regions.map((r) => {
     const c = r.bounds.getCenter();
     return { lat: c.lat, lon: c.lng };

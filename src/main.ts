@@ -25,6 +25,7 @@ import { createAvalancheTerrainLayer } from './layers/avalancheTerrain';
 import { drawObservations, focusObservation, obsGroup } from './layers/observations';
 import { drawRegions, regionGroup, restyleRegions } from './layers/regions';
 import { renderSteepnessLegend, steepnessLayer } from './layers/steepness';
+import { renderRunoutLegend, setRunout } from './layers/runout';
 import { isSnowKind, renderSnowLegend, setSnow, snowLayer, type SnowKind } from './layers/snow';
 import { map } from './map';
 import { state } from './state';
@@ -286,6 +287,17 @@ function bindToggle(id: string, ...layers: L.Layer[]): void {
 }
 bindToggle('l-skred', avalancheLayer, regionGroup);
 bindToggle('l-bratt', steepnessLayer);
+// Runout areas: an option on the steepness layer (swaps its tiles).
+{
+  const box = $<HTMLInputElement>('b-runout');
+  const apply = () => {
+    setRunout(box.checked);
+    $('runout-legend').hidden = !box.checked;
+  };
+  box.addEventListener('change', apply);
+  apply();
+  renderRunoutLegend($('runout-legend'));
+}
 bindToggle('l-snow', snowLayer);
 bindToggle('l-asp', aspectLayer);
 bindToggle('l-obs', obsGroup);

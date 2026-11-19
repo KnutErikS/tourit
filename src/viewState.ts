@@ -37,6 +37,7 @@ export interface View {
   settings?: Partial<Record<(typeof SETTINGS)[number], string>>;
   rest?: boolean;
   lee?: boolean;
+  runout?: boolean;
 }
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -88,6 +89,7 @@ function currentView(): View {
     settings,
     rest: $<HTMLInputElement>('s-rest').checked,
     lee: $<HTMLInputElement>('s-lee').checked,
+    runout: $<HTMLInputElement>('b-runout').checked,
   };
 }
 
@@ -175,6 +177,7 @@ export function restoreView(): string {
     if (value !== OLD_DEFAULTS[id]) setValue(id, value);
   }
   if (stored?.rest !== undefined) $<HTMLInputElement>('s-rest').checked = stored.rest;
+  if (stored?.runout !== undefined) $<HTMLInputElement>('b-runout').checked = stored.runout;
   if (stored?.lee !== undefined) $<HTMLInputElement>('s-lee').checked = $<HTMLInputElement>('a-lee').checked = stored.lee;
   return resolveDate(fromHash ? fromHash.date : stored?.date);
 }
@@ -186,7 +189,7 @@ export function restoreView(): string {
 export function trackView(go: (date: string) => void): void {
   ready = true;
   map.on('moveend', saveView);
-  for (const id of [...Object.values(LAYERS), 's-rest', 's-lee', 'a-lee', ...SETTINGS]) $(id).addEventListener('change', saveView);
+  for (const id of [...Object.values(LAYERS), 's-rest', 's-lee', 'a-lee', 'b-runout', ...SETTINGS]) $(id).addEventListener('change', saveView);
   window.addEventListener('hashchange', () => {
     const v = parseHash();
     if (!v) return;

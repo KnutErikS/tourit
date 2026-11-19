@@ -1,5 +1,5 @@
 import * as L from 'leaflet';
-import { BASEMAP_MAX_NATIVE, BASEMAP_URL, BRATT_MAX_NATIVE, BRATT_TILE_URL, DEM_MAX_NATIVE, SKRED_MIN_ZOOM } from '../config';
+import { BASEMAP_MAX_NATIVE, BASEMAP_URL, BRATT_MAX_NATIVE, BRATT_TILE_URL, BRATT_UTLOP_TILE_URL, DEM_MAX_NATIVE, SKRED_MIN_ZOOM } from '../config';
 import { demUrl } from '../terrain/dem';
 
 /**
@@ -60,7 +60,11 @@ export function areaTiles(a: AreaSpec): TileJob[] {
 
   if (a.bratt)
     for (let z = MIN_ZOOM; z <= Math.min(a.maxZoom, BRATT_MAX_NATIVE); z++)
-      for (const t of tilesAt(a.bounds, z)) add(fill(BRATT_TILE_URL, t), 'bratt');
+      for (const t of tilesAt(a.bounds, z)) {
+        add(fill(BRATT_TILE_URL, t), 'bratt');
+        // With runout too: the map and route checks then work without signal.
+        add(fill(BRATT_UTLOP_TILE_URL, t), 'bratt');
+      }
 
   if (a.terrain)
     for (let z = SKRED_MIN_ZOOM; z <= Math.min(a.maxZoom, DEM_MAX_NATIVE); z++)

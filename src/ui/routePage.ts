@@ -2,6 +2,7 @@ import * as L from 'leaflet';
 import { regionAt } from '../domain/geo';
 import { map } from '../map';
 import { parseGpx } from '../route/gpx';
+import { ZONES, type Zone, type ZoneSection, zoneSections } from '../route/runout';
 import { type Draft, type SavedRoute, listRoutes, putRoute, readDraft, removeRoute, writeDraft } from '../route/store';
 import { state } from '../state';
 import { type ProfilePoint, type ProfileStats, TooManyTiles, cumulative, profileOf, statsOf } from '../terrain/elevation';
@@ -40,12 +41,31 @@ let job = { cancelled: false };
 let timer = 0;
 let confirmDelete: string | null = null;
 let badge: HTMLElement | null = null;
+/** Stretches in steep terrain or runout (NVE's Bratthet med utløp); null while unknown. */
+let runout: ZoneSection[] | null = null;
+let runoutErr = '';
+let runoutAbort: AbortController | null = null;
 
 /* ---------- map layers ---------- */
 
 map.createPane('route').style.zIndex = '450';
 const group = L.layerGroup().addTo(map);
 const halo = L.polyline([], { pane: 'route', color: '#fff', weight: 7, opacity: 0.85, interactive: false }).addTo(group);
+/**
+ * Glow under the line in avalanche terrain: red on steep ground, then three
+ * shades of orange for short, medium and long runout (darker = more avalanches reach it).
+ * Orange rather than NVE's blues, so it stands out on top of the map.
+ */
+const ZONE_STYLE: Record<Zone, { color: string; label: string; help: string }> = {
+  steep: { color: '#b71c1c', label: 'Bratt (27°+)', help: 'der skred kan løsne' },
+  short: { color: '#e65100', label: 'Kort utløp', help: 'halvparten av skredene når hit' },
+  medium: { color: '#ff9800', label: 'Middels utløp', help: 'ett av fire skred når hit' },
+  long: { color: '#ffcc80', label: 'Langt utløp', help: 'ett av tjue skred når hit' },
+};
+const zoneLines = Object.fromEntries(
+  ZONES.map((z) => [z, L.polyline([], { pane: 'route', color: ZONE_STYLE[z].color, weight: 13, opacity: 0.9, lineCap: 'butt', interactive: false }).addTo(group)]),
+) as Record<Zone, L.Polyline>;
+const drawZones = (s: ZoneSection[]) => ZONES.forEach((z) => zoneLines[z].setLatLngs(s.filter((x) => x.zone === z).map((x) => x.lls)));
 const line = L.polyline([], { pane: 'route', color: LINE, weight: 4, bubblingMouseEvents: false }).addTo(group);
 const vertices = L.layerGroup().addTo(group);
 const cursor = L.circleMarker([0, 0], { pane: 'route', radius: 6, color: '#fff', weight: 2, fillColor: LINE, fillOpacity: 1, interactive: false });
@@ -131,10 +151,15 @@ function scheduleProfile(): void {
   stats = null;
   elevErr = '';
   loading = points.length > 1;
+  runoutAbort?.abort();
+  runout = null;
+  runoutErr = '';
+  drawZones([]);
   if (!loading) return;
   timer = window.setTimeout(async () => {
     const mine = (job = { cancelled: false });
     const pts = points.slice();
+    void loadRunout(pts);
     try {
       const p = await profileOf(pts, mine, (done, total) => {
         const el = document.querySelector('.rt-prof-wait');
@@ -153,6 +178,22 @@ function scheduleProfile(): void {
     refreshSavedStats();
     render();
   }, 300);
+}
+
+/** Read the route's zones off NVE's steepness-with-runout tiles and mark them. */
+async function loadRunout(pts: L.LatLng[]): Promise<void> {
+  const ctl = (runoutAbort = new AbortController());
+  try {
+    const s = await zoneSections(pts, ctl.signal);
+    if (ctl.signal.aborted) return;
+    runout = s;
+    drawZones(s);
+  } catch (e) {
+    if (ctl.signal.aborted) return;
+    runout = null;
+    runoutErr = navigator.onLine ? (e as Error)?.message || 'nettverksfeil' : 'uten nett';
+  }
+  render();
 }
 
 /* ---------- formatting ---------- */
@@ -188,12 +229,19 @@ function profileSVG(): string {
   };
   for (const p of profile) p.z === null ? flush() : run.push(p as ProfilePoint & { z: number });
   flush();
+  // Stretches in an aktsomhetsområde, as amber bands behind the profile (at least 2 px wide, so short ones show).
+  const bands = (runout ?? [])
+    .map((s) => {
+      const x0 = x(s.from), w = Math.max(2, x(s.to) - x0);
+      return `<rect class="ro" fill="${ZONE_STYLE[s.zone].color}" x="${x0.toFixed(1)}" y="${PAD.t}" width="${w.toFixed(1)}" height="${PH - PAD.t - PAD.b}"/>`;
+    })
+    .join('');
   const mid = (lo + hi) / 2;
   const grid = [lo, mid, hi]
     .map((v) => `<line x1="${PAD.l}" x2="${PW - PAD.r}" y1="${y(v)}" y2="${y(v)}" class="g"/><text x="${PAD.l - 4}" y="${y(v) + 3.5}" text-anchor="end">${Math.round(v)}</text>`)
     .join('');
   return `<svg class="rt-prof" id="rt-prof" viewBox="0 0 ${PW} ${PH}" role="img" aria-label="Høydeprofil fra ${Math.round(stats.min)} til ${Math.round(stats.max)} moh.">
-    ${grid}
+    ${bands}${grid}
     <path d="${area}" class="a"/><path d="${path}" class="l"/>
     <text x="${PAD.l}" y="${PH - 4}">0</text><text x="${PW - PAD.r}" y="${PH - 4}" text-anchor="end">${esc(fmtLen(total))}</text>
     <line id="rt-cur" class="cur" y1="${PAD.t}" y2="${PH - PAD.b}" x1="-10" x2="-10"/>
@@ -216,7 +264,20 @@ function statsHTML(): string {
       ${cell('Nedstigning', stats ? '↓ ' + fmtM(stats.descent) : '–')}
       ${cell('Høyeste', stats ? fmtM(stats.max) : '–')}
       ${cell('Laveste', stats ? fmtM(stats.min) : '–')}
-    </div>${elev}${loading ? '' : profileSVG()}`;
+    </div>${runoutHTML()}${elev}${loading ? '' : profileSVG()}`;
+}
+
+function runoutHTML(): string {
+  if (runoutErr) return `<p class="rt-runout">Fikk ikke sjekket ruta mot NVEs bratthets- og utløpskart (${esc(runoutErr)}).</p>`;
+  if (!runout) return '<p class="rt-runout">Sjekker ruta mot NVEs bratthets- og utløpskart…</p>';
+  if (!runout.length) return '<p class="rt-runout">Ruta går ikke i bratt terreng eller i utløpsområder for snøskred etter NVEs kart.</p>';
+  const len: Record<Zone, number> = { steep: 0, short: 0, medium: 0, long: 0 };
+  // A stretch that is a single test point still counts as one step.
+  for (const s of runout) len[s.zone] += Math.max(10, s.to - s.from);
+  const rows = ZONES.filter((z) => len[z] > 0)
+    .map((z) => `<li><i style="background:${ZONE_STYLE[z].color}" aria-hidden="true"></i><span>${esc(ZONE_STYLE[z].label)}</span><b>${esc(fmtLen(len[z]))}</b><small>${esc(ZONE_STYLE[z].help)}</small></li>`)
+    .join('');
+  return `<div class="rt-runout hit"><ul class="rt-zones">${rows}</ul><p>Utløp regnes fra bratte heng over ruta, også der du selv går på flatt terreng. Noen skred går lenger enn «langt utløp».</p></div>`;
 }
 
 function routeHTML(r: SavedRoute): string {

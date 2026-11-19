@@ -303,7 +303,7 @@ export function initOffline(): void {
             <option value="17">zoom 17 · maks</option>
           </select></label>
         <label class="off-check"><input type="checkbox" checked disabled> Kart (Kartverket)</label>
-        <label class="off-check"><input type="checkbox" id="off-bratt" checked> Bratthet (NVE)</label>
+        <label class="off-check"><input type="checkbox" id="off-bratt" checked> Bratthet og utløp (NVE)</label>
         <label class="off-check"><input type="checkbox" id="off-terrain" checked> Terreng for skredlag og himmelretning</label>
         <div class="off-est" id="off-estimate"></div>
         <div class="off-actions"><button class="btn primary" id="off-go">Last ned</button><button class="btn" id="off-cancel">Avbryt</button></div>

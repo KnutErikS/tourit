@@ -5,7 +5,7 @@ Avalanche terrain map for Norway. A static web app (no backend, no API keys) bui
 ## Features
 
 - **Skredfare i terrenget** – forecast regions coloured by today's danger level. From zoom 10, slopes steeper than 27/30/35° that match the aspect and height band of the day's avalanche problems are coloured.
-- **Bratthet** – NVE's steepness map.
+- **Bratthet** – NVE's steepness map, optionally with modelled runout in three bands (short/medium/long: alpha angle 32°/27°/23°, passed by 1 in 2, 1 in 4 and 1 in 20 avalanches). Drawn routes are checked against it and stretches in steep terrain or runout are marked.
 - **Snø (seNorge)** – NVE's modelled snow maps for the chosen date (also a few days ahead): new snow over the last 1 or 3 days, or snow depth. 1 km grid, so it shows the pattern across a region, not single slopes.
 - **Himmelretning** – slope aspect, computed in the browser from Kartverket's terrain model (zoom 11+).
 - **Observasjoner** – Regobs snow observations for the chosen day and the two days before, with photos.

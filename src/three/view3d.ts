@@ -1,7 +1,7 @@
 import * as L from 'leaflet';
 import type * as ML from 'maplibre-gl';
 import {
-  ASPECT_MIN_ZOOM, BASEMAP_MAX_NATIVE, BASEMAP_URL, BRATT_MAX_NATIVE, BRATT_TILE_URL, DANGER, DEM_MAX_NATIVE, DNAME, SKRED_MIN_ZOOM,
+  ASPECT_MIN_ZOOM, BASEMAP_MAX_NATIVE, BASEMAP_URL, BRATT_MAX_NATIVE, BRATT_TILE_URL, BRATT_UTLOP_TILE_URL, DANGER, DEM_MAX_NATIVE, DNAME, SKRED_MIN_ZOOM,
   SNOW_MAX_NATIVE, TERRAIN_3D_MAX_ZOOM, TERRAIN_3D_URL,
 } from '../config';
 import { isSnowKind, SNOW_ATTRIBUTION, snowTileUrl } from '../layers/snow';
@@ -108,6 +108,7 @@ function regionsGeoJSON(): ML.GeoJSONSourceSpecification['data'] {
 
 const checked = (id: string) => $<HTMLInputElement>(id).checked;
 const vis = (on: boolean) => (on ? 'visible' : 'none');
+const runoutOn = () => checked('l-bratt') && checked('b-runout');
 
 function style(): ML.StyleSpecification {
   return {
@@ -126,6 +127,13 @@ function style(): ML.StyleSpecification {
         tileSize: 256,
         maxzoom: BRATT_MAX_NATIVE,
         attribution: 'Bratthet © <a href="https://www.nve.no" target="_blank" rel="noopener">NVE</a>',
+      },
+      runout: {
+        type: 'raster',
+        tiles: [BRATT_UTLOP_TILE_URL],
+        tileSize: 256,
+        maxzoom: BRATT_MAX_NATIVE,
+        attribution: 'Bratthet og utløp © <a href="https://www.nve.no" target="_blank" rel="noopener">NVE</a>',
       },
       snow: { type: 'raster', tiles: [(snowShown = snowUrl())], tileSize: 256, maxzoom: SNOW_MAX_NATIVE, attribution: SNOW_ATTRIBUTION },
       // Separate DEM sources for terrain and hillshade, as MapLibre recommends.
@@ -151,7 +159,14 @@ function style(): ML.StyleSpecification {
         id: 'bratt',
         type: 'raster',
         source: 'bratt',
-        layout: { visibility: vis(checked('l-bratt')) },
+        layout: { visibility: vis(checked('l-bratt') && !checked('b-runout')) },
+        paint: { 'raster-opacity': +$<HTMLInputElement>('o-bratt').value },
+      },
+      {
+        id: 'runout',
+        type: 'raster',
+        source: 'runout',
+        layout: { visibility: vis(runoutOn()) },
         paint: { 'raster-opacity': +$<HTMLInputElement>('o-bratt').value },
       },
       {
@@ -193,8 +208,10 @@ export function update3D(): void {
 
 function syncLayers(): void {
   if (!m3) return;
-  m3.setLayoutProperty('bratt', 'visibility', vis(checked('l-bratt')));
+  m3.setLayoutProperty('bratt', 'visibility', vis(checked('l-bratt') && !runoutOn()));
   m3.setPaintProperty('bratt', 'raster-opacity', +$<HTMLInputElement>('o-bratt').value);
+  m3.setLayoutProperty('runout', 'visibility', vis(runoutOn()));
+  m3.setPaintProperty('runout', 'raster-opacity', +$<HTMLInputElement>('o-bratt').value);
   m3.setLayoutProperty('snow', 'visibility', vis(checked('l-snow')));
   m3.setPaintProperty('snow', 'raster-opacity', +$<HTMLInputElement>('o-snow').value);
   m3.setLayoutProperty('aspect', 'visibility', vis(checked('l-asp')));
@@ -373,7 +390,7 @@ const Toggle3DControl = L.Control.extend({
 export function init3D(pick: (ll: L.LatLng) => void): void {
   onPick = pick;
   new Toggle3DControl({ position: 'topright' }).addTo(map);
-  for (const id of ['l-bratt', 'l-snow', 'l-skred', 'l-asp', 'l-obs']) $(id).addEventListener('change', syncLayers);
+  for (const id of ['l-bratt', 'b-runout', 'l-snow', 'l-skred', 'l-asp', 'l-obs']) $(id).addEventListener('change', syncLayers);
   // main.ts updates state on these first (its listeners are registered earlier).
   for (const id of ['s-thr', 's-rest', 'a-min']) $(id).addEventListener('change', refreshOverlays);
   $('o-bratt').addEventListener('input', syncLayers);

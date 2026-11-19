@@ -84,6 +84,9 @@
       <p class="desc">NVEs bratthetskart, samme lag som på varsom.no.</p>
       <div class="ctrl"><span>Gjennomsiktighet</span><input type="range" id="o-bratt" min="0.2" max="1" step="0.05" value="0.5" aria-label="Opasitet bratthet"></div>
       <div class="legend" id="bratt-legend"><span class="empty">Henter tegnforklaring…</span></div>
+      <div class="ctrl"><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="b-runout"> Vis utløpsområder</label></div>
+      <div class="legend" id="runout-legend" hidden></div>
+      <p class="desc">Hvor langt skred fra de bratte hengene kan gå, også ut på flatt terreng <em>under</em> dem (NVEs modell, samme som på varsom.no). Tre nyanser: forbi <b>kort</b> utløp går halvparten av skredene, forbi <b>middels</b> ett av fire, forbi <b>langt</b> ett av tjue. Noen skred går enda lenger. Ruter du tegner får markert strekninger i skredterreng og utløp.</p>
     </section>
 
     <section class="layer">

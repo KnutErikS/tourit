@@ -1,3 +1,5 @@
+export type RGB = [number, number, number];
+
 /** External services. All are public, CORS-enabled and need no API key. */
 export const NVE_API = 'https://api01.nve.no/hydrology/forecast/avalanche/v6.3.2/api';
 export const REGOBS_API = 'https://api.regobs.no/v5';
@@ -11,14 +13,29 @@ export const DTM_URL = 'https://hoydedata.no/arcgis/rest/services/DTM/ImageServe
 export const BRATT_URL = 'https://gis3.nve.no/arcgis/rest/services/wmts/Bratthet_2024/MapServer';
 export const BRATT_TILE_URL = `${BRATT_URL}/tile/{z}/{y}/{x}`;
 /**
+ * NVE's "Bratthet med utløp" (what varsom.no and the Varsom app show): the same
+ * steepness classes plus modelled runout below them in three blues. Runout is
+ * modelled from the alpha angle (Lied & Bakkehøi): short = 32° (half of all
+ * avalanches go further), medium = 27° (one in four), long = 23° (one in twenty).
+ * See https://www.varsom.no/snoskredskolen/skredterreng/bratthet-og-utlopsomradekart/
+ */
+export const BRATT_UTLOP_URL = 'https://gis3.nve.no/arcgis/rest/services/wmts/Bratthet_med_utlop_2024/MapServer';
+export const BRATT_UTLOP_TILE_URL = `${BRATT_UTLOP_URL}/tile/{z}/{y}/{x}`;
+
+export type RunoutClass = 'short' | 'medium' | 'long';
+/** The exact tile colours (the tiles have no antialiasing), darkest = shortest = most avalanches reach it. */
+export const RUNOUT: Record<RunoutClass, { rgb: RGB; label: string; share: string }> = {
+  short: { rgb: [0, 77, 168], label: 'Kort utløp', share: 'halvparten av skredene går lenger' },
+  medium: { rgb: [76, 155, 255], label: 'Middels utløp', share: 'ett av fire skred går lenger' },
+  long: { rgb: [154, 177, 230], label: 'Langt utløp', share: 'ett av tjue skred går lenger' },
+};
+/**
  * NVE's seNorge snow maps (modelled, 1 km grid, also a few days ahead) as a
  * WMS with a TIME parameter: the same service senorge.no draws from.
  */
 export const SNOW_WMS_URL = 'https://kart.nve.no/enterprise/services/seNorgeGrid_png/ImageServer/WMSServer';
 export const BASEMAP_URL =
   'https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/{z}/{y}/{x}.png';
-
-export type RGB = [number, number, number];
 
 /** Danger level colours (0 = not assessed). */
 export const DANGER: Record<number, string> = {

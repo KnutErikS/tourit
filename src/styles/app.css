@@ -256,6 +256,19 @@ body.panel-hidden #coord{left:calc(72px + env(safe-area-inset-left,0px))}
 #search-results li span{font-size:12px;color:var(--muted)}
 #search-results li[aria-selected="true"],#search-results li:hover{background:var(--chip)}
 #search-results li.s-msg{cursor:default;color:var(--muted);font-size:13px}
+/* ---------- Søk/dato bak ikoner (kun mobil, se ui/headerTools.ts) ---------- */
+.hdr-tool{display:none;flex:none;width:40px;height:40px;padding:0;border:1px solid var(--line);border-radius:8px;background:var(--chip);color:var(--fg);place-items:center}
+.hdr-tool svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.hdr-tool:hover{border-color:var(--accent)}
+.hdr-tool:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.hdr-tool[aria-expanded="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+@media (max-width:640px){
+  .hdr-tool{display:grid}
+  .brand{gap:8px}
+  .brand small{display:none} /* sources are credited in the footer and the map attribution */
+  #panel header{gap:8px;padding-bottom:8px}
+  #panel:not(.show-search) #search-row,#panel:not(.show-date) #date-row{display:none}
+}
 /* ---------- Kompass ---------- */
 #compass{position:absolute;z-index:999;right:calc(12px + env(safe-area-inset-right,0px));bottom:calc(72px + env(safe-area-inset-bottom,0px));
   width:52px;height:52px;padding:0;border-radius:50%;border:1px solid var(--line);background:var(--panel);box-shadow:var(--shadow);

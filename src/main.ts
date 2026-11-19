@@ -31,6 +31,7 @@ import { roseSVG } from './ui/icons';
 import { flyTo3D, focusObs3D, init3D, is3DOpen, resetNorth3D, setPick3D, update3D, update3DObs } from './three/view3d';
 import { initCompass } from './ui/compass';
 import { initCoords, showCoord } from './ui/coords';
+import { initHeaderTools, setHeaderTool } from './ui/headerTools';
 import { initSearch } from './ui/search';
 import { initSheet, resetSheet } from './ui/sheet';
 import { initLocate } from './ui/locate';
@@ -270,10 +271,12 @@ function panelInsets(): { left: number; bottom: number } {
   return r.width < box.width * 0.9 ? { left: Math.max(0, r.right - box.left), bottom: 0 } : { left: 0, bottom: Math.max(0, box.bottom - r.top) };
 }
 
+initHeaderTools();
 initSearch((place) => {
   const ll = L.latLng(place.lat, place.lng);
   const z = Math.max(map.getZoom(), SEARCH_ZOOM);
   resetSheet(); // phones: back to half height so the map is visible
+  setHeaderTool(null); // phones: fold the search away again
   const inset = panelInsets();
   if (is3DOpen()) flyTo3D(place.lat, place.lng, z, inset);
   else {

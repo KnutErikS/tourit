@@ -31,13 +31,16 @@
       <button type="button" id="burger-in" class="burger-in" aria-controls="panel" aria-expanded="true" aria-label="Skjul panelet" title="Skjul panelet"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
       <h1>Skredterreng</h1>
       <small>Varsom · NVE · Kartverket</small>
+      <!-- Phones only: search and date picker fold away behind these (see ui/headerTools.ts). -->
+      <button type="button" class="hdr-tool" id="tool-search" aria-controls="search-row" aria-expanded="false" aria-label="Søk etter fjell eller sted" title="Søk etter fjell eller sted"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg></button>
+      <button type="button" class="hdr-tool" id="tool-date" aria-controls="date-row" aria-expanded="false" aria-label="Velg dag for skredvarsel" title="Velg dag for skredvarsel"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></button>
     </div>
-    <div class="search" role="search">
+    <div class="search" id="search-row" role="search">
       <input id="search" type="search" placeholder="Søk etter fjell eller sted" autocomplete="off" spellcheck="false"
         role="combobox" aria-label="Søk etter fjell eller sted" aria-autocomplete="list" aria-controls="search-results" aria-expanded="false">
       <ul id="search-results" role="listbox" aria-label="Søkeresultater" hidden></ul>
     </div>
-    <div class="daterow">
+    <div class="daterow" id="date-row">
       <input type="date" id="date" aria-label="Varseldato">
       <button class="btn" id="today">I dag</button>
       <button class="btn" id="tomorrow">I morgen</button>

@@ -161,6 +161,7 @@ function renderMode(): void {
 /* ---------- actions ---------- */
 
 export function openOffline(m: 'list' | 'save'): void {
+  window.dispatchEvent(new CustomEvent('tourit:page', { detail: 'offline' }));
   mode = m;
   confirmDelete = null;
   page().hidden = false;
@@ -322,6 +323,7 @@ export function initOffline(): void {
   for (const id of ['off-maxz', 'off-bratt', 'off-terrain']) $(id).addEventListener('change', updatePreview);
   $('off-list').addEventListener('click', (e) => void onListClick(e));
   map.on('moveend', updatePreview);
+  window.addEventListener('tourit:page', (e) => (e as CustomEvent).detail !== 'offline' && !page().hidden && closeOffline());
 
   new OfflineControl({ position: 'topright' }).addTo(map);
   renderList();

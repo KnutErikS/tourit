@@ -39,6 +39,7 @@ import { initOffline } from './ui/offlinePage';
 import { reportDemError, setStatus } from './ui/status';
 import { renderSummary } from './ui/summary';
 import { initShare } from './ui/share';
+import { initRoute, isDrawing } from './ui/routePage';
 import { $, fmtDate, isoDate } from './util';
 import { restoreView, saveView, trackView } from './viewState';
 
@@ -260,12 +261,15 @@ async function pickPoint(ll: L.LatLng): Promise<void> {
   }
   if (state.picked === mine) renderPanels();
 }
-map.on('click', (e: L.LeafletMouseEvent) => void pickPoint(e.latlng));
+map.on('click', (e: L.LeafletMouseEvent) => {
+  if (!isDrawing()) void pickPoint(e.latlng); // while drawing a route, taps add route points
+});
 
 /* ---------- start ---------- */
 
 registerServiceWorker();
 initOffline();
+initRoute();
 initLocate(pickPoint);
 init3D(pickPoint);
 initCompass(resetNorth3D, '.leaflet-top.leaflet-right > .leaflet-control');

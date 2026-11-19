@@ -2,8 +2,9 @@ import { toMgrs } from '../domain/mgrs';
 import { $ } from '../util';
 
 /**
- * Coordinate chip on the map: MGRS of the picked point or of your own position
- * (live while position is on). Tap the coordinate to copy it.
+ * Coordinate chip on the map: the picked point (terrain facts + MGRS) or your own
+ * position (live while position is on). The MGRS starts folded to a small button;
+ * tapping it reveals the full grid reference and copies it.
  */
 
 export type CoordSource = 'pick' | 'position';
@@ -15,19 +16,36 @@ const COPY_ICON =
 
 export const coordSource = () => source;
 
-export function showCoord(src: CoordSource, lat: number, lng: number, accuracy?: number): void {
+/**
+ * Show the chip. `info` is trusted HTML (terrain facts) shown before the MGRS button.
+ * A new picked point, or switching source, folds the MGRS again; live position updates keep it as is.
+ */
+export function showCoord(src: CoordSource, lat: number, lng: number, accuracy?: number, info = ''): void {
   const mgrs = toMgrs(lat, lng);
   const el = $('coord');
   if (!mgrs) {
     clearCoord();
     return;
   }
+  if (src === 'pick' || src !== source) setOpen(false);
   source = src;
   current = mgrs;
   el.querySelector('.c-label')!.textContent = src === 'position' ? 'Min posisjon' : 'Valgt punkt';
   el.querySelector('.c-mgrs')!.textContent = mgrs;
   el.querySelector('.c-acc')!.textContent = accuracy != null ? `± ${Math.round(accuracy)} m` : '';
+  setCoordInfo(info);
   el.hidden = false;
+}
+
+/** Replace the terrain facts (e.g. once the terrain at the picked point has loaded). */
+export function setCoordInfo(html: string): void {
+  $('coord').querySelector('.c-info')!.innerHTML = html;
+}
+
+function setOpen(open: boolean): void {
+  const btn = $('coord').querySelector<HTMLElement>('.c-copy')!;
+  $('coord').classList.toggle('open', open);
+  btn.title = open ? 'Kopier MGRS' : 'Vis og kopier MGRS';
 }
 
 /** Hide the chip; with `src`, only if it currently shows that source. */
@@ -58,6 +76,7 @@ export function legacyCopy(text: string): boolean {
 
 async function copy(): Promise<void> {
   if (!current) return;
+  setOpen(true);
   const btn = $('coord').querySelector<HTMLElement>('.c-copy')!;
   let ok = false;
   try {
@@ -89,7 +108,8 @@ export function initCoords(): void {
   const el = $('coord');
   el.innerHTML = `
     <span class="c-label"></span>
-    <button type="button" class="c-copy" aria-label="Kopier MGRS" title="Kopier MGRS">
+    <span class="c-info"></span>
+    <button type="button" class="c-copy" aria-label="Kopier MGRS" title="Vis og kopier MGRS">
       <span class="c-sys">MGRS</span><b class="c-mgrs"></b>${COPY_ICON}
     </button>
     <span class="c-acc"></span>

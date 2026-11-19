@@ -30,7 +30,8 @@ import { renderDetail } from './ui/detail';
 import { roseSVG } from './ui/icons';
 import { flyTo3D, focusObs3D, init3D, is3DOpen, resetNorth3D, setPick3D, update3D, update3DObs } from './three/view3d';
 import { initCompass } from './ui/compass';
-import { initCoords, showCoord } from './ui/coords';
+import { coordSource, initCoords, setCoordInfo, showCoord } from './ui/coords';
+import { pointFacts } from './ui/point';
 import { initHeaderTools, setHeaderTool } from './ui/headerTools';
 import { initSearch } from './ui/search';
 import { initSheet, resetSheet } from './ui/sheet';
@@ -250,7 +251,7 @@ async function pickPoint(ll: L.LatLng): Promise<void> {
   const mine: Picked = { ll, terrain: undefined };
   state.picked = mine;
   state.selected = regionAt(state.regions, ll);
-  showCoord('pick', ll.lat, ll.lng);
+  showCoord('pick', ll.lat, ll.lng, undefined, pointFacts());
   setPick3D(ll);
   restyleRegions();
   renderPanels();
@@ -259,7 +260,9 @@ async function pickPoint(ll: L.LatLng): Promise<void> {
   } catch {
     mine.terrain = null;
   }
-  if (state.picked === mine) renderPanels();
+  if (state.picked !== mine) return;
+  renderPanels();
+  if (coordSource() === 'pick') setCoordInfo(pointFacts());
 }
 map.on('click', (e: L.LeafletMouseEvent) => {
   if (!isDrawing()) void pickPoint(e.latlng); // while drawing a route, taps add route points

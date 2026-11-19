@@ -281,6 +281,12 @@ details.ws > div{display:grid;gap:8px;padding-top:8px}
 #coord .c-copy:focus-visible,#coord .c-close:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 #coord .c-sys{font:600 10px var(--f-mono);color:var(--muted);letter-spacing:.04em}
 #coord .c-mgrs{font:500 14px var(--f-mono);letter-spacing:.02em;user-select:text;-webkit-user-select:text}
+/* MGRS folded to "MGRS ⧉" until tapped; the tap reveals it and copies it. */
+#coord:not(.open) .c-mgrs{display:none}
+#coord .c-info{display:flex;align-items:baseline;gap:8px}
+#coord .c-info:empty{display:none}
+#coord .c-info b{font-weight:600}
+#coord .c-info span{color:var(--muted)}
 #coord .c-copy svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round}
 #coord .c-copy[data-state="ok"]{background:var(--d1);color:#fff}
 #coord .c-copy[data-state="err"]{background:var(--d4);color:#fff}
@@ -294,6 +300,12 @@ body.panel-hidden #coord{left:calc(72px + env(safe-area-inset-left,0px))}
   /* Under the zoom hint (top-left), clear of the buttons on the right. */
   #coord,body.panel-hidden #coord{top:calc(48px + env(safe-area-inset-top,0px));left:calc(10px + env(safe-area-inset-left,0px));max-width:calc(100% - 80px);gap:6px}
   #coord .c-label{display:none}
+  /* Panel hidden: down by the floating burger, level with its centre, centred in the space to its right. */
+  body.panel-hidden #coord{top:auto;bottom:calc(44px + env(safe-area-inset-bottom,0px));transform:translateY(50%);
+    left:calc(80px + env(safe-area-inset-left,0px));right:calc(10px + env(safe-area-inset-right,0px));width:fit-content;margin-inline:auto;max-width:none}
+  /* Facts + full MGRS don't fit on one line on a phone: let the MGRS drop to a second line. */
+  #coord.open{flex-wrap:wrap;row-gap:4px;border-radius:16px;padding-top:6px;padding-bottom:6px}
+  #coord.open .c-copy{order:1}
 }
 /* ---------- Stedsøk ---------- */
 .search{position:relative}

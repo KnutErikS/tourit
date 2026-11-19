@@ -1,6 +1,8 @@
 /** External services. All are public, CORS-enabled and need no API key. */
 export const NVE_API = 'https://api01.nve.no/hydrology/forecast/avalanche/v6.3.2/api';
 export const REGOBS_API = 'https://api.regobs.no/v5';
+/** Kartverket's place-name register (Sentralt stedsnavnregister), for search. */
+export const STEDSNAVN_API = 'https://ws.geonorge.no/stedsnavn/v1';
 export const DTM_URL = 'https://hoydedata.no/arcgis/rest/services/DTM/ImageServer/exportImage';
 export const BRATT_URL = 'https://gis3.nve.no/arcgis/rest/services/wmts/Bratthet_2024/MapServer';
 export const BRATT_TILE_URL = `${BRATT_URL}/tile/{z}/{y}/{x}`;

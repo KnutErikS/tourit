@@ -10,6 +10,8 @@ Avalanche terrain map for Norway. A static web app (no backend, no API keys) bui
 - **Observasjoner** – Regobs snow observations for the chosen day and the two days before, with photos.
 - **Skredvarsel tab** – the full warning for a region, with avalanche problems, advice and weather.
 - **Tap the map** – elevation, slope and aspect at that point, and whether each avalanche problem applies there.
+- **Place search** – mountains, peaks, valleys, towns etc. from Kartverket's place-name register. Choosing a hit flies there and selects it.
+- **MGRS** – coordinate of the selected point or your own position (live, with accuracy) in a chip on the map; tap to copy.
 - **Own position** – with accuracy circle and follow mode.
 - **3D view** (needs network) – the same layers on 3D terrain (MapLibre GL). Tap to pick points, rotate, and use the compass to return to north. The 2D map is always north-up.
 - **Saved areas** – download map, steepness and elevation tiles for an area so they load from the device. Manage them behind the download icon.
@@ -50,13 +52,13 @@ src/
   types.ts              Types for NVE/Regobs data
   util.ts               DOM helper, esc(), safeUrl(), dates, fetch
   map.ts                Leaflet map + Kartverket topo basemap
-  api/                  NVE warnings/regions, Regobs search
-  domain/               Pure logic: problem matching, point-in-polygon, observation types
+  api/                  NVE warnings/regions, Regobs search, Kartverket place names
+  domain/               Pure logic: problem matching, point-in-polygon, observation types, MGRS
   terrain/              Elevation tiles (LERC) → slope/aspect; canvas layer base
   layers/               2D layers: avalanche terrain, aspect, steepness, regions, observations
   three/view3d.ts       3D view (MapLibre, loaded on demand)
   offline/              Saved areas: tile lists, download/delete, metadata
-  ui/                   Panel content, saved-areas page, position, compass, bottom sheet, icons
+  ui/                   Panel content, search, MGRS chip, saved-areas page, position, compass, bottom sheet, icons
   styles/app.css        Styling (panel follows light/dark; the map stays light)
 ```
 
@@ -80,4 +82,4 @@ The aspect and avalanche-terrain layers share the same drawing functions in 2D (
 
 ## Data
 
-Avalanche warnings and steepness © NVE / varsom.no · Terrain model and basemap © Kartverket · 3D terrain: AWS Terrain Tiles (© Kartverket) · Observations © Regobs and the observers. `docs/` holds the original single-file prototype and the prompts it came from.
+Avalanche warnings and steepness © NVE / varsom.no · Terrain model and basemap © Kartverket · 3D terrain: AWS Terrain Tiles (© Kartverket) · Observations © Regobs and the observers · Place names © Kartverket (Sentralt stedsnavnregister) · MGRS via [proj4js/mgrs](https://github.com/proj4js/mgrs). `docs/` holds the original single-file prototype and the prompts it came from.

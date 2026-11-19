@@ -28,9 +28,10 @@ import type { Picked } from './types';
 import { registerServiceWorker } from './offline/download';
 import { renderDetail } from './ui/detail';
 import { roseSVG } from './ui/icons';
-import { focusObs3D, init3D, is3DOpen, resetNorth3D, setPick3D, update3D, update3DObs } from './three/view3d';
+import { flyTo3D, focusObs3D, init3D, is3DOpen, resetNorth3D, setPick3D, update3D, update3DObs } from './three/view3d';
 import { initCompass } from './ui/compass';
 import { initCoords, showCoord } from './ui/coords';
+import { initSearch } from './ui/search';
 import { initSheet, resetSheet } from './ui/sheet';
 import { initLocate } from './ui/locate';
 import { initOffline } from './ui/offlinePage';
@@ -258,6 +259,30 @@ initLocate(pickPoint);
 init3D(pickPoint);
 initCompass(resetNorth3D, '.ctl3dbar');
 initCoords();
+
+/* Place search: fly there and select the place like a map tap. */
+const SEARCH_ZOOM = 13;
+/** Pixels of the map covered by the panel: on the left (PC) or at the bottom (phone sheet). */
+function panelInsets(): { left: number; bottom: number } {
+  const p = $('panel');
+  if (p.hidden) return { left: 0, bottom: 0 };
+  const box = map.getContainer().getBoundingClientRect(), r = p.getBoundingClientRect();
+  return r.width < box.width * 0.9 ? { left: Math.max(0, r.right - box.left), bottom: 0 } : { left: 0, bottom: Math.max(0, box.bottom - r.top) };
+}
+
+initSearch((place) => {
+  const ll = L.latLng(place.lat, place.lng);
+  const z = Math.max(map.getZoom(), SEARCH_ZOOM);
+  resetSheet(); // phones: back to half height so the map is visible
+  const inset = panelInsets();
+  if (is3DOpen()) flyTo3D(place.lat, place.lng, z, inset);
+  else {
+    // Centre the place in the part of the map that isn't covered by the panel.
+    const centre = map.unproject(map.project(ll, z).add([-inset.left / 2, inset.bottom / 2]), z);
+    map.flyTo(centre, z);
+  }
+  void pickPoint(ll);
+});
 
 onZoom();
 state.date = isoDate(today);

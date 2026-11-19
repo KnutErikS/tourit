@@ -219,7 +219,8 @@ details.ws > div{display:grid;gap:8px;padding-top:8px}
   .burger-in{width:40px;height:40px}
 }
 /* ---------- Koordinat (MGRS) ---------- */
-#coord{position:absolute;z-index:999;top:calc(12px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);
+/* PC: top-left of the map area, just right of the panel (400 px + margins), or of the burger when the panel is hidden. */
+#coord{position:absolute;z-index:999;top:calc(12px + env(safe-area-inset-top,0px));left:calc(424px + env(safe-area-inset-left,0px));
   display:flex;align-items:center;gap:8px;padding:5px 6px 5px 12px;border-radius:999px;background:var(--panel);color:var(--fg);
   border:1px solid var(--line);box-shadow:var(--shadow);font-size:12px;white-space:nowrap;max-width:calc(100% - 24px)}
 #coord .c-label{color:var(--muted)}
@@ -227,20 +228,34 @@ details.ws > div{display:grid;gap:8px;padding-top:8px}
 #coord .c-copy:hover{outline:1px solid var(--accent)}
 #coord .c-copy:focus-visible,#coord .c-close:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 #coord .c-sys{font:600 10px var(--f-mono);color:var(--muted);letter-spacing:.04em}
-#coord .c-mgrs{font:500 14px var(--f-mono);letter-spacing:.02em}
+#coord .c-mgrs{font:500 14px var(--f-mono);letter-spacing:.02em;user-select:text;-webkit-user-select:text}
 #coord .c-copy svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round}
 #coord .c-copy[data-state="ok"]{background:var(--d1);color:#fff}
 #coord .c-copy[data-state="err"]{background:var(--d4);color:#fff}
 #coord .c-acc{font:400 11px var(--f-mono);color:var(--muted)}
 #coord .c-acc:empty{display:none}
+body.panel-hidden #coord{left:calc(72px + env(safe-area-inset-left,0px))}
 #coord .c-close{border:0;background:none;color:var(--muted);font-size:18px;line-height:1;padding:2px 6px;cursor:pointer}
 .pick-mgrs{flex-basis:100%;font-size:12px}
 .pick-mgrs > span{color:var(--muted);font:600 10px var(--f-mono)}
 @media (max-width:640px){
   /* Under the zoom hint (top-left), clear of the buttons on the right. */
-  #coord{top:calc(48px + env(safe-area-inset-top,0px));left:calc(10px + env(safe-area-inset-left,0px));transform:none;max-width:calc(100% - 80px);gap:6px}
+  #coord,body.panel-hidden #coord{top:calc(48px + env(safe-area-inset-top,0px));left:calc(10px + env(safe-area-inset-left,0px));max-width:calc(100% - 80px);gap:6px}
   #coord .c-label{display:none}
 }
+/* ---------- Stedsøk ---------- */
+.search{position:relative}
+#search{width:100%;box-sizing:border-box;font:inherit;font-size:14px;padding:8px 10px 8px 32px;border:1px solid var(--line);border-radius:8px;
+  background:var(--panel) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238a96a3' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-4-4'/%3E%3C/svg%3E") no-repeat 9px 50%/16px;
+  color:var(--fg)}
+#search:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+#search-results{position:absolute;z-index:5;left:0;right:0;top:calc(100% + 4px);margin:0;padding:4px;list-style:none;max-height:min(40vh,360px);overflow-y:auto;
+  background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow)}
+#search-results li{display:grid;gap:1px;padding:7px 9px;border-radius:6px;cursor:pointer}
+#search-results li b{font-weight:600;font-size:14px}
+#search-results li span{font-size:12px;color:var(--muted)}
+#search-results li[aria-selected="true"],#search-results li:hover{background:var(--chip)}
+#search-results li.s-msg{cursor:default;color:var(--muted);font-size:13px}
 /* ---------- Kompass ---------- */
 #compass{position:absolute;z-index:999;right:calc(12px + env(safe-area-inset-right,0px));bottom:calc(72px + env(safe-area-inset-bottom,0px));
   width:52px;height:52px;padding:0;border-radius:50%;border:1px solid var(--line);background:var(--panel);box-shadow:var(--shadow);

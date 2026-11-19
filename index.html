@@ -21,6 +21,11 @@
       <h1>Skredterreng</h1>
       <small>Varsom · NVE · Kartverket</small>
     </div>
+    <div class="search" role="search">
+      <input id="search" type="search" placeholder="Søk etter fjell eller sted" autocomplete="off" spellcheck="false"
+        role="combobox" aria-label="Søk etter fjell eller sted" aria-autocomplete="list" aria-controls="search-results" aria-expanded="false">
+      <ul id="search-results" role="listbox" aria-label="Søkeresultater" hidden></ul>
+    </div>
     <div class="daterow">
       <input type="date" id="date" aria-label="Varseldato">
       <button class="btn" id="today">I dag</button>

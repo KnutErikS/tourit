@@ -15,6 +15,7 @@ const HOSTS = {
   kartverket: 'https://cache.kartverket.no', // basemap tiles
   hoydedata: 'https://hoydedata.no', // elevation (DTM) for computed layers
   awsTerrain: 'https://s3.amazonaws.com', // 3D terrain tiles
+  stedsnavn: 'https://ws.geonorge.no', // place-name search (Kartverket)
 };
 
 function csp(): Plugin {

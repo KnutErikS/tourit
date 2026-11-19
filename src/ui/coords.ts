@@ -38,16 +38,46 @@ export function clearCoord(src?: CoordSource): void {
   $('coord').hidden = true;
 }
 
+/** Older copy method, for browsers/webviews where the Clipboard API is blocked. */
+function legacyCopy(text: string): boolean {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.setAttribute('readonly', '');
+  ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+  document.body.appendChild(ta);
+  ta.select();
+  let ok = false;
+  try {
+    ok = document.execCommand('copy');
+  } catch {
+    ok = false;
+  }
+  ta.remove();
+  return ok;
+}
+
 async function copy(): Promise<void> {
   if (!current) return;
   const btn = $('coord').querySelector<HTMLElement>('.c-copy')!;
+  let ok = false;
   try {
     await navigator.clipboard.writeText(current);
+    ok = true;
+  } catch {
+    ok = legacyCopy(current);
+  }
+  if (ok) {
     btn.dataset.state = 'ok';
     btn.setAttribute('aria-label', 'Kopiert');
-  } catch {
+  } else {
+    // Last resort: select the coordinate so it can be copied by hand.
+    const sel = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents($('coord').querySelector('.c-mgrs')!);
+    sel?.removeAllRanges();
+    sel?.addRange(range);
     btn.dataset.state = 'err';
-    btn.setAttribute('aria-label', 'Kunne ikke kopiere');
+    btn.setAttribute('aria-label', 'Kunne ikke kopiere – teksten er markert');
   }
   setTimeout(() => {
     delete btn.dataset.state;

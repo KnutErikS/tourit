@@ -317,6 +317,13 @@ export function close3D(): void {
   setCompassBearing(0, false); // 2D is always north-up
 }
 
+/** Fly the 3D map to a place (no-op when 3D isn't open). Leaflet zoom → MapLibre zoom − 1. */
+export function flyTo3D(lat: number, lng: number, leafletZoom: number, inset = { left: 0, bottom: 0 }): void {
+  if (!m3 || !is3DOpen()) return;
+  // padding keeps the place centred in the part of the map not covered by the panel.
+  m3.flyTo({ center: [lng, lat], zoom: leafletZoom - 1, padding: { left: inset.left, bottom: inset.bottom, top: 0, right: 0 } });
+}
+
 /** Turn the 3D map back to north (keeps the tilt). No-op when 3D isn't open. */
 export function resetNorth3D(): void {
   if (m3 && is3DOpen()) m3.easeTo({ bearing: 0, duration: 400 });

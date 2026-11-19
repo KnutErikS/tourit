@@ -46,7 +46,7 @@ export function initSheet(onHide: () => void): void {
     if (!PHONE.matches || e.button > 0) return;
     const t = e.target as HTMLElement;
     fromGrabber = !!t.closest('#grabber');
-    if (!fromGrabber && t.closest('button, input, select, a, label, [role="tab"]')) return;
+    if (!fromGrabber && t.closest('button, input, select, a, label, [role="tab"], .search')) return;
     dragging = true;
     moved = false;
     startY = lastY = e.clientY;

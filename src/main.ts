@@ -13,6 +13,7 @@ import './styles/app.css';
 import * as L from 'leaflet';
 import { fetchRegions, fetchWarnings } from './api/nve';
 import { fetchObservations } from './api/regobs';
+import { fetchPointWeather } from './api/met';
 import { ASP_RGB, ASPECT_MIN_ZOOM, DEMO, DIRS, DNAME, SKRED_MIN_ZOOM } from './config';
 import { images, obsKind } from './domain/observations';
 import { regionAt } from './domain/geo';
@@ -40,6 +41,7 @@ import { initLocate } from './ui/locate';
 import { initOffline } from './ui/offlinePage';
 import { reportDemError, setStatus } from './ui/status';
 import { renderSummary } from './ui/summary';
+import { renderWeather } from './ui/weather';
 import { initShare } from './ui/share';
 import { initRoute, isDrawing } from './ui/routePage';
 import { $, fmtDate, fmtTime, isoDate } from './util';
@@ -55,6 +57,7 @@ const aspectLayer = createAspectLayer(reportDemError);
 function renderPanels(): void {
   renderDetail(openObservation);
   renderSummary(() => setTab('warn'));
+  renderWeather();
 }
 
 function openObservation(regId: number): void {
@@ -188,6 +191,8 @@ function go(date: string): void {
   suggestTomorrow();
   loadWarnings(date).catch(warnFail);
   loadObservations(date).catch(obsFail);
+  // Weather follows the date shown, and gets refreshed along with the warning.
+  if (state.picked && state.picked.terrain !== undefined) void loadWeather(state.picked);
 }
 
 /** Catch up with the clock: a new day, or tomorrow's warning coming out. */
@@ -277,16 +282,16 @@ $('demo').addEventListener('click', () => {
 
 /* ---------- tabs + panel ---------- */
 
-type Tab = 'layers' | 'warn';
+const TABS = ['layers', 'warn', 'wx'] as const;
+type Tab = (typeof TABS)[number];
 function setTab(t: Tab): void {
-  $('tab-layers').hidden = t !== 'layers';
-  $('tab-warn').hidden = t !== 'warn';
-  $('tab-btn-layers').setAttribute('aria-selected', String(t === 'layers'));
-  $('tab-btn-warn').setAttribute('aria-selected', String(t === 'warn'));
+  for (const k of TABS) {
+    $(`tab-${k}`).hidden = k !== t;
+    $(`tab-btn-${k}`).setAttribute('aria-selected', String(k === t));
+  }
   expandPanel();
 }
-$('tab-btn-layers').addEventListener('click', () => setTab('layers'));
-$('tab-btn-warn').addEventListener('click', () => setTab('warn'));
+for (const k of TABS) $(`tab-btn-${k}`).addEventListener('click', () => setTab(k));
 
 /*
  * Burger: hides/shows the whole side panel (remembered between visits).
@@ -349,6 +354,21 @@ async function pickPoint(ll: L.LatLng): Promise<void> {
   if (state.picked !== mine) return;
   renderPanels();
   if (coordSource() === 'pick') setCoordInfo(pointFacts());
+  void loadWeather(mine);
+}
+
+/** Weather for the picked point, at its terrain height when known. Cheap to repeat: the API module caches until MET's Expires. */
+async function loadWeather(p: Picked): Promise<void> {
+  try {
+    const got = await fetchPointWeather(p.ll.lat, p.ll.lng, p.terrain?.elev);
+    p.weather = got;
+    if (got.savedAt !== null) showingStored = true;
+  } catch (e) {
+    if (p.weather) return; // keep what we had
+    p.weather = null;
+    p.weatherErr = e instanceof NotStoredError ? 'uten nett, og ikke lagret for dette punktet' : (e as Error)?.message || 'nettverksfeil';
+  }
+  if (state.picked === p) renderPanels();
 }
 map.on('click', (e: L.LeafletMouseEvent) => {
   if (!isDrawing()) void pickPoint(e.latlng); // while drawing a route, taps add route points

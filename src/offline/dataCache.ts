@@ -8,7 +8,7 @@
  * caller gets `savedAt`, so the UI can say how old it is.
  *
  * Only the newest few entries per kind are kept (warnings per date, observations
- * per date, one set of regions).
+ * per date, one set of regions, the last few weather points).
  */
 
 const DATA_CACHE = 'tourit-data-v1';
@@ -16,8 +16,8 @@ const SAVED_AT = 'x-tourit-saved-at';
 /** Wait this long for the network before falling back to a stored copy. */
 const SLOW_MS = 10_000;
 
-export type Kind = 'warnings' | 'observations' | 'regions';
-const KEEP: Record<Kind, number> = { warnings: 8, observations: 4, regions: 1 };
+export type Kind = 'warnings' | 'observations' | 'regions' | 'weather';
+const KEEP: Record<Kind, number> = { warnings: 8, observations: 4, regions: 1, weather: 6 };
 
 export interface Fetched<T> {
   data: T;

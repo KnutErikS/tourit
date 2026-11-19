@@ -49,6 +49,7 @@
     <div class="tabs" role="tablist">
       <button role="tab" id="tab-btn-layers" aria-selected="true" aria-controls="tab-layers">Kartlag</button>
       <button role="tab" id="tab-btn-warn" aria-selected="false" aria-controls="tab-warn">Skredvarsel</button>
+      <button role="tab" id="tab-btn-wx" aria-selected="false" aria-controls="tab-wx">Vær</button>
     </div>
   </header>
   <div class="scroll" id="tab-layers" role="tabpanel">
@@ -113,6 +114,9 @@
   </div>
   <div class="scroll" id="tab-warn" role="tabpanel" hidden>
     <div id="detail" style="padding-top:10px"><p class="empty">Trykk på et sted i kartet. Du får varselet for regionen stedet ligger i, og ser om akkurat det punktet er utsatt for skredproblemene.</p></div>
+  </div>
+  <div class="scroll" id="tab-wx" role="tabpanel" hidden>
+    <div id="weather" style="padding-top:10px"><p class="empty">Trykk på et sted i kartet for å se værvarselet der.</p></div>
   </div>
 </aside>
 <aside id="offline" aria-label="Lagrede områder" hidden></aside>

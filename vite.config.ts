@@ -19,6 +19,7 @@ const HOSTS = {
   hoydedata: 'https://hoydedata.no', // elevation (DTM) for computed layers
   awsTerrain: 'https://s3.amazonaws.com', // 3D terrain tiles
   stedsnavn: 'https://ws.geonorge.no', // place-name search (Kartverket)
+  met: 'https://api.met.no', // point weather forecast (yr's data)
 };
 
 function csp(): Plugin {

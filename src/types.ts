@@ -1,3 +1,5 @@
+import type { Fetched } from './offline/dataCache';
+import type { PointWeather } from './domain/weather';
 import type * as L from 'leaflet';
 
 /* ---------- NVE avalanche warning API (only the fields we use) ---------- */
@@ -107,6 +109,9 @@ export interface Picked {
   ll: L.LatLng;
   /** undefined = still loading, null = no data */
   terrain: TerrainPoint | null | undefined;
+  /** Weather forecast for the point: undefined = not loaded yet, null = failed (see weatherErr). */
+  weather?: Fetched<PointWeather> | null;
+  weatherErr?: string;
 }
 
 /* ---------- Regobs ---------- */

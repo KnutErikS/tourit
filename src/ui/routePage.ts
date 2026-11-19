@@ -4,7 +4,7 @@ import { map } from '../map';
 import { parseGpx } from '../route/gpx';
 import { type Draft, type SavedRoute, listRoutes, putRoute, readDraft, removeRoute, writeDraft } from '../route/store';
 import { state } from '../state';
-import { type ProfilePoint, type ProfileStats, cumulative, profileOf, statsOf } from '../terrain/elevation';
+import { type ProfilePoint, type ProfileStats, TooManyTiles, cumulative, profileOf, statsOf } from '../terrain/elevation';
 import type { LatLngTuple } from '../types';
 import { $, esc } from '../util';
 
@@ -34,6 +34,8 @@ let editId: string | null = null;
 let profile: ProfilePoint[] = [];
 let stats: ProfileStats | null = null;
 let loading = false;
+/** Why there is no elevation, when it's not just "no data here". */
+let elevErr = '';
 let job = { cancelled: false };
 let timer = 0;
 let confirmDelete: string | null = null;
@@ -127,6 +129,7 @@ function scheduleProfile(): void {
   clearTimeout(timer);
   profile = [];
   stats = null;
+  elevErr = '';
   loading = points.length > 1;
   if (!loading) return;
   timer = window.setTimeout(async () => {
@@ -140,10 +143,11 @@ function scheduleProfile(): void {
       if (mine.cancelled) return;
       profile = p;
       stats = p.some((s) => s.z !== null) ? statsOf(p) : null;
-    } catch {
+    } catch (e) {
       if (mine.cancelled) return;
       profile = [];
       stats = null;
+      elevErr = e instanceof TooManyTiles ? e.message : '';
     }
     loading = false;
     refreshSavedStats();
@@ -204,7 +208,7 @@ function statsHTML(): string {
     ? '<div class="rt-prof rt-prof-wait">henter høydedata…</div>'
     : stats
       ? ''
-      : '<span class="rt-wait">ingen høydedata her</span>';
+      : `<span class="rt-wait">${esc(elevErr || 'ingen høydedata her')}</span>`;
   const cell = (label: string, value: string) => `<div><span>${label}</span><b>${value}</b></div>`;
   return `<div class="rt-stats">
       ${cell('Lengde', fmtLen(length()))}
@@ -320,7 +324,13 @@ function saveRoute(): void {
     ascent: stats && !loading ? Math.round(stats.ascent) : null,
     descent: stats && !loading ? Math.round(stats.descent) : null,
   };
-  putRoute(r);
+  try {
+    putRoute(r);
+  } catch {
+    // localStorage full (or blocked): keep the route on the map and say why it wasn't saved.
+    showMsg('Fikk ikke lagret ruta: lagringsplassen i nettleseren er full eller blokkert. Slett noen lagrede ruter, eller last ned ruta som GPX.', true);
+    return;
+  }
   editId = r.id;
   saveDraft();
   render();
@@ -334,7 +344,12 @@ function refreshSavedStats(): void {
   if (!editId || !stats || loading) return;
   const r = listRoutes().find((x) => x.id === editId);
   const same = r && r.points.length === points.length && r.points.every(([a, b], i) => Math.abs(a - points[i].lat) < 1e-6 && Math.abs(b - points[i].lng) < 1e-6);
-  if (r && same && r.ascent === null) putRoute({ ...r, ascent: Math.round(stats.ascent), descent: Math.round(stats.descent) });
+  if (!r || !same || r.ascent !== null) return;
+  try {
+    putRoute({ ...r, ascent: Math.round(stats.ascent), descent: Math.round(stats.descent) });
+  } catch {
+    /* storage full: the list just keeps showing no climb */
+  }
 }
 
 /* ---------- GPX ---------- */
@@ -442,7 +457,12 @@ async function onListClick(e: Event): Promise<void> {
         break;
       }
       confirmDelete = null;
-      removeRoute(r.id);
+      try {
+        removeRoute(r.id);
+      } catch {
+        showMsg('Fikk ikke slettet ruta: lagringen i nettleseren er blokkert.', true);
+        break;
+      }
       if (editId === r.id) {
         editId = null;
         saveDraft();

@@ -29,6 +29,13 @@ const MIN_STEP = 10;
 const HYSTERESIS = 3;
 /** Fetch this many DTM tiles at a time. */
 const PARALLEL = 6;
+/** Never fetch more DTM tiles than this for one profile; coarser zoom first, then give up. */
+const MAX_TILES = 200;
+/** Coarsest zoom used for a profile (~35 m cells in southern Norway). Coarser would flatten the climb too much. */
+const MIN_ZOOM = 11;
+
+/** Thrown when a route covers too much ground to fetch its elevation politely. */
+export class TooManyTiles extends Error {}
 
 /** Distance along each segment, as cumulative metres per vertex. */
 export function cumulative(pts: L.LatLng[]): number[] {
@@ -58,7 +65,9 @@ function samplePoints(pts: L.LatLng[]): { d: number; ll: L.LatLng }[] {
 
 /**
  * Elevation profile for a line. Zoom 13 (~9 m cells in southern Norway, like DTM 10) is plenty for
- * trip numbers and needs a quarter of the tiles of zoom 14; very long routes use zoom 12.
+ * trip numbers and needs a quarter of the tiles of zoom 14; very long routes use zoom 12. Routes that
+ * would still need more than MAX_TILES tiles get a coarser zoom, down to MIN_ZOOM, and otherwise
+ * throw TooManyTiles: that keeps one route from sending thousands of requests to hoydedata.no.
  */
 export async function profileOf(
   pts: L.LatLng[],
@@ -68,15 +77,21 @@ export async function profileOf(
   if (pts.length < 2) return [];
   const samples = samplePoints(pts);
   const total = samples[samples.length - 1].d;
-  const z = total > 40_000 ? 12 : 13;
-
-  // Which tile and pixel each sample falls in.
-  const at = samples.map((s) => {
-    const p = L.CRS.EPSG3857.latLngToPoint(s.ll, z);
-    const x = Math.floor(p.x / 256), y = Math.floor(p.y / 256);
-    return { key: `${x}/${y}`, x, y, o: (Math.floor(p.y) - y * 256) * 256 + (Math.floor(p.x) - x * 256) };
-  });
-  const keys = [...new Set(at.map((a) => a.key))];
+  // Which tile and pixel each sample falls in, at the finest zoom that stays within MAX_TILES.
+  const locate = (z: number) =>
+    samples.map((s) => {
+      const p = L.CRS.EPSG3857.latLngToPoint(s.ll, z);
+      const x = Math.floor(p.x / 256), y = Math.floor(p.y / 256);
+      return { key: `${x}/${y}`, o: (Math.floor(p.y) - y * 256) * 256 + (Math.floor(p.x) - x * 256) };
+    });
+  let z = total > 40_000 ? 12 : 13;
+  let at = locate(z);
+  let keys = [...new Set(at.map((a) => a.key))];
+  while (keys.length > MAX_TILES && z > MIN_ZOOM) {
+    at = locate(--z);
+    keys = [...new Set(at.map((a) => a.key))];
+  }
+  if (keys.length > MAX_TILES) throw new TooManyTiles('Ruta dekker for stort område til å hente høydedata.');
   const tiles = new Map<string, Awaited<ReturnType<typeof getDem>> | null>();
   // A pool of PARALLEL requests: a slow tile doesn't hold up the others.
   let next = 0, done = 0;

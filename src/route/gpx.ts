@@ -8,8 +8,16 @@ import type { LatLngTuple } from '../types';
  * simplified to keep it editable.
  */
 
-/** Keep at most about this many points (more makes dragging points on a phone impractical). */
+/** Keep at most this many points (more makes dragging points on a phone impractical). */
 const MAX_POINTS = 500;
+/** Refuse files with more points than this (a day of 1-second GPS logging is ~50 000). */
+const MAX_RAW_POINTS = 200_000;
+/** A plain decimal number, optionally with an exponent. Rejects "61abc", "0x3d", "" and the like. */
+const NUM = /^\s*[-+]?(\d+(\.\d*)?|\.\d+)(e[-+]?\d+)?\s*$/i;
+
+function num(s: string | null): number {
+  return s !== null && NUM.test(s) ? Number(s) : NaN;
+}
 
 export interface ParsedGpx {
   name: string;
@@ -17,9 +25,11 @@ export interface ParsedGpx {
 }
 
 function pointsOf(doc: Document, tag: string): LatLngTuple[] {
+  const els = doc.getElementsByTagNameNS('*', tag);
+  if (els.length > MAX_RAW_POINTS) throw new Error(`GPX-filen har for mange punkter (over ${MAX_RAW_POINTS.toLocaleString('nb-NO')}).`);
   const out: LatLngTuple[] = [];
-  for (const el of doc.getElementsByTagNameNS('*', tag)) {
-    const lat = parseFloat(el.getAttribute('lat') ?? ''), lng = parseFloat(el.getAttribute('lon') ?? '');
+  for (const el of els) {
+    const lat = num(el.getAttribute('lat')), lng = num(el.getAttribute('lon'));
     if (Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180) out.push([lat, lng]);
   }
   return out;
@@ -32,6 +42,11 @@ function simplify(pts: LatLngTuple[]): LatLngTuple[] {
   const px = pts.map((p) => L.CRS.EPSG3857.latLngToPoint(L.latLng(p[0], p[1]), z));
   let out = px;
   for (let tol = 2; out.length > MAX_POINTS && tol < 1e5; tol *= 1.6) out = L.LineUtil.simplify(px, tol);
+  // Scattered points (not a real track) can survive any tolerance: thin them out evenly, keeping both ends.
+  if (out.length > MAX_POINTS) {
+    const src = out, n = MAX_POINTS;
+    out = Array.from({ length: n }, (_, i) => src[Math.round((i * (src.length - 1)) / (n - 1))]);
+  }
   return out.map((p) => {
     const ll = L.CRS.EPSG3857.pointToLatLng(p, z);
     return [+ll.lat.toFixed(6), +ll.lng.toFixed(6)] as LatLngTuple;

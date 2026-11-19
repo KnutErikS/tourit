@@ -137,7 +137,10 @@ function onLineClick(e: L.LeafletMouseEvent): void {
   let best = 1, bestD = Infinity;
   for (let i = 1; i < points.length; i++) {
     const d = L.LineUtil.pointToSegmentDistance(p, map.latLngToLayerPoint(points[i - 1]), map.latLngToLayerPoint(points[i]));
-    if (d < bestD) (bestD = d), (best = i);
+    if (d < bestD) {
+      bestD = d;
+      best = i;
+    }
   }
   edit(() => points.splice(best, 0, e.latlng));
 }
@@ -589,12 +592,14 @@ export function initRoute(): void {
   $('rt-new').addEventListener('click', () => {
     load([], null, '');
   });
-  $('rt-gpx').addEventListener('click', () => downloadGpx($<HTMLInputElement>('rt-name').value.trim() || defaultName(), points, profile));
-  $('rt-import').addEventListener('click', () => $('rt-file').click());
-  $('rt-file').addEventListener('change', () => void importGpx($<HTMLInputElement>('rt-file')));
+  const nameInput = $<HTMLInputElement>('rt-name');
+  const fileInput = $<HTMLInputElement>('rt-file');
+  $('rt-gpx').addEventListener('click', () => downloadGpx(nameInput.value.trim() || defaultName(), points, profile));
+  $('rt-import').addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', () => void importGpx(fileInput));
   $('rt-save').addEventListener('click', saveRoute);
-  $('rt-name').addEventListener('input', saveDraft);
-  $('rt-name').addEventListener('keydown', (e) => e.key === 'Enter' && saveRoute());
+  nameInput.addEventListener('input', saveDraft);
+  nameInput.addEventListener('keydown', (e) => e.key === 'Enter' && saveRoute());
   $('rt-list').addEventListener('click', (e) => void onListClick(e));
   const result = $('rt-result');
   result.addEventListener('pointermove', onProfileMove);

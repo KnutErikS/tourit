@@ -43,8 +43,9 @@ export function setCoordInfo(html: string): void {
 }
 
 function setOpen(open: boolean): void {
-  const btn = $('coord').querySelector<HTMLElement>('.c-copy')!;
-  $('coord').classList.toggle('open', open);
+  const box = $('coord');
+  const btn = box.querySelector<HTMLElement>('.c-copy')!;
+  box.classList.toggle('open', open);
   btn.title = open ? 'Kopier MGRS' : 'Vis og kopier MGRS';
 }
 
@@ -77,7 +78,8 @@ export function legacyCopy(text: string): boolean {
 async function copy(): Promise<void> {
   if (!current) return;
   setOpen(true);
-  const btn = $('coord').querySelector<HTMLElement>('.c-copy')!;
+  const box = $('coord');
+  const btn = box.querySelector<HTMLElement>('.c-copy')!;
   let ok = false;
   try {
     await navigator.clipboard.writeText(current);
@@ -92,7 +94,7 @@ async function copy(): Promise<void> {
     // Last resort: select the coordinate so it can be copied by hand.
     const sel = window.getSelection();
     const range = document.createRange();
-    range.selectNodeContents($('coord').querySelector('.c-mgrs')!);
+    range.selectNodeContents(box.querySelector('.c-mgrs')!);
     sel?.removeAllRanges();
     sel?.addRange(range);
     btn.dataset.state = 'err';

@@ -134,7 +134,10 @@ const minutes = (s: Span[]) => s.reduce((m, x) => m + (x.to - x.from) / MIN_MS, 
 export function daylight(day: SunDay): Daylight {
   let maxAlt = -90, iMax = 0;
   day.pos.forEach((p, i) => {
-    if (p.alt > maxAlt) (maxAlt = p.alt), (iMax = i);
+    if (p.alt > maxAlt) {
+      maxAlt = p.alt;
+      iMax = i;
+    }
   });
   const sun = spans(day, (i) => day.pos[i].alt > SUNRISE_ALT);
   const light = spans(day, (i) => day.pos[i].alt > CIVIL_ALT);
@@ -162,7 +165,10 @@ export function sunOnSlope(day: SunDay, slope: number, aspect: number): SlopeSun
   let peak = 0, peakAt: number | null = null, sum = 0;
   w.forEach((x, i) => {
     sum += x;
-    if (x > peak) (peak = x), (peakAt = day.start + i * MIN_MS);
+    if (x > peak) {
+      peak = x;
+      peakAt = day.start + i * MIN_MS;
+    }
   });
   // Ignore a sliver of grazing sun: under ~1 % of a full sun does nothing.
   return { spans: spans(day, (i) => w[i] > 10), peak, peakAt, total: sum / 60 / 1000 };

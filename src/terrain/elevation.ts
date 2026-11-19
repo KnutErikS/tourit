@@ -123,8 +123,13 @@ export function statsOf(profile: ProfilePoint[]): ProfileStats {
     min = min === null ? p.z : Math.min(min, p.z);
     max = max === null ? p.z : Math.max(max, p.z);
     if (ref === null) ref = p.z;
-    else if (p.z - ref >= HYSTERESIS) (ascent += p.z - ref), (ref = p.z);
-    else if (ref - p.z >= HYSTERESIS) (descent += ref - p.z), (ref = p.z);
+    else if (p.z - ref >= HYSTERESIS) {
+      ascent += p.z - ref;
+      ref = p.z;
+    } else if (ref - p.z >= HYSTERESIS) {
+      descent += ref - p.z;
+      ref = p.z;
+    }
   }
   return { ascent, descent, min, max };
 }

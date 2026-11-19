@@ -67,8 +67,9 @@ function renderPanels(): void {
 
 function openObservation(regId: number): void {
   if (is3DOpen()) {
-    if (!$<HTMLInputElement>('l-obs').checked) {
-      $<HTMLInputElement>('l-obs').checked = true;
+    const obsBox = $<HTMLInputElement>('l-obs');
+    if (!obsBox.checked) {
+      obsBox.checked = true;
       obsGroup.addTo(map);
       update3DObs();
     }
@@ -259,12 +260,17 @@ setInterval(() => document.visibilityState === 'visible' && state.regions.length
 
 // Map view, layer checkboxes and settings from the link or the last visit.
 const startDate = restoreView();
-state.thr = +$<HTMLSelectElement>('s-thr').value;
-state.aspMin = +$<HTMLSelectElement>('a-min').value;
-state.showRest = $<HTMLInputElement>('s-rest').checked;
+const thrSelect = $<HTMLSelectElement>('s-thr');
+const aspMinSelect = $<HTMLSelectElement>('a-min');
+const restBox = $<HTMLInputElement>('s-rest');
+const steepOpacityInput = $<HTMLInputElement>('o-bratt');
+const snowOpacityInput = $<HTMLInputElement>('o-snow');
+state.thr = +thrSelect.value;
+state.aspMin = +aspMinSelect.value;
+state.showRest = restBox.checked;
 state.showLee = $<HTMLInputElement>('s-lee').checked;
-steepnessLayer.setOpacity(+$<HTMLInputElement>('o-bratt').value);
-snowLayer.setOpacity(+$<HTMLInputElement>('o-snow').value);
+steepnessLayer.setOpacity(+steepOpacityInput.value);
+snowLayer.setOpacity(+snowOpacityInput.value);
 
 /** seNorge snow map: the chosen kind for the warning date shown. */
 function snowKind(): SnowKind {
@@ -302,20 +308,20 @@ bindToggle('l-snow', snowLayer);
 bindToggle('l-asp', aspectLayer);
 bindToggle('l-obs', obsGroup);
 
-$<HTMLInputElement>('o-bratt').addEventListener('input', (e) => steepnessLayer.setOpacity(+(e.target as HTMLInputElement).value));
-$<HTMLInputElement>('o-snow').addEventListener('input', (e) => snowLayer.setOpacity(+(e.target as HTMLInputElement).value));
+steepOpacityInput.addEventListener('input', () => steepnessLayer.setOpacity(+steepOpacityInput.value));
+snowOpacityInput.addEventListener('input', () => snowLayer.setOpacity(+snowOpacityInput.value));
 $<HTMLSelectElement>('n-kind').addEventListener('change', applySnow);
-$<HTMLSelectElement>('a-min').addEventListener('change', (e) => {
-  state.aspMin = +(e.target as HTMLSelectElement).value;
+aspMinSelect.addEventListener('change', () => {
+  state.aspMin = +aspMinSelect.value;
   aspectLayer.redraw();
 });
-$<HTMLSelectElement>('s-thr').addEventListener('change', (e) => {
-  state.thr = +(e.target as HTMLSelectElement).value;
+thrSelect.addEventListener('change', () => {
+  state.thr = +thrSelect.value;
   avalancheLayer.redraw();
   renderPanels();
 });
-$<HTMLInputElement>('s-rest').addEventListener('change', (e) => {
-  state.showRest = (e.target as HTMLInputElement).checked;
+restBox.addEventListener('change', () => {
+  state.showRest = restBox.checked;
   avalancheLayer.redraw();
 });
 

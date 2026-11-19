@@ -271,7 +271,10 @@ const OfflineControl = L.Control.extend({
     const save = bar.querySelector<HTMLElement>('#ctl-save')!;
     const list = bar.querySelector<HTMLElement>('#ctl-offline')!;
     badge = list.querySelector('.offbadge');
-    save.addEventListener('click', (e) => (e.preventDefault(), openOffline('save')));
+    save.addEventListener('click', (e) => {
+      e.preventDefault();
+      openOffline('save');
+    });
     list.addEventListener('click', (e) => {
       e.preventDefault();
       if (!page().hidden && mode === 'list') closeOffline();

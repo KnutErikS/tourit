@@ -111,6 +111,7 @@ const vis = (on: boolean) => (on ? 'visible' : 'none');
 const runoutOn = () => checked('l-bratt') && checked('b-runout');
 
 function style(): ML.StyleSpecification {
+  const steepOpacity = +$<HTMLInputElement>('o-bratt').value;
   return {
     version: 8,
     sources: {
@@ -160,14 +161,14 @@ function style(): ML.StyleSpecification {
         type: 'raster',
         source: 'bratt',
         layout: { visibility: vis(checked('l-bratt') && !checked('b-runout')) },
-        paint: { 'raster-opacity': +$<HTMLInputElement>('o-bratt').value },
+        paint: { 'raster-opacity': steepOpacity },
       },
       {
         id: 'runout',
         type: 'raster',
         source: 'runout',
         layout: { visibility: vis(runoutOn()) },
-        paint: { 'raster-opacity': +$<HTMLInputElement>('o-bratt').value },
+        paint: { 'raster-opacity': steepOpacity },
       },
       {
         id: 'snow',
@@ -209,9 +210,10 @@ export function update3D(): void {
 function syncLayers(): void {
   if (!m3) return;
   m3.setLayoutProperty('bratt', 'visibility', vis(checked('l-bratt') && !runoutOn()));
-  m3.setPaintProperty('bratt', 'raster-opacity', +$<HTMLInputElement>('o-bratt').value);
+  const steepOpacity = +$<HTMLInputElement>('o-bratt').value;
+  m3.setPaintProperty('bratt', 'raster-opacity', steepOpacity);
   m3.setLayoutProperty('runout', 'visibility', vis(runoutOn()));
-  m3.setPaintProperty('runout', 'raster-opacity', +$<HTMLInputElement>('o-bratt').value);
+  m3.setPaintProperty('runout', 'raster-opacity', steepOpacity);
   m3.setLayoutProperty('snow', 'visibility', vis(checked('l-snow')));
   m3.setPaintProperty('snow', 'raster-opacity', +$<HTMLInputElement>('o-snow').value);
   m3.setLayoutProperty('aspect', 'visibility', vis(checked('l-asp')));

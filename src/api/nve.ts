@@ -38,7 +38,8 @@ export async function fetchWarnings(date: string): Promise<Map<number, Warning>>
   let data: NveRegionSummaryRaw[];
   try {
     // Language 1 = Norwegian.
-    data = await getJson<NveRegionSummaryRaw[]>(`${NVE_API}/RegionSummary/Detail/1/${date}/${date}`);
+    // no-cache: a refetch must not get a stale copy from the HTTP cache.
+    data = await getJson<NveRegionSummaryRaw[]>(`${NVE_API}/RegionSummary/Detail/1/${date}/${date}`, { cache: 'no-cache' });
   } catch (e) {
     throw new Error('Varsler: ' + (e as Error).message);
   }

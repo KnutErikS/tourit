@@ -89,9 +89,9 @@ async function loadWarnings(date: string): Promise<void> {
   $('season').hidden = warned.length > 0;
   if (warned.length) {
     const max = Math.max(...warned.map((r) => r.warn!.level));
-    setStatus(`${warned.length} regioner varslet ${fmtDate(date)} · høyeste faregrad ${max} (${DNAME[max].toLowerCase()})`, 'ok');
+    setStatus(`${warned.length} regioner varslet ${fmtDate(date)} · høyeste faregrad ${max} (${DNAME[max].toLowerCase()})${tomorrowHint()}`, 'ok');
   } else {
-    setStatus(`Ingen regioner har varsel ${fmtDate(date)}.`, 'ok');
+    setStatus(`Ingen regioner har varsel ${fmtDate(date)}.${tomorrowHint()}`, 'ok');
   }
 }
 
@@ -115,14 +115,66 @@ const obsFail = (e: unknown) => {
   $('obs-status').textContent = `Fikk ikke hentet observasjoner fra Regobs (${(e as Error)?.message || 'nettverksfeil'}).`;
 };
 
+/* ---------- dates ---------- */
+
+/** NVE publishes the next day's warning around 16:00. */
+const TOMORROW_FROM_HOUR = 16;
+/** Coming back to the app refetches when the data is older than this. */
+const STALE_MS = 5 * 60_000;
+
+/** Worked out when asked, never at startup: the app may stay open past midnight. */
+const todayIso = () => isoDate(new Date());
+function tomorrowIso(): string {
+  const d = new Date();
+  d.setDate(d.getDate() + 1); // calendar day, so DST changes don't matter
+  return isoDate(d);
+}
+const tomorrowIsOut = () => state.date === todayIso() && new Date().getHours() >= TOMORROW_FROM_HOUR;
+const tomorrowHint = () => (tomorrowIsOut() ? ' Varselet for i morgen er ute.' : '');
+
+/** Point the user at tomorrow's warning once it is out (the button, and the date icon on phones). */
+function suggestTomorrow(): void {
+  const on = tomorrowIsOut();
+  const btn = $('tomorrow');
+  btn.classList.toggle('primary', on);
+  btn.title = on ? 'Varselet for i morgen er publisert' : '';
+  $('tool-date').classList.toggle('suggest', on);
+}
+
 const dateEl = $<HTMLInputElement>('date');
+/** True while the user is on "today", so the date moves along after midnight. */
+let followToday = false;
+let loadedAt = 0;
 function go(date: string): void {
   state.date = date;
+  followToday = date === todayIso();
+  loadedAt = Date.now();
   dateEl.value = date;
   saveView();
+  suggestTomorrow();
   loadWarnings(date).catch(warnFail);
   loadObservations(date).catch(obsFail);
 }
+
+/** Catch up with the clock: a new day, or tomorrow's warning coming out. */
+function syncClock(): boolean {
+  if (followToday && state.date !== todayIso()) {
+    go(todayIso());
+    return true;
+  }
+  suggestTomorrow();
+  return false;
+}
+
+/** Back in the foreground (phone unlocked, tab switched back): new day or stale data → fetch again. */
+function onForeground(): void {
+  if (document.visibilityState !== 'visible' || !state.regions.length) return;
+  if (!syncClock() && Date.now() - loadedAt > STALE_MS) go(state.date);
+}
+document.addEventListener('visibilitychange', onForeground);
+window.addEventListener('pageshow', (e) => e.persisted && onForeground());
+// While open and visible, notice midnight and 16:00 without waiting for a reload.
+setInterval(() => document.visibilityState === 'visible' && state.regions.length && syncClock(), 60_000);
 
 /* ---------- layer controls ---------- */
 
@@ -179,11 +231,9 @@ map.on('zoomend', onZoom);
 
 /* ---------- date controls ---------- */
 
-const today = new Date();
-const tomorrow = new Date(Date.now() + 864e5);
 dateEl.addEventListener('change', () => dateEl.value && go(dateEl.value));
-$('today').addEventListener('click', () => go(isoDate(today)));
-$('tomorrow').addEventListener('click', () => go(isoDate(tomorrow)));
+$('today').addEventListener('click', () => go(todayIso()));
+$('tomorrow').addEventListener('click', () => go(tomorrowIso()));
 $('demo').addEventListener('click', () => {
   go(DEMO.date);
   map.flyTo(DEMO.center, DEMO.zoom);
@@ -307,7 +357,10 @@ initSearch((place) => {
 
 onZoom();
 state.date = startDate;
+followToday = startDate === todayIso();
+loadedAt = Date.now();
 dateEl.value = state.date;
+suggestTomorrow();
 trackView(go);
 setStatus('Henter varslingsregioner…', 'busy');
 fetchRegions()

@@ -329,6 +329,9 @@ body.panel-hidden #coord{left:calc(72px + env(safe-area-inset-left,0px))}
 .hdr-tool:hover{border-color:var(--accent)}
 .hdr-tool:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .hdr-tool[aria-expanded="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+/* Tomorrow's warning is out: a dot on the (folded) date picker icon. */
+.hdr-tool{position:relative}
+.hdr-tool.suggest::after{content:"";position:absolute;top:5px;right:5px;width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px var(--chip)}
 @media (max-width:640px){
   .hdr-tool{display:grid}
   .brand{gap:8px}

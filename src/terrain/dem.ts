@@ -1,5 +1,6 @@
 import * as L from 'leaflet';
-import Lerc, { type LercPixelBlock } from 'lerc';
+import { load as loadLerc, decode as decodeLerc, type LercData } from 'lerc';
+import lercWasmUrl from 'lerc/lerc-wasm.wasm?url';
 import { DTM_URL } from '../config';
 import type { DemTile, TerrainPoint } from '../types';
 
@@ -12,6 +13,18 @@ const CIRC = 40075016.68557849; // Web Mercator world width in metres
 const ORIG = 20037508.342789244;
 const MAX_CACHE = 500;
 const cache = new Map<string, Promise<DemTile>>();
+
+// lerc ≥4 decodes via WebAssembly; the module must be loaded once before decode().
+// Point it at the wasm file Vite emits, since the package's own relative lookup
+// breaks once the JS is bundled.
+let lercReady: Promise<void> | null = null;
+function ensureLerc(): Promise<void> {
+  lercReady ??= loadLerc({ locateFile: () => lercWasmUrl }).catch((e) => {
+    lercReady = null;
+    throw e;
+  });
+  return lercReady;
+}
 
 /** Exact DTM request URL for tile (x, y, z) at oversampling f. Also used by offline downloads. */
 export function demUrl(x: number, y: number, z: number, f = 1): string {
@@ -44,12 +57,13 @@ export function getDem(x: number, y: number, z: number, f = 1): Promise<DemTile>
   const ymax = ORIG - y * size;
   const url = demUrl(x, y, z, f);
 
-  const p = fetch(url)
-    .then((r) => {
+  const p = Promise.all([
+    fetch(url).then((r) => {
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return r.arrayBuffer();
-    })
-    .then((buf) => analyze(Lerc.decode(buf), res, ymax + res, n));
+    }),
+    ensureLerc(),
+  ]).then(([buf]) => analyze(decodeLerc(buf), res, ymax + res, n));
 
   cache.set(key, p);
   p.catch(() => cache.delete(key));
@@ -58,7 +72,7 @@ export function getDem(x: number, y: number, z: number, f = 1): Promise<DemTile>
 }
 
 /** Slope (Horn's method) and aspect for n×n cells from an (n+2)×(n+2) grid. */
-export function analyze(d: LercPixelBlock, res: number, ytop: number, n: number): DemTile {
+export function analyze(d: LercData, res: number, ytop: number, n: number): DemTile {
   const W = d.width, Z = d.pixels[0], M = d.mask;
   const N = n * n;
   const slope = new Float32Array(N), sector = new Uint8Array(N), elev = new Float32Array(N), ok = new Uint8Array(N);

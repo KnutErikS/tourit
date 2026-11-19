@@ -31,7 +31,8 @@ function csp(): Plugin {
       if (dev) connect.push('ws://localhost:*', 'ws://127.0.0.1:*');
       const policy = [
         "default-src 'self'",
-        "script-src 'self'",
+        // 'wasm-unsafe-eval' lets the lerc DEM decoder compile its WebAssembly.
+        "script-src 'self' 'wasm-unsafe-eval'",
         // Leaflet and the app set inline style attributes; CSS can't run code.
         "style-src 'self' 'unsafe-inline'",
         `img-src 'self' data: blob: ${HOSTS.kartverket} ${HOSTS.nveGis} ${HOSTS.regobs}`,

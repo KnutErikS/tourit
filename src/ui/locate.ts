@@ -1,5 +1,6 @@
 import * as L from 'leaflet';
 import { map } from '../map';
+import { clearCoord, coordSource, showCoord } from './coords';
 import { setStatus } from './status';
 
 /**
@@ -44,12 +45,20 @@ function onPosition(p: GeolocationPosition): void {
       title: 'Din posisjon',
       keyboard: false,
     }).addTo(map);
-    marker.on('click', () => marker && onPick(marker.getLatLng()));
+    marker.on('click', () => {
+      if (!marker) return;
+      const at = marker.getLatLng();
+      onPick(at);
+      showCoord('position', at.lat, at.lng, circle?.getRadius());
+    });
     circle = L.circle(ll, { radius: acc, pane: 'regions', color: '#2a7de1', weight: 1, opacity: 0.6, fillColor: '#2a7de1', fillOpacity: 0.12, interactive: false }).addTo(map);
   } else {
     marker.setLatLng(ll);
     circle?.setLatLng(ll).setRadius(acc);
   }
+  // Coordinate chip: show own position on the first fix, then keep it live
+  // unless the user has picked another point since.
+  if (firstFix || coordSource() === 'position') showCoord('position', ll.lat, ll.lng, acc);
   if (following) {
     if (firstFix) map.setView(ll, Math.max(map.getZoom(), FOLLOW_ZOOM));
     else map.panTo(ll);
@@ -91,6 +100,7 @@ function stop(): void {
   marker?.remove();
   circle?.remove();
   marker = circle = null;
+  clearCoord('position');
   updateButton();
 }
 

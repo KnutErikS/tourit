@@ -30,6 +30,7 @@ import { renderDetail } from './ui/detail';
 import { roseSVG } from './ui/icons';
 import { focusObs3D, init3D, is3DOpen, resetNorth3D, setPick3D, update3D, update3DObs } from './three/view3d';
 import { initCompass } from './ui/compass';
+import { initCoords, showCoord } from './ui/coords';
 import { initSheet, resetSheet } from './ui/sheet';
 import { initLocate } from './ui/locate';
 import { initOffline } from './ui/offlinePage';
@@ -236,6 +237,7 @@ async function pickPoint(ll: L.LatLng): Promise<void> {
   const mine: Picked = { ll, terrain: undefined };
   state.picked = mine;
   state.selected = regionAt(state.regions, ll);
+  showCoord('pick', ll.lat, ll.lng);
   setPick3D(ll);
   restyleRegions();
   renderPanels();
@@ -255,6 +257,7 @@ initOffline();
 initLocate(pickPoint);
 init3D(pickPoint);
 initCompass(resetNorth3D, '.ctl3dbar');
+initCoords();
 
 onZoom();
 state.date = isoDate(today);

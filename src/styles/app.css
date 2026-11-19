@@ -218,6 +218,29 @@ details.ws > div{display:grid;gap:8px;padding-top:8px}
   #burger svg{width:26px;height:26px}
   .burger-in{width:40px;height:40px}
 }
+/* ---------- Koordinat (MGRS) ---------- */
+#coord{position:absolute;z-index:999;top:calc(12px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);
+  display:flex;align-items:center;gap:8px;padding:5px 6px 5px 12px;border-radius:999px;background:var(--panel);color:var(--fg);
+  border:1px solid var(--line);box-shadow:var(--shadow);font-size:12px;white-space:nowrap;max-width:calc(100% - 24px)}
+#coord .c-label{color:var(--muted)}
+#coord .c-copy{display:flex;align-items:center;gap:6px;border:0;background:var(--chip);color:var(--fg);padding:4px 8px;border-radius:999px;cursor:pointer}
+#coord .c-copy:hover{outline:1px solid var(--accent)}
+#coord .c-copy:focus-visible,#coord .c-close:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+#coord .c-sys{font:600 10px var(--f-mono);color:var(--muted);letter-spacing:.04em}
+#coord .c-mgrs{font:500 14px var(--f-mono);letter-spacing:.02em}
+#coord .c-copy svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round}
+#coord .c-copy[data-state="ok"]{background:var(--d1);color:#fff}
+#coord .c-copy[data-state="err"]{background:var(--d4);color:#fff}
+#coord .c-acc{font:400 11px var(--f-mono);color:var(--muted)}
+#coord .c-acc:empty{display:none}
+#coord .c-close{border:0;background:none;color:var(--muted);font-size:18px;line-height:1;padding:2px 6px;cursor:pointer}
+.pick-mgrs{flex-basis:100%;font-size:12px}
+.pick-mgrs > span{color:var(--muted);font:600 10px var(--f-mono)}
+@media (max-width:640px){
+  /* Under the zoom hint (top-left), clear of the buttons on the right. */
+  #coord{top:calc(48px + env(safe-area-inset-top,0px));left:calc(10px + env(safe-area-inset-left,0px));transform:none;max-width:calc(100% - 80px);gap:6px}
+  #coord .c-label{display:none}
+}
 /* ---------- Kompass ---------- */
 #compass{position:absolute;z-index:999;right:calc(12px + env(safe-area-inset-right,0px));bottom:calc(72px + env(safe-area-inset-bottom,0px));
   width:52px;height:52px;padding:0;border-radius:50%;border:1px solid var(--line);background:var(--panel);box-shadow:var(--shadow);

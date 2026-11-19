@@ -16,7 +16,8 @@
     "@fontsource/ibm-plex-mono": "^5.2.0",
     "leaflet": "^1.9.4",
     "lerc": "2.0.0",
-    "maplibre-gl": "^6.0.0"
+    "maplibre-gl": "^6.0.0",
+    "mgrs": "^2.1.0"
   },
   "devDependencies": {
     "@types/leaflet": "^1.9.20",

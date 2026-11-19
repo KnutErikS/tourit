@@ -1,10 +1,10 @@
 /**
  * Weather for one point, independent of where it came from.
  *
- * MET Norway's Locationforecast (yr's data) fills it today. Other sources can
- * add what MET doesn't have: `cloudLayers` (cloud base/top in metres) and
- * `snowCm` (snowfall given directly) are there for that, and everything below
- * uses them when present and falls back to estimates otherwise.
+ * MET Norway's Locationforecast (yr's data) gives the steps. An air profile
+ * from another model (Open-Meteo / ICON, see `withProfile`) adds what MET
+ * doesn't have: cloud cover per height, cloud layers in metres, the freezing
+ * level and the snow line. Everything below works with or without it.
  */
 
 /** One forecast time. Instant values (temperature, wind, cloud) are at `time`; precipitation is for the period after it. */
@@ -36,15 +36,55 @@ export interface WeatherStep {
   precipProb?: number;
   /** Source's own weather symbol (MET/yr symbol code, e.g. "lightsnowshowers_day"). */
   symbol?: string;
-  /** Cloud layers, metres above sea level, when a source gives them. */
-  cloudLayers?: { base: number; top: number }[];
-  /** Snowfall over the period in cm, when a source gives it (otherwise estimated from precip + temperature). */
+  /** Air above the point at this time, when a profile source is merged in. */
+  air?: AirProfile;
+  /** Cloud layers worked out from `air`, bottom first. */
+  cloudLayers?: CloudLayer[];
+  /** Height where all precipitation is snow (wet-bulb ≤ 0.5 °C from here up), m. Worked out from `air`. */
+  snowLine?: number;
+  /**
+   * Snowfall over the period in cm, if a source gives it in step with `precip`.
+   * Not filled from ICON: its snowfall comes from a different model run than
+   * MET's precipitation, so the two would disagree. Estimated otherwise.
+   */
   snowCm?: number;
+}
+
+/** One pressure level of a profile. */
+export interface AirLevel {
+  /** Height above sea level, m */
+  h: number;
+  /** Cloud cover at this height, % */
+  cover: number;
+  temp?: number;
+  rh?: number;
+}
+
+/** The air above a point at one time. */
+export interface AirProfile {
+  time: number;
+  /** Bottom to top. */
+  levels: AirLevel[];
+  /** Height of 0 °C, m */
+  freezingLevel?: number;
+}
+
+export interface CloudLayer {
+  base: number;
+  top: number;
+  /** Highest cover inside the layer, % */
+  cover: number;
+  /** The layer starts at the lowest level we have, so the real base may be lower. */
+  openBase: boolean;
+  /** The layer reaches the highest level we have (~5 km), so the real top may be higher. */
+  openTop: boolean;
 }
 
 export interface PointWeather {
   /** Attribution, e.g. "MET Norway". */
   source: string;
+  /** Attribution for the merged air profile, if any. */
+  profileSource?: string;
   lat: number;
   lon: number;
   /** Altitude the forecast is adjusted to (m), or undefined for the model's own terrain. */
@@ -206,4 +246,104 @@ export function precipUntil(steps: WeatherStep[], from: number, to: number): { m
     snow += stepSnow(s).mm * part;
   }
   return { mm, snowFrac: mm > 0 ? snow / mm : 0 };
+}
+
+/* ---------- air profile: cloud layers, snow line ---------- */
+
+/** Cloud cover (%) at which a level counts as inside a cloud layer. */
+export const CLOUD_COVER_MIN = 50;
+
+/** Height between two levels where `value` crosses `at`, by linear interpolation. */
+const cross = (a: AirLevel, b: AirLevel, va: number, vb: number, at: number) => a.h + ((at - va) / (vb - va)) * (b.h - a.h);
+
+/** Contiguous runs of levels with cloud cover ≥ `min`, with base/top interpolated between levels. */
+export function cloudLayers(levels: AirLevel[], min = CLOUD_COVER_MIN): CloudLayer[] {
+  const out: CloudLayer[] = [];
+  let cur: CloudLayer | null = null;
+  levels.forEach((l, i) => {
+    const cloudy = l.cover >= min, prev = levels[i - 1];
+    if (cloudy && !cur) {
+      cur = { base: prev ? cross(prev, l, prev.cover, l.cover, min) : l.h, top: l.h, cover: l.cover, openBase: !prev, openTop: false };
+      out.push(cur);
+    } else if (cloudy && cur) {
+      cur.top = l.h;
+      cur.cover = Math.max(cur.cover, l.cover);
+    } else if (!cloudy && cur) {
+      cur.top = cross(prev, l, prev.cover, l.cover, min);
+      cur = null;
+    }
+  });
+  if (cur) (cur as CloudLayer).openTop = true;
+  return out;
+}
+
+/**
+ * Lowest height with all snow from there up (wet-bulb ≤ 0.5 °C, the same rule as `snowFraction`).
+ * 0 when even the lowest level is cold enough: snow all the way down.
+ */
+export function snowLine(levels: AirLevel[]): number | undefined {
+  const tw = levels.map((l) => (l.temp == null ? undefined : l.rh == null ? l.temp : wetBulb(l.temp, l.rh)));
+  if (tw.some((t) => t == null)) return undefined;
+  const t = tw as number[], LIMIT = 0.5;
+  let i = t.length - 1;
+  if (t[i] > LIMIT) return undefined; // warm all the way up
+  while (i > 0 && t[i - 1] <= LIMIT) i--;
+  return i === 0 ? 0 : cross(levels[i - 1], levels[i], t[i - 1], t[i], LIMIT);
+}
+
+/** Merge hourly air profiles into the steps at the same time. */
+export function withProfile(w: PointWeather, profiles: AirProfile[], source: string): PointWeather {
+  const byTime = new Map(profiles.map((p) => [p.time, p]));
+  const steps = w.steps.map((s) => {
+    const air = byTime.get(s.time);
+    return air ? { ...s, air, cloudLayers: cloudLayers(air.levels), snowLine: snowLine(air.levels) } : s;
+  });
+  return { ...w, steps, profileSource: source };
+}
+
+/** Where the point is relative to the cloud at one time. */
+export type CloudPlace = 'in' | 'above' | 'below' | 'between' | 'clear';
+
+export function cloudPlace(layers: CloudLayer[], alt: number): CloudPlace {
+  if (!layers.length) return 'clear';
+  if (layers.some((l) => l.base <= alt && alt <= l.top)) return 'in';
+  const under = layers.some((l) => l.top < alt), over = layers.some((l) => l.base > alt);
+  return under && over ? 'between' : under ? 'above' : 'below';
+}
+
+const median = (xs: number[]) => {
+  const v = [...xs].sort((a, b) => a - b);
+  return v[Math.floor(v.length / 2)];
+};
+
+export interface AirSummary {
+  /** Number of steps with a profile in the window. */
+  n: number;
+  /** How many of those steps the point is in / above / below / between / clear of cloud. */
+  places: Record<CloudPlace, number>;
+  /** Typical (median) lowest layer, among steps that have one. */
+  low?: { base: number; top: number; openBase: boolean; openTop: boolean };
+  freezing?: { min: number; max: number };
+  snowLine?: { min: number; max: number };
+}
+
+export function summarizeAir(steps: WeatherStep[], from: number, to: number, alt: number): AirSummary | null {
+  const inside = steps.filter((s) => s.air && s.time >= from && s.time < to);
+  if (!inside.length) return null;
+  const places: Record<CloudPlace, number> = { in: 0, above: 0, below: 0, between: 0, clear: 0 };
+  for (const s of inside) places[cloudPlace(s.cloudLayers ?? [], alt)]++;
+  const lows = inside.map((s) => s.cloudLayers?.[0]).filter((l): l is CloudLayer => !!l);
+  const range = (xs: (number | undefined)[]) => {
+    const v = xs.filter((x): x is number => x != null);
+    return v.length ? { min: Math.min(...v), max: Math.max(...v) } : undefined;
+  };
+  return {
+    n: inside.length,
+    places,
+    low: lows.length
+      ? { base: median(lows.map((l) => l.base)), top: median(lows.map((l) => l.top)), openBase: lows.some((l) => l.openBase), openTop: lows.some((l) => l.openTop) }
+      : undefined,
+    freezing: range(inside.map((s) => s.air!.freezingLevel)),
+    snowLine: range(inside.map((s) => s.snowLine)),
+  };
 }

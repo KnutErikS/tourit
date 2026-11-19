@@ -1,7 +1,7 @@
 import { DIRS } from '../config';
 import {
-  PHASE_NAME, phaseOf, precipUntil, skyText, spread, summarize,
-  type PointWeather, type WeatherSummary,
+  PHASE_NAME, phaseOf, precipUntil, skyText, spread, summarize, summarizeAir,
+  type AirProfile, type AirSummary, type CloudPlace, type PointWeather, type WeatherSummary,
 } from '../domain/weather';
 import { state } from '../state';
 import { $, esc, fmtTime, isoDate } from '../util';
@@ -53,18 +53,72 @@ function cloudLine(s: WeatherSummary): string {
   return parts.length ? parts.join(' · ') : `${Math.round(s.cloudAvg)} %`;
 }
 
-function timeline(w: PointWeather, from: number, to: number): string {
+/** Heights rounded to 100 m: the model can't place cloud more precisely than that. */
+const m100 = (h: number) => Math.max(0, Math.round(h / 100) * 100);
+const span = (r: { min: number; max: number }) =>
+  m100(r.max) - m100(r.min) < 200 ? `ca. ${m100((r.min + r.max) / 2)}` : `${m100(r.min)}–${m100(r.max)}`;
+
+const PLACE_TEXT: Record<CloudPlace, string> = {
+  in: 'punktet er i skyen',
+  below: 'skyer over punktet',
+  above: 'punktet er over skyene',
+  between: 'punktet er mellom skylag',
+  clear: 'ingen tette skylag under ca. 5000 m',
+};
+
+function cloudHeightLine(a: AirSummary): string {
+  const ranked = (Object.entries(a.places) as [CloudPlace, number][]).sort((x, y) => y[1] - x[1]);
+  const [place, n] = ranked[0];
+  let line = PLACE_TEXT[place] + (n < a.n ? ` (${n} av ${a.n} tider)` : '');
+  if (a.low) {
+    const top = a.low.openTop ? `over ${m100(a.low.top)}` : m100(a.low.top);
+    line += a.low.openBase ? ` · laveste skylag fra lavlandet opp til ${top} moh.` : ` · laveste skylag ${m100(a.low.base)}–${top} moh.`;
+  }
+  return line;
+}
+
+function freezeLine(a: AirSummary): string {
+  const parts = [];
+  if (a.freezing) parts.push(`nullgrense ${span(a.freezing)} moh.`);
+  if (a.snowLine) parts.push(a.snowLine.max < 150 ? 'snø helt ned i lavlandet' : `bare snø over ${span(a.snowLine)} moh.`);
+  return parts.join(' · ');
+}
+
+/** Top of the height scale in the mini cloud columns. */
+const scaleTop = (alt: number | undefined) => Math.max(3000, Math.ceil(((alt ?? 0) + 1000) / 500) * 500);
+
+/** A small column: cloud cover by height (darker = more), the point's height, and the freezing level. */
+function airColumn(air: AirProfile, alt: number | undefined, top: number): string {
+  const H = 48, y = (h: number) => H - (Math.min(h, top) / top) * H;
+  const lv = air.levels;
+  const bands = lv.map((l, i) => {
+    const lo = i ? (lv[i - 1].h + l.h) / 2 : 0, hi = i < lv.length - 1 ? (l.h + lv[i + 1].h) / 2 : l.h + 300;
+    if (lo >= top || l.cover < 5) return '';
+    return `<rect class="wxp-c" x="0" width="20" y="${y(hi).toFixed(1)}" height="${(y(lo) - y(hi)).toFixed(1)}" fill-opacity="${(l.cover / 100 * 0.85).toFixed(2)}"/>`;
+  }).join('');
+  const fl = air.freezingLevel != null && air.freezingLevel < top ? `<line class="wxp-fl" x1="0" x2="20" y1="${y(air.freezingLevel).toFixed(1)}" y2="${y(air.freezingLevel).toFixed(1)}"/>` : '';
+  const me = alt != null ? `<line class="wxp-me" x1="0" x2="20" y1="${y(alt).toFixed(1)}" y2="${y(alt).toFixed(1)}"/>` : '';
+  return `<svg class="wxp" viewBox="0 0 20 ${H}" preserveAspectRatio="none" aria-hidden="true"><rect class="wxp-bg" width="20" height="${H}"/>${bands}${fl}${me}</svg>`;
+}
+
+function timeline(w: PointWeather, from: number, to: number, alt: number | undefined): string {
   const shown = spread(w.steps, from, to, 3);
   if (shown.length < 2) return '';
+  const top = scaleTop(alt);
+  const hasAir = shown.some((s) => s.air);
   const cells = shown.map((s, i) => {
     const next = shown[i + 1]?.time ?? Math.min(to, s.time + 3 * HOUR);
     const p = precipUntil(w.steps, s.time, next);
     const pTxt = p.mm >= 0.1 ? `${r1(p.mm)} <small>${PHASE_NAME[phaseOf(p.snowFrac)]}</small>` : '–';
     return `<div class="wx-cell"><span class="wx-t">${hhmm(s.time)}</span><b>${deg(s.temp)}</b>`
       + `<span>${arrow(s.windFrom)}${Math.round(s.wind)}${s.gust != null ? `<small>(${Math.round(s.gust)})</small>` : ''}</span>`
-      + `<span>${pTxt}</span><span class="wx-sky">${esc(skyText(s.cloud, s.fog))}</span></div>`;
+      + `<span>${pTxt}</span><span class="wx-sky">${esc(skyText(s.cloud, s.fog))}</span>`
+      + `${hasAir ? (s.air ? airColumn(s.air, alt, top) : '<span class="wxp wxp-none"></span>') : ''}</div>`;
   });
-  return `<div class="wx-line" aria-label="Time for time">${cells.join('')}</div>`;
+  const legend = hasAir
+    ? `<p class="wx-src">Søylene: skydekke etter høyde, 0–${top} moh. (mørkere = tettere) · <i class="wxk wxk-me"></i> punktets høyde · <i class="wxk wxk-fl"></i> nullgrense</p>`
+    : '';
+  return `<div class="wx-line" aria-label="Time for time">${cells.join('')}</div>${legend}`;
 }
 
 /** The weather card for the picked point: summary for the selected day plus a 3-hourly timeline. */
@@ -80,7 +134,9 @@ export function pointWeather(): string {
   const yr = `https://www.yr.no/nb/v%C3%A6rvarsel/daglig-tabell/${w.lat.toFixed(3)},${w.lon.toFixed(3)}`;
   const foot = `<p class="wx-src">${savedAt !== null ? `Uten nett · lagret ${esc(fmtTime(new Date(savedAt).toISOString()))} · ` : ''}`
     + `Varsel fra <a href="${yr}" target="_blank" rel="noopener">MET Norway / yr</a> (CC BY 4.0), oppdatert ${esc(fmtTime(new Date(w.updated).toISOString()))}`
-    + `${w.altitude != null ? ` · temperatur for ${w.altitude} moh.` : ''}. Regn/snø og nysnø er beregnet her.</p>`;
+    + `${w.altitude != null ? ` · temperatur for ${w.altitude} moh.` : ''}.`
+    + `${w.profileSource ? ` Skyhøyder og nullgrense fra <a href="https://open-meteo.com/" target="_blank" rel="noopener">${esc(w.profileSource)}</a> (CC BY 4.0), ca. 7 døgn fram.` : ''}`
+    + ` Regn/snø, nysnø og skylag er beregnet her.</p>`;
   if (typeof win === 'string') return `<div class="wxcard">${head}<p class="rsub">${win}</p>${foot}</div>`;
 
   const s = summarize(w.steps, win.from, win.to);
@@ -89,16 +145,21 @@ export function pointWeather(): string {
   const wind = `${Math.round(s.windMax)} m/s fra ${dirName(s.windFrom)}${s.gustMax != null ? `, kast ${Math.round(s.gustMax)}` : ''}`;
   const sky = skyText(s.cloudAvg, s.fogMax);
   const fog = s.fogMax != null && s.fogMax >= 20 && sky !== 'tåke' ? ` · tåke ${Math.round(s.fogMax)} %` : '';
+  const alt = w.altitude ?? p.terrain?.elev;
+  const a = alt != null ? summarizeAir(w.steps, win.from, win.to, alt) : null;
+  const freeze = a ? freezeLine(a) : '';
 
   return `<div class="wxcard">${head}
     <div class="rsub">${esc(win.label)}${s.partial ? ' · varselet slutter før perioden er over' : ''}</div>
     <dl class="wx">
       <dt>Himmel</dt><dd>${esc(sky)} · ${cloudLine(s)}${fog}</dd>
+      ${a ? `<dt>Skyhøyde</dt><dd>${esc(cloudHeightLine(a))}</dd>` : ''}
+      ${freeze ? `<dt>Nullgrense</dt><dd>${esc(freeze)}</dd>` : ''}
       <dt>Nedbør</dt><dd>${esc(precipLine(s))}${s.precipProb != null && s.precip >= 0.1 ? ` · ${Math.round(s.precipProb)} % sjanse` : ''}</dd>
       <dt>Temperatur</dt><dd>${temp}</dd>
       <dt>Vind</dt><dd>${wind}</dd>
     </dl>
-    ${timeline(w, win.from, win.to)}
+    ${timeline(w, win.from, win.to, alt)}
     ${foot}</div>`;
 }
 

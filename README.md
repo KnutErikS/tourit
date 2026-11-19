@@ -1,6 +1,6 @@
 # tourit – Skredterreng Norge
 
-Avalanche terrain map for Norway. A static web app (no backend, no API keys) built on open data from NVE/Varsom, Regobs, Kartverket and MET Norway (yr). UI in Norwegian.
+Avalanche terrain map for Norway. A static web app (no backend, no API keys) built on open data from NVE/Varsom, Regobs, Kartverket, MET Norway (yr) and Open-Meteo. UI in Norwegian.
 
 ## Features
 
@@ -10,7 +10,7 @@ Avalanche terrain map for Norway. A static web app (no backend, no API keys) bui
 - **Observasjoner** – Regobs snow observations for the chosen day and the two days before, with photos.
 - **Skredvarsel tab** – the full warning for a region, with avalanche problems, advice and weather.
 - **Tap the map** – elevation, slope and aspect at that point, and whether each avalanche problem applies there.
-- **Vær tab** – MET Norway's forecast (yr's data) for the tapped point, with the temperature adjusted to the point's height: sky (low/middle/high cloud), precipitation split into snow/sleet/rain with estimated new snow, temperature, wind, and a 3-hourly timeline for the chosen day.
+- **Vær tab** – MET Norway's forecast (yr's data) for the tapped point, with the temperature adjusted to the point's height: sky (low/middle/high cloud), precipitation split into snow/sleet/rain with estimated new snow, temperature, wind, and a 3-hourly timeline for the chosen day. From Open-Meteo (DWD's ICON model, ~7 days): cloud cover by height, so the tab says whether the point is in, above or below the cloud and where the lowest layer is, plus the freezing level and the snow line.
 - **Place search** – mountains, peaks, valleys, towns etc. from Kartverket's place-name register. Choosing a hit flies there and selects it.
 - **MGRS** – coordinate of the selected point or your own position (live, with accuracy) in a chip on the map; tap to copy.
 - **Own position** – with accuracy circle and follow mode.
@@ -54,8 +54,8 @@ src/
   types.ts              Types for NVE/Regobs data
   util.ts               DOM helper, esc(), safeUrl(), dates, fetch
   map.ts                Leaflet map + Kartverket topo basemap
-  api/                  NVE warnings/regions, Regobs search, Kartverket place names, MET point forecast
-  domain/               Pure logic: problem matching, point-in-polygon, observation types, MGRS, weather (rain/snow split, summaries)
+  api/                  NVE warnings/regions, Regobs search, Kartverket place names, MET point forecast, Open-Meteo air profile
+  domain/               Pure logic: problem matching, point-in-polygon, observation types, MGRS, weather (rain/snow split, cloud layers, snow line, summaries)
   terrain/              Elevation tiles (LERC) → slope/aspect; canvas layer base
   layers/               2D layers: avalanche terrain, aspect, steepness, regions, observations
   three/view3d.ts       3D view (MapLibre, loaded on demand)
@@ -73,7 +73,7 @@ The aspect and avalanche-terrain layers share the same drawing functions in 2D (
 - **Service worker** must be active for saved areas to be used (normal browsers; not the Claude desktop app's browser pane). Changing tile URLs or DEM oversampling makes existing saved areas stale.
 - **Elevation load:** zoom 10–11 fetches elevation at 2× resolution so steep slopes aren't smoothed away; first load of an area can take a few seconds.
 - **MapLibre worker** is set explicitly with `setWorkerUrl` (Vite doesn't follow MapLibre's own lookup). In dev, `window.__map3d` exposes the 3D map.
-- **Weather:** rain/snow is worked out here from wet-bulb temperature (all snow ≤ 0.5 °C, all rain ≥ 1.5 °C), and new snow from mm × a temperature-dependent ratio (0.8–1.5 cm/mm). MET gives cloud cover in low/middle/high bands, not cloud base in metres. `domain/weather.ts` is source-neutral: a later source (e.g. Open-Meteo for cloud layers and snowfall) can fill `cloudLayers` / `snowCm`. MET forbids custom request headers from browsers (no CORS preflight), so caching relies on the browser's HTTP cache plus an in-memory copy until `Expires`.
+- **Weather:** MET gives the steps (temperature at the point's height, wind, precipitation, cloud in low/middle/high bands). Open-Meteo's ICON profile is merged in by time (`withProfile` in `domain/weather.ts`): pressure levels 1000–500 hPa (~0–5 km), each with cloud cover, temperature and humidity. A level with ≥ 50 % cover counts as cloud; layer base/top are interpolated between levels, so heights are good to a few hundred metres at best, and cloud above ~5 km only shows in MET's "high" band. ICON is used because it is the only model on Open-Meteo with every level here (ECMWF/MET Nordic only have 1000/850/700 hPa). Rain/snow uses wet-bulb temperature (all snow ≤ 0.5 °C, all rain ≥ 1.5 °C), at the point and up the profile for the snow line; new snow is mm × 0.8–1.5 cm/mm by temperature. ICON's own snowfall isn't used: it comes from another model than MET's precipitation, so amounts wouldn't match. MET forbids custom request headers from browsers (no CORS preflight), so caching relies on the browser's HTTP cache plus an in-memory copy until `Expires`; Open-Meteo is kept for an hour.
 - Problem icons are our own drawings in EAWS style. Terrain hits are an automatic reading of the warning, not a replacement for your own assessment.
 
 ## Security

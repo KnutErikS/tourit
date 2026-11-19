@@ -5,6 +5,8 @@ export const REGOBS_API = 'https://api.regobs.no/v5';
 export const STEDSNAVN_API = 'https://ws.geonorge.no/stedsnavn/v1';
 /** MET Norway (yr's data): point forecasts. Open data, CC BY 4.0; see src/api/met.ts for the terms. */
 export const MET_API = 'https://api.met.no/weatherapi';
+/** Open-Meteo: cloud cover per height and freezing level (ICON model). Free for non-commercial use, CC BY 4.0. */
+export const OPEN_METEO_API = 'https://api.open-meteo.com/v1';
 export const DTM_URL = 'https://hoydedata.no/arcgis/rest/services/DTM/ImageServer/exportImage';
 export const BRATT_URL = 'https://gis3.nve.no/arcgis/rest/services/wmts/Bratthet_2024/MapServer';
 export const BRATT_TILE_URL = `${BRATT_URL}/tile/{z}/{y}/{x}`;

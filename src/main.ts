@@ -14,6 +14,8 @@ import * as L from 'leaflet';
 import { fetchRegions, fetchWarnings } from './api/nve';
 import { fetchObservations } from './api/regobs';
 import { fetchPointWeather } from './api/met';
+import { fetchAirProfile } from './api/openMeteo';
+import { withProfile } from './domain/weather';
 import { ASP_RGB, ASPECT_MIN_ZOOM, DEMO, DIRS, DNAME, SKRED_MIN_ZOOM } from './config';
 import { images, obsKind } from './domain/observations';
 import { regionAt } from './domain/geo';
@@ -357,12 +359,18 @@ async function pickPoint(ll: L.LatLng): Promise<void> {
   void loadWeather(mine);
 }
 
-/** Weather for the picked point, at its terrain height when known. Cheap to repeat: the API module caches until MET's Expires. */
+/**
+ * Weather for the picked point: MET's forecast at the point's terrain height,
+ * plus the air above it from Open-Meteo (cloud heights, freezing level) when
+ * that answers. Cheap to repeat: both API modules cache in memory.
+ */
 async function loadWeather(p: Picked): Promise<void> {
+  const air = fetchAirProfile(p.ll.lat, p.ll.lng).catch(() => null); // optional extra
   try {
     const got = await fetchPointWeather(p.ll.lat, p.ll.lng, p.terrain?.elev);
-    p.weather = got;
-    if (got.savedAt !== null) showingStored = true;
+    const prof = await air;
+    p.weather = prof ? { data: withProfile(got.data, prof.data, 'Open-Meteo (ICON)'), savedAt: got.savedAt ?? prof.savedAt } : got;
+    if (p.weather.savedAt !== null) showingStored = true;
   } catch (e) {
     if (p.weather) return; // keep what we had
     p.weather = null;

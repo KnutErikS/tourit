@@ -56,12 +56,19 @@ function samplePoints(pts: L.LatLng[]): { d: number; ll: L.LatLng }[] {
   return out;
 }
 
-/** Elevation profile for a line. Zoom 14 (~5–10 m cells) for normal trips, 13 for very long ones. */
-export async function profileOf(pts: L.LatLng[], signal?: { cancelled: boolean }): Promise<ProfilePoint[]> {
+/**
+ * Elevation profile for a line. Zoom 13 (~9 m cells in southern Norway, like DTM 10) is plenty for
+ * trip numbers and needs a quarter of the tiles of zoom 14; very long routes use zoom 12.
+ */
+export async function profileOf(
+  pts: L.LatLng[],
+  signal?: { cancelled: boolean },
+  onProgress?: (done: number, total: number) => void,
+): Promise<ProfilePoint[]> {
   if (pts.length < 2) return [];
   const samples = samplePoints(pts);
   const total = samples[samples.length - 1].d;
-  const z = total > 40_000 ? 13 : 14;
+  const z = total > 40_000 ? 12 : 13;
 
   // Which tile and pixel each sample falls in.
   const at = samples.map((s) => {
@@ -71,19 +78,22 @@ export async function profileOf(pts: L.LatLng[], signal?: { cancelled: boolean }
   });
   const keys = [...new Set(at.map((a) => a.key))];
   const tiles = new Map<string, Awaited<ReturnType<typeof getDem>> | null>();
-  for (let i = 0; i < keys.length; i += PARALLEL) {
-    if (signal?.cancelled) return [];
-    await Promise.all(
-      keys.slice(i, i + PARALLEL).map(async (k) => {
-        const [x, y] = k.split('/').map(Number);
-        try {
-          tiles.set(k, await getDem(x, y, z, 1));
-        } catch {
-          tiles.set(k, null);
-        }
-      }),
-    );
-  }
+  // A pool of PARALLEL requests: a slow tile doesn't hold up the others.
+  let next = 0, done = 0;
+  const worker = async () => {
+    while (next < keys.length && !signal?.cancelled) {
+      const k = keys[next++];
+      const [x, y] = k.split('/').map(Number);
+      try {
+        tiles.set(k, await getDem(x, y, z, 1));
+      } catch {
+        tiles.set(k, null);
+      }
+      onProgress?.(++done, keys.length);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(PARALLEL, keys.length) }, worker));
+  if (signal?.cancelled) return [];
   return samples.map((s, i) => {
     const t = tiles.get(at[i].key);
     const o = at[i].o;

@@ -1,6 +1,7 @@
 import * as L from 'leaflet';
 import { regionAt } from '../domain/geo';
 import { map } from '../map';
+import { parseGpx } from '../route/gpx';
 import { type Draft, type SavedRoute, listRoutes, putRoute, readDraft, removeRoute, writeDraft } from '../route/store';
 import { state } from '../state';
 import { type ProfilePoint, type ProfileStats, cumulative, profileOf, statsOf } from '../terrain/elevation';
@@ -20,6 +21,8 @@ import { $, esc } from '../util';
 const ICON_ROUTE =
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="18" r="2"/><circle cx="19" cy="6" r="2"/><path d="M7 18h7a3 3 0 0 0 0-6h-4a3 3 0 0 1 0-6h7"/></svg>';
 const LINE = '#c2185b';
+/** Above this many points (typically an imported GPS track) the in-between handles are drawn smaller. */
+const DENSE = 40;
 
 const page = () => $('route');
 
@@ -48,8 +51,9 @@ const cursor = L.circleMarker([0, 0], { pane: 'route', radius: 6, color: '#fff',
 export const isDrawing = () => drawing;
 
 function vertexIcon(i: number): L.DivIcon {
-  const cls = i === 0 ? ' start' : i === points.length - 1 ? ' end' : '';
-  return L.divIcon({ className: '', html: `<div class="rt-v${cls}"></div>`, iconSize: [16, 16], iconAnchor: [8, 8] });
+  const cls = i === 0 ? ' start' : i === points.length - 1 ? ' end' : points.length > DENSE ? ' small' : '';
+  const n = cls === ' small' ? 10 : 16;
+  return L.divIcon({ className: '', html: `<div class="rt-v${cls}"></div>`, iconSize: [n, n], iconAnchor: [n / 2, n / 2] });
 }
 
 function drawLine(): void {
@@ -91,6 +95,7 @@ function edit(fn: () => void): void {
 }
 
 function changed(): void {
+  showMsg('');
   drawLine();
   drawVertices();
   saveDraft();
@@ -128,7 +133,10 @@ function scheduleProfile(): void {
     const mine = (job = { cancelled: false });
     const pts = points.slice();
     try {
-      const p = await profileOf(pts, mine);
+      const p = await profileOf(pts, mine, (done, total) => {
+        const el = document.querySelector('.rt-prof-wait');
+        if (el && !mine.cancelled && total > 1) el.textContent = `henter høydedata… ${Math.round((done / total) * 100)} %`;
+      });
       if (mine.cancelled) return;
       profile = p;
       stats = p.some((s) => s.z !== null) ? statsOf(p) : null;
@@ -361,6 +369,34 @@ ${trk}
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+/* ---------- GPX import ---------- */
+
+function showMsg(text: string, err = false): void {
+  const el = $('rt-msg');
+  el.textContent = text;
+  el.classList.toggle('err', err);
+  el.hidden = !text;
+}
+
+/** Load a GPX file as a new, unsaved route (Angre brings back the previous one). */
+async function importGpx(input: HTMLInputElement): Promise<void> {
+  const file = input.files?.[0];
+  input.value = ''; // so picking the same file again fires 'change'
+  if (!file) return;
+  try {
+    if (file.size > 20e6) throw new Error('Filen er for stor (over 20 MB).');
+    const gpx = parseGpx(await file.text());
+    const prev = points.slice();
+    load(gpx.points, null, gpx.name || file.name.replace(/\.gpx$/i, ''));
+    if (prev.length) undo = [prev];
+    render();
+    map.fitBounds(L.latLngBounds(gpx.points), { padding: [40, 40] });
+    showMsg(`Importerte «${gpx.name || file.name}» med ${gpx.points.length} punkter. Trykk «Lagre rute» for å beholde den.`);
+  } catch (e) {
+    showMsg((e as Error)?.message || 'Kunne ikke lese GPX-filen.', true);
+  }
+}
+
 /* ---------- open / close ---------- */
 
 export function openRoute(): void {
@@ -448,7 +484,10 @@ export function initRoute(): void {
         <button class="btn" id="rt-clear">Tøm</button>
         <button class="btn" id="rt-gpx">Last ned GPX</button>
         <button class="btn" id="rt-new" hidden>Ny rute</button>
+        <button class="btn" id="rt-import">Importer GPX</button>
+        <input type="file" id="rt-file" accept=".gpx,application/gpx+xml" hidden>
       </div>
+      <p class="rt-msg" id="rt-msg" role="status" hidden></p>
       <section class="off-new" id="rt-save-row" hidden>
         <label class="off-field"><span>Navn</span><input id="rt-name" type="text" maxlength="60" autocomplete="off" placeholder="Navn på ruta"></label>
         <div class="off-actions"><button class="btn primary" id="rt-save">Lagre rute</button></div>
@@ -470,6 +509,8 @@ export function initRoute(): void {
     load([], null, '');
   });
   $('rt-gpx').addEventListener('click', () => downloadGpx($<HTMLInputElement>('rt-name').value.trim() || defaultName(), points, profile));
+  $('rt-import').addEventListener('click', () => $('rt-file').click());
+  $('rt-file').addEventListener('change', () => void importGpx($<HTMLInputElement>('rt-file')));
   $('rt-save').addEventListener('click', saveRoute);
   $('rt-name').addEventListener('input', saveDraft);
   $('rt-name').addEventListener('keydown', (e) => e.key === 'Enter' && saveRoute());

@@ -274,10 +274,11 @@ details.ws > div{display:grid;gap:8px;padding-top:8px}
   .burger-in{width:40px;height:40px}
 }
 /* ---------- Koordinat (MGRS) ---------- */
-/* PC: top-left of the map area, just right of the panel (400 px + margins), or of the burger when the panel is hidden. */
-#coord{position:absolute;z-index:999;top:calc(12px + env(safe-area-inset-top,0px));left:calc(424px + env(safe-area-inset-left,0px));
+/* PC: bottom of the map area, centred in the space right of the panel (400 px + margins), or of the burger when the panel is hidden. */
+#coord{position:absolute;z-index:999;bottom:calc(24px + env(safe-area-inset-bottom,0px));left:calc(424px + env(safe-area-inset-left,0px));
+  right:calc(12px + env(safe-area-inset-right,0px));width:fit-content;margin-inline:auto;
   display:flex;align-items:center;gap:8px;padding:5px 6px 5px 12px;border-radius:999px;background:var(--panel);color:var(--fg);
-  border:1px solid var(--line);box-shadow:var(--shadow);font-size:12px;white-space:nowrap;max-width:calc(100% - 24px)}
+  border:1px solid var(--line);box-shadow:var(--shadow);font-size:12px;white-space:nowrap;max-width:none}
 #coord .c-label{color:var(--muted)}
 #coord .c-copy{display:flex;align-items:center;gap:6px;border:0;background:var(--chip);color:var(--fg);padding:4px 8px;border-radius:999px;cursor:pointer}
 #coord .c-copy:hover{outline:1px solid var(--accent)}
@@ -297,11 +298,16 @@ details.ws > div{display:grid;gap:8px;padding-top:8px}
 #coord .c-acc:empty{display:none}
 body.panel-hidden #coord{left:calc(72px + env(safe-area-inset-left,0px))}
 #coord .c-close{border:0;background:none;color:var(--muted);font-size:18px;line-height:1;padding:2px 6px;cursor:pointer}
+/* PC: the chip takes the bottom row; lift the zoom hint (and the compass above it) one row so they never overlap in narrow windows. */
+@media (min-width:641px){
+  #coord:not([hidden]) + #hint{bottom:calc(68px + env(safe-area-inset-bottom,0px))}
+  body:has(#coord:not([hidden])) #compass{bottom:calc(112px + env(safe-area-inset-bottom,0px))}
+}
 .pick-mgrs{flex-basis:100%;font-size:12px}
 .pick-mgrs > span{color:var(--muted);font:600 10px var(--f-mono)}
 @media (max-width:640px){
   /* Under the zoom hint (top-left), clear of the buttons on the right. */
-  #coord,body.panel-hidden #coord{top:calc(48px + env(safe-area-inset-top,0px));left:calc(10px + env(safe-area-inset-left,0px));max-width:calc(100% - 80px);gap:6px}
+  #coord,body.panel-hidden #coord{top:calc(48px + env(safe-area-inset-top,0px));bottom:auto;left:calc(10px + env(safe-area-inset-left,0px));right:auto;margin-inline:0;max-width:calc(100% - 80px);gap:6px}
   #coord .c-label{display:none}
   /* Panel hidden: down by the floating burger, level with its centre, centred in the space to its right. */
   body.panel-hidden #coord{top:auto;bottom:calc(44px + env(safe-area-inset-bottom,0px));transform:translateY(50%);

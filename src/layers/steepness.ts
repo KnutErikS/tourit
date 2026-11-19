@@ -7,7 +7,7 @@ export const steepnessLayer = L.tileLayer(BRATT_TILE_URL, {
   minZoom: 5,
   maxNativeZoom: BRATT_MAX_NATIVE,
   maxZoom: 17,
-  opacity: 0.75,
+  opacity: 0.5,
   pane: 'terrain',
   attribution: 'Bratthet © <a href="https://www.nve.no" target="_blank" rel="noopener">NVE</a>',
 });

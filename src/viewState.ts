@@ -73,7 +73,11 @@ export function parseHash(hash = location.hash): View | null {
 function currentView(): View {
   const c = map.getCenter();
   const settings: View['settings'] = {};
-  for (const id of SETTINGS) settings[id] = $<HTMLInputElement>(id).value;
+  // Only settings changed from their default, so a later change of default reaches everyone.
+  for (const id of SETTINGS) {
+    const el = $<HTMLInputElement | HTMLSelectElement>(id);
+    if (el.value !== defaultOf(el)) settings[id] = el.value;
+  }
   return {
     zoom: map.getZoom(),
     lat: c.lat,
@@ -117,6 +121,18 @@ export function saveView(): void {
 }
 
 /** Set an input's value only if it's one of its allowed values. */
+/** The value an input or select has in index.html, before anything is restored. */
+function defaultOf(el: HTMLInputElement | HTMLSelectElement): string {
+  if (el instanceof HTMLSelectElement) return ([...el.options].find((o) => o.defaultSelected) ?? el.options[0])?.value ?? '';
+  return el.defaultValue;
+}
+
+/**
+ * Earlier versions stored every setting, even untouched ones, so a stored old default
+ * can't be told from a deliberate choice. Drop those so the new default applies.
+ */
+const OLD_DEFAULTS: Partial<Record<(typeof SETTINGS)[number], string>> = { 'o-bratt': '0.75' };
+
 function setValue(id: string, value: string | undefined): void {
   if (value === undefined) return;
   const el = $<HTMLInputElement | HTMLSelectElement>(id);
@@ -152,7 +168,10 @@ export function restoreView(): string {
   if (v) map.setView([v.lat, v.lng], Math.round(v.zoom), { animate: false });
   applyLayers(v?.layers ?? stored?.layers, false);
   // Settings are personal preferences, never part of the link.
-  for (const id of SETTINGS) setValue(id, stored?.settings?.[id]);
+  for (const id of SETTINGS) {
+    const value = stored?.settings?.[id];
+    if (value !== OLD_DEFAULTS[id]) setValue(id, value);
+  }
   if (stored?.rest !== undefined) $<HTMLInputElement>('s-rest').checked = stored.rest;
   return resolveDate(fromHash ? fromHash.date : stored?.date);
 }

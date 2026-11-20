@@ -124,3 +124,23 @@ export async function zoneSections(pts: L.LatLng[], signal?: AbortSignal): Promi
   }
   return out;
 }
+
+/** Tiles read for single points (the selected point), kept so moving the point nearby is instant. */
+const pointTiles = new Map<string, Promise<Uint8Array>>();
+const MAX_POINT_TILES = 40;
+
+/** The zone at one point (steep, a runout band, or null). Throws on network errors. */
+export async function zoneAt(ll: L.LatLng): Promise<Zone | null> {
+  const p = CRS.latLngToPoint(ll, ZOOM);
+  const x = Math.floor(p.x / 256), y = Math.floor(p.y / 256);
+  const key = `${x}/${y}`;
+  let tile = pointTiles.get(key);
+  if (!tile) {
+    tile = loadTile(L.Util.template(BRATT_UTLOP_TILE_URL, { x, y, z: ZOOM }));
+    pointTiles.set(key, tile);
+    tile.catch(() => pointTiles.delete(key));
+    if (pointTiles.size > MAX_POINT_TILES) pointTiles.delete(pointTiles.keys().next().value!);
+  }
+  const v = (await tile)[(Math.floor(p.y) - y * 256) * 256 + (Math.floor(p.x) - x * 256)];
+  return v === 255 ? null : ZONES[v];
+}

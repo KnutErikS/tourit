@@ -190,6 +190,8 @@ details.ws > div{display:grid;gap:8px;padding-top:8px}
 .leaflet-popup-content .thumbs img{width:120px;height:90px}
 .pop-link{font-weight:600;color:var(--accent)}
 .pin{width:14px;height:14px;border-radius:50%;background:var(--accent);border:3px solid #fff;box-shadow:0 0 0 1.5px #0b1220,0 2px 6px rgba(0,0,0,.4)}
+/* 2D pin: an invisible finger-sized tap area (main.ts PIN_HIT) with the pin in the middle. */
+.pin-hit{display:grid;place-items:center}
 #hint{position:absolute;z-index:999;right:calc(12px + env(safe-area-inset-right,0px));bottom:calc(28px + env(safe-area-inset-bottom,0px));
   background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:12px;box-shadow:var(--shadow);font-family:var(--f-mono),monospace}
 @media (max-width:640px){

@@ -8,7 +8,8 @@ import { setStatus } from './status';
  * accuracy circle, and keeps the map centred on you until you drag the map.
  *
  * Button cycle: off → on + following → (drag map) on → tap: follow again → tap: off.
- * Tapping the dot picks that point, like tapping the map.
+ * Tapping the dot picks that point, like tapping the map; tapping it again
+ * (pin still under the dot) removes the point (see main.ts).
  */
 
 const ICON =
@@ -64,6 +65,13 @@ function onPosition(p: GeolocationPosition): void {
     else map.panTo(ll);
   }
   firstFix = false;
+}
+
+/** Show your position in the coordinate chip again (e.g. after the picked point is removed). No-op while position is off. */
+export function showPositionCoord(): void {
+  if (!marker) return;
+  const at = marker.getLatLng();
+  showCoord('position', at.lat, at.lng, circle?.getRadius());
 }
 
 function onError(e: GeolocationPositionError): void {

@@ -36,3 +36,30 @@ export function regionObs(all: RegobsObs[], regions: Region[], r: Region | null)
         order[obsKind(a)] - order[obsKind(b)] || new Date(b.DtObsTime).getTime() - new Date(a.DtObsTime).getTime(),
     );
 }
+
+/** Regobs danger signs (DangerSignTID % 100) that show the snowpack is unstable right now. */
+export const INSTABILITY_SIGNS: Record<number, string> = { 2: 'Ferske skred', 3: 'Drønn i snøen', 14: 'Skytende sprekker' };
+/** How far back signs of instability count. */
+export const SIGNS_H = 48;
+
+/**
+ * Observations in `obs` from the SIGNS_H hours before `end` (ms) that report
+ * an avalanche or a sign of instability, with a short label each.
+ * Filter `obs` to the region first (`regionObs`).
+ */
+export function instabilitySigns(obs: RegobsObs[], end: number, hours = SIGNS_H): { obs: RegobsObs; label: string }[] {
+  const from = end - hours * 3_600_000;
+  const out: { obs: RegobsObs; label: string }[] = [];
+  for (const o of obs) {
+    const t = new Date(o.DtObsTime).getTime();
+    if (!(t > from && t <= end)) continue;
+    const labels = new Set<string>();
+    if (obsKind(o) === 'skred') labels.add(INSTABILITY_SIGNS[2]);
+    for (const d of o.DangerObs ?? []) {
+      const l = d.DangerSignTID ? INSTABILITY_SIGNS[d.DangerSignTID % 100] : undefined;
+      if (l) labels.add(l);
+    }
+    for (const label of labels) out.push({ obs: o, label });
+  }
+  return out;
+}

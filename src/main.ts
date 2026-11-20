@@ -47,12 +47,12 @@ import { renderDetail } from './ui/detail';
 import { roseSVG } from './ui/icons';
 import { flyTo3D, focusObs3D, init3D, is3DOpen, resetNorth3D, setPick3D, syncSnow3D, update3D, update3DObs } from './three/view3d';
 import { initCompass } from './ui/compass';
-import { coordSource, initCoords, setCoordInfo, showCoord } from './ui/coords';
+import { clearCoord, coordSource, initCoords, setCoordInfo, showCoord } from './ui/coords';
 import { pointFacts } from './ui/point';
 import { initHeaderTools, setHeaderTool } from './ui/headerTools';
 import { initSearch } from './ui/search';
 import { initSheet, resetSheet } from './ui/sheet';
-import { initLocate } from './ui/locate';
+import { initLocate, showPositionCoord } from './ui/locate';
 import { initOffline } from './ui/offlinePage';
 import { reportDemError, setStatus } from './ui/status';
 import { renderSummary } from './ui/summary';
@@ -438,14 +438,28 @@ function expandPanel(): void {
 /* ---------- picking a point ---------- */
 
 let pickMarker: L.Marker | null = null;
+/** Tap area around the pin, px: big enough for a finger, though the pin itself is small. */
+const PIN_HIT = 44;
 /** Pick a point: marker, region lookup, terrain at the point. Used by map clicks and the position dot. */
 async function pickPoint(ll: L.LatLng): Promise<void> {
   if (!pickMarker) {
     pickMarker = L.marker(ll, {
-      icon: L.divIcon({ className: '', html: '<div class="pin"></div>', iconSize: [14, 14], iconAnchor: [7, 7] }),
+      icon: L.divIcon({
+        className: 'pin-hit',
+        html: '<div class="pin"></div>',
+        iconSize: [PIN_HIT, PIN_HIT],
+        iconAnchor: [PIN_HIT / 2, PIN_HIT / 2],
+      }),
       keyboard: false,
-      interactive: false,
+      title: 'Trykk for å fjerne punktet',
+      bubblingMouseEvents: false,
     }).addTo(map);
+    // Tapping the pin again removes it (tools then follow your position, if it is shown).
+    // While drawing a route the tap is a route point like any other, where you tapped
+    // (Leaflet puts a marker's own position in e.latlng, which would snap it to the pin).
+    pickMarker.on('click', (e: L.LeafletMouseEvent) =>
+      isDrawing() ? map.fire('click', { latlng: map.mouseEventToLatLng(e.originalEvent), originalEvent: e.originalEvent }) : clearPick(),
+    );
   } else {
     pickMarker.setLatLng(ll);
   }
@@ -465,6 +479,32 @@ async function pickPoint(ll: L.LatLng): Promise<void> {
   renderPanels();
   if (coordSource() === 'pick') setCoordInfo(pointFacts());
   void loadWeather(mine);
+}
+
+/**
+ * Remove the picked point. The region stays selected, so the warning stays on screen;
+ * the coordinate chip goes back to your position, if it is shown.
+ */
+function clearPick(): void {
+  pickMarker?.remove();
+  pickMarker = null;
+  state.picked = null;
+  clearCoord('pick');
+  showPositionCoord();
+  setPick3D(null);
+  restyleRegions();
+  renderPanels();
+}
+
+/**
+ * Tap on your position dot: pick that point, or, if the pin is already under the
+ * dot (so the pin itself can't be tapped), remove it.
+ */
+function pickFromPosition(ll: L.LatLng): void {
+  const underDot =
+    pickMarker && map.latLngToContainerPoint(pickMarker.getLatLng()).distanceTo(map.latLngToContainerPoint(ll)) < PIN_HIT / 2;
+  if (underDot && !isDrawing()) clearPick();
+  else void pickPoint(ll);
 }
 
 /**
@@ -495,7 +535,7 @@ map.on('click', (e: L.LeafletMouseEvent) => {
 registerServiceWorker();
 initOffline();
 initRoute();
-initLocate(pickPoint);
+initLocate(pickFromPosition);
 init3D(pickPoint);
 initCompass(resetNorth3D, '.leaflet-top.leaflet-right > .leaflet-control');
 initCoords();

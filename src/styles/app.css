@@ -155,7 +155,7 @@ details.ws > div{display:grid;gap:8px;padding-top:8px}
 .empty{font-size:12.5px;color:var(--muted)}
 .foot{font-size:11px;color:var(--muted);line-height:1.5}
 .foot a{color:var(--accent)}
-.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.tabs{display:grid;grid-template-columns:repeat(4,auto);gap:0;border:1px solid var(--line);border-radius:7px;overflow:hidden}
 .tabs button{border:0;background:var(--panel);color:var(--muted);padding:7px 8px;font-family:var(--f-display),sans-serif;font-size:15px;font-weight:600;letter-spacing:.03em}
 .tabs button+button{border-left:1px solid var(--line)}
 .tabs button[aria-selected="true"]{background:var(--accent);color:var(--accent-ink)}
@@ -473,4 +473,33 @@ dialog.dlg a{color:var(--accent);font-weight:600}
 @media (max-width:640px){.info-btn.sm{width:34px;height:34px}.info-btn.sm svg{width:18px;height:18px}}
 dialog.dlg .dlg-list{margin:0 0 10px;padding-left:18px;display:grid;gap:6px}
 #tool-info-title:focus{outline:none}
+
+/* ---------- Verktøy tab (ui/tools.ts): Stop or Go and ALPTRUTh ---------- */
+.tools{display:grid;gap:10px;padding-top:10px;transition:opacity .15s}
+.tools.busy{opacity:.6}
+.tcard{display:grid;gap:8px;border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.thead{display:flex;align-items:center;gap:8px}
+.thead .kicker{margin:0}
+.sog-verdict{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.sog-pill{font-family:var(--f-display),sans-serif;font-size:20px;font-weight:700;letter-spacing:.02em;padding:3px 14px;border-radius:99px;color:#fff;background:var(--d0)}
+.sog-go{background:var(--d1)}
+.sog-caution{background:var(--d2);color:#16202b}
+.sog-stop{background:var(--d4)}
+.sog-limit{font-weight:600}
+.treasons{margin:0;padding-left:18px;display:grid;gap:3px;font-size:12.5px;color:var(--muted)}
+.alp-count{margin-left:auto;font-family:var(--f-mono),monospace;font-size:13px;font-weight:600;padding:2px 10px;border-radius:99px;border:1px solid var(--line);background:var(--chip)}
+.alp-count.red{background:var(--d4);border-color:var(--d4);color:#fff}
+.alp-list{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.alp-clue{width:100%;display:grid;grid-template-columns:22px 26px 1fr;align-items:start;gap:8px;text-align:left;font:inherit;color:inherit;
+  background:none;border:1px solid transparent;border-radius:8px;padding:6px 8px;cursor:pointer}
+.alp-clue:hover{border-color:var(--line)}
+.alp-clue:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.alp-box{width:20px;height:20px;border:1.5px solid var(--muted);border-radius:5px;display:grid;place-items:center;font-size:13px;font-weight:700;line-height:1;color:var(--muted)}
+.alp-on .alp-box{background:var(--d4);border-color:var(--d4);color:#fff}
+.alp-on{background:color-mix(in srgb,var(--d4) 8%,transparent)}
+.alp-key{font-family:var(--f-mono),monospace;font-weight:600;color:var(--muted);padding-top:1px}
+.alp-text{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;min-width:0}
+.alp-text small{flex-basis:100%;font-size:12px;color:var(--muted);line-height:1.4}
+.alp-mine{font-size:10.5px;font-weight:600;padding:0 6px;border-radius:99px;background:var(--accent);color:var(--accent-ink)}
+@media (max-width:640px){.alp-clue{padding:8px}}
 .share-ico{width:18px;height:18px;vertical-align:-3px;fill:none;stroke:var(--accent);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}

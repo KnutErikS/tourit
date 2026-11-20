@@ -60,6 +60,7 @@ import { renderWeather } from './ui/weather';
 import { initShare } from './ui/share';
 import { initAbout } from './ui/about';
 import { initToolInfo } from './ui/toolInfo';
+import { initTools, renderTools, setToolsActive } from './ui/tools';
 import { initRoute, isDrawing } from './ui/routePage';
 import { $, fmtDate, fmtTime, isoDate } from './util';
 import { restoreView, saveView, trackView } from './viewState';
@@ -75,6 +76,7 @@ function renderPanels(): void {
   renderDetail(openObservation);
   renderSummary(() => setTab('warn'));
   renderWeather();
+  renderTools();
 }
 
 function openObservation(regId: number): void {
@@ -398,13 +400,14 @@ $('demo').addEventListener('click', () => {
 
 /* ---------- tabs + panel ---------- */
 
-const TABS = ['layers', 'warn', 'wx'] as const;
+const TABS = ['layers', 'warn', 'wx', 'tools'] as const;
 type Tab = (typeof TABS)[number];
 function setTab(t: Tab): void {
   for (const k of TABS) {
     $(`tab-${k}`).hidden = k !== t;
     $(`tab-btn-${k}`).setAttribute('aria-selected', String(k === t));
   }
+  setToolsActive(t === 'tools'); // the tools only work things out while their tab is open
   expandPanel();
 }
 for (const k of TABS) $(`tab-btn-${k}`).addEventListener('click', () => setTab(k));
@@ -560,6 +563,7 @@ initHeaderTools();
 initShare();
 initAbout();
 initToolInfo();
+initTools();
 initSearch((place) => {
   const ll = L.latLng(place.lat, place.lng);
   const z = Math.max(map.getZoom(), SEARCH_ZOOM);

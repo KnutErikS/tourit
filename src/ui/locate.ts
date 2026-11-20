@@ -25,6 +25,23 @@ let circle: L.Circle | null = null;
 let button: HTMLAnchorElement | null = null;
 let onPick: (ll: L.LatLng) => void = () => {};
 
+/** Your position as shown on the map (null while position is off). */
+export interface Position {
+  ll: L.LatLng;
+  /** m */
+  accuracy: number;
+}
+const listeners: ((pos: Position | null) => void)[] = [];
+
+export function currentPosition(): Position | null {
+  return marker ? { ll: marker.getLatLng(), accuracy: circle?.getRadius() ?? 0 } : null;
+}
+
+/** Called on every new position fix, and with null when position is turned off. */
+export function onPositionChange(fn: (pos: Position | null) => void): void {
+  listeners.push(fn);
+}
+
 function updateButton(): void {
   if (!button) return;
   const on = watchId !== null;
@@ -65,6 +82,8 @@ function onPosition(p: GeolocationPosition): void {
     else map.panTo(ll);
   }
   firstFix = false;
+  const pos = currentPosition();
+  listeners.forEach((fn) => fn(pos));
 }
 
 /** Show your position in the coordinate chip again (e.g. after the picked point is removed). No-op while position is off. */
@@ -110,6 +129,7 @@ function stop(): void {
   marker = circle = null;
   clearCoord('position');
   updateButton();
+  listeners.forEach((fn) => fn(null));
 }
 
 function onButton(): void {

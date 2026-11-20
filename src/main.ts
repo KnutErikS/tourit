@@ -1,12 +1,22 @@
 // Fonts are bundled with the app (no Google Fonts: no third-party request, works offline).
-import '@fontsource/barlow/400.css';
-import '@fontsource/barlow/500.css';
-import '@fontsource/barlow/600.css';
-import '@fontsource/barlow-condensed/500.css';
-import '@fontsource/barlow-condensed/600.css';
-import '@fontsource/barlow-condensed/700.css';
-import '@fontsource/ibm-plex-mono/400.css';
-import '@fontsource/ibm-plex-mono/500.css';
+// Only the Latin sets: latin has æøå, latin-ext the Sámi letters in place names (Č, Š, Ŋ, Ŧ, Đ, Ž).
+// Skipping Cyrillic/Vietnamese keeps them out of the files stored for offline use.
+import '@fontsource/barlow/latin-400.css';
+import '@fontsource/barlow/latin-ext-400.css';
+import '@fontsource/barlow/latin-500.css';
+import '@fontsource/barlow/latin-ext-500.css';
+import '@fontsource/barlow/latin-600.css';
+import '@fontsource/barlow/latin-ext-600.css';
+import '@fontsource/barlow-condensed/latin-500.css';
+import '@fontsource/barlow-condensed/latin-ext-500.css';
+import '@fontsource/barlow-condensed/latin-600.css';
+import '@fontsource/barlow-condensed/latin-ext-600.css';
+import '@fontsource/barlow-condensed/latin-700.css';
+import '@fontsource/barlow-condensed/latin-ext-700.css';
+import '@fontsource/ibm-plex-mono/latin-400.css';
+import '@fontsource/ibm-plex-mono/latin-ext-400.css';
+import '@fontsource/ibm-plex-mono/latin-500.css';
+import '@fontsource/ibm-plex-mono/latin-ext-500.css';
 import 'leaflet/dist/leaflet.css';
 import './styles/app.css';
 

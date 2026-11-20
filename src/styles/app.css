@@ -17,10 +17,11 @@ body{margin:0}[hidden]{display:none!important}
 :root[data-theme="dark"]{
   --bg:#0c1117; --panel:#121a23; --fg:#e6edf3; --muted:#93a1b0; --line:#253241;
   --accent:#6aa5e8; --accent-ink:#06121f; --chip:#1a2531; --d5:#e9e1df; --shadow:0 8px 28px rgba(0,0,0,.5); --icon-filter:invert(1) hue-rotate(180deg); color-scheme:dark}
-html,body{height:100%}
-/* iPhone Home Screen app (black-translucent status bar): iOS makes 100 % shorter by the
-   status-bar height, leaving a black band at the bottom. Add the top inset back. */
-@media (display-mode:standalone){html,body{height:calc(100% + env(safe-area-inset-top,0px))}}
+/* --app-h: the whole screen in the iPhone Home Screen app, where iOS reports a viewport that is
+   too short (ui/viewport.ts). body is the containing block, so the absolutely positioned map,
+   panel and controls follow it rather than the short viewport. */
+html,body{height:var(--app-h,100%)}
+body{position:relative}
 body{background:var(--bg);color:var(--fg);font-family:var(--f-body),sans-serif;font-size:14px;overflow:hidden}
 /* The basemap tiles are partly transparent and designed for a light backdrop,
    so the map background stays light in both themes (only the panel goes dark). */
@@ -205,8 +206,8 @@ details.ws > div{display:grid;gap:8px;padding-top:8px}
     height:55%;max-height:none;padding-bottom:env(safe-area-inset-bottom,0px);transition:height .22s cubic-bezier(.2,.8,.2,1)}
   #panel.sheet-full{height:calc(100% - env(safe-area-inset-top,0px) - 8px)}
   #panel.sheet-dragging{transition:none}
-  /* Peek: only the header shows (height set in ui/sheet.ts); the content is out of reach for focus and screen readers. */
-  #panel.sheet-peek .scroll{visibility:hidden}
+  /* Peek: just a strip with the grab bar (height set in ui/sheet.ts); everything else is out of reach for focus and screen readers. */
+  #panel.sheet-peek .scroll,#panel.sheet-peek header > :not(#grabber){visibility:hidden}
   #panel.sheet-peek header{border-bottom-color:transparent}
   #panel header{touch-action:none;padding-top:6px}
   #panel .scroll{flex:1;min-height:0}
@@ -434,6 +435,11 @@ body.panel-hidden #coord{left:calc(72px + env(safe-area-inset-left,0px))}
   /* Panel hidden: down by the floating burger, level with its centre, centred in the space to its right. */
   body.panel-hidden #coord{top:auto;bottom:calc(44px + env(safe-area-inset-bottom,0px));transform:translateY(50%);
     left:calc(80px + env(safe-area-inset-left,0px));right:calc(10px + env(safe-area-inset-right,0px));width:fit-content;margin-inline:auto;max-width:none}
+  /* Sheet at its lowest (the grab-bar strip): centred at the bottom, just above the strip. Comes after the
+     "no hint" rule above (same specificity), so this one wins. */
+  body:not(.panel-hidden):has(#panel.sheet-peek) #coord{top:auto;bottom:calc(30px + 10px + env(safe-area-inset-bottom,0px));
+    left:calc(10px + env(safe-area-inset-left,0px));right:calc(10px + env(safe-area-inset-right,0px));width:fit-content;margin-inline:auto;
+    max-width:calc(100% - 20px - env(safe-area-inset-left,0px) - env(safe-area-inset-right,0px))}
   /* Facts + full MGRS don't fit on one line on a phone: let the MGRS drop to a second line. */
   #coord.open{flex-wrap:wrap;row-gap:4px;border-radius:16px;padding-top:6px;padding-bottom:6px}
   #coord.open .c-copy{order:1}

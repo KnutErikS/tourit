@@ -19,6 +19,8 @@ import '@fontsource/ibm-plex-mono/latin-500.css';
 import '@fontsource/ibm-plex-mono/latin-ext-500.css';
 import 'leaflet/dist/leaflet.css';
 import './styles/app.css';
+// Before ./map: the page must have its full height when Leaflet first measures it.
+import './ui/viewport';
 
 import * as L from 'leaflet';
 import { fetchRegions, fetchWarnings } from './api/nve';

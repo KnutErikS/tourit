@@ -7,10 +7,21 @@
  * twilight (−6°): light enough to travel without a headlamp.
  *
  * Sun on a slope: the angle between the sun and the slope's normal. Terrain
- * shadow (a ridge or valley side blocking a low sun) is NOT included, so the
- * times are when the sun *can* reach the slope; in narrow valleys and with a
- * low winter sun, the real sun window is shorter.
+ * shadow (a ridge or valley side blocking a low sun) is included when a
+ * horizon is given (`horizon(az)`, degrees, see domain/horizon.ts): the sun
+ * then counts only above it. Without one, the times are when the sun *can*
+ * reach the slope.
  */
+
+/** The terrain's height towards an azimuth, degrees (domain/horizon.ts `horizonAt`). */
+export type HorizonFn = (az: number) => number;
+
+/**
+ * The sun is up for this spot: above the terrain horizon when one is given,
+ * else above the flat horizon (SUNRISE_ALT includes the upper limb and refraction).
+ */
+export const sunVisible = (p: SunPos, horizon?: HorizonFn): boolean =>
+  p.alt > (horizon ? Math.max(horizon(p.az), -5) : 0) + SUNRISE_ALT;
 
 const RAD = Math.PI / 180;
 const DAY_MS = 86_400_000;
@@ -114,6 +125,10 @@ function spans(day: SunDay, test: (i: number) => boolean): Span[] {
 export interface Daylight {
   /** Sun above the horizon. Empty = polar night; one span covering the day = midnight sun. */
   sun: Span[];
+  /** Sun above the terrain around the point (when a horizon was given). */
+  overTerrain?: Span[];
+  /** Minutes of it. */
+  overTerrainMin?: number;
   /** Civil twilight or brighter. */
   light: Span[];
   /** Highest sun of the day, degrees. */
@@ -131,7 +146,7 @@ export interface Daylight {
 
 const minutes = (s: Span[]) => s.reduce((m, x) => m + (x.to - x.from) / MIN_MS, 0);
 
-export function daylight(day: SunDay): Daylight {
+export function daylight(day: SunDay, horizon?: HorizonFn): Daylight {
   let maxAlt = -90, iMax = 0;
   day.pos.forEach((p, i) => {
     if (p.alt > maxAlt) {
@@ -142,15 +157,17 @@ export function daylight(day: SunDay): Daylight {
   const sun = spans(day, (i) => day.pos[i].alt > SUNRISE_ALT);
   const light = spans(day, (i) => day.pos[i].alt > CIVIL_ALT);
   const sunMin = minutes(sun), lightMin = minutes(light);
+  const overTerrain = horizon ? spans(day, (i) => sunVisible(day.pos[i], horizon)) : undefined;
   return {
     sun, light, maxAlt, noon: day.start + iMax * MIN_MS, sunMin, lightMin,
+    ...(overTerrain && { overTerrain, overTerrainMin: minutes(overTerrain) }),
     midnightSun: sunMin >= day.pos.length - 1,
     polarNight: sunMin === 0,
   };
 }
 
 export interface SlopeSun {
-  /** When direct sun reaches the slope (no terrain shadow). */
+  /** When direct sun reaches the slope (terrain shadow included when a horizon was given). */
   spans: Span[];
   /** Strongest direct sun on the slope, W/m², and when. */
   peak: number;
@@ -159,9 +176,9 @@ export interface SlopeSun {
   total: number;
 }
 
-/** Sun on a slope of `slope`° facing `aspect`° through the day. */
-export function sunOnSlope(day: SunDay, slope: number, aspect: number): SlopeSun {
-  const w = day.pos.map((p) => slopeSun(p, slope, aspect));
+/** Sun on a slope of `slope`° facing `aspect`° through the day, in the shadow of `horizon` if given. */
+export function sunOnSlope(day: SunDay, slope: number, aspect: number, horizon?: HorizonFn): SlopeSun {
+  const w = day.pos.map((p) => (horizon && !sunVisible(p, horizon) ? 0 : slopeSun(p, slope, aspect)));
   let peak = 0, peakAt: number | null = null, sum = 0;
   w.forEach((x, i) => {
     sum += x;

@@ -57,6 +57,7 @@ import { initOffline } from './ui/offlinePage';
 import { reportDemError, setStatus } from './ui/status';
 import { renderSummary } from './ui/summary';
 import { renderWeather } from './ui/weather';
+import { initSun } from './ui/sun';
 import { initShare } from './ui/share';
 import { initAbout } from './ui/about';
 import { initToolInfo } from './ui/toolInfo';
@@ -567,6 +568,7 @@ initAbout();
 initToolInfo();
 initTools();
 initInfos(renderPanels); // the point's info chips appear once worked out
+initSun(renderPanels); // the sun card redraws once the terrain horizon is worked out
 initSearch((place) => {
   const ll = L.latLng(place.lat, place.lng);
   const z = Math.max(map.getZoom(), SEARCH_ZOOM);

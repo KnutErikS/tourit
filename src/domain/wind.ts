@@ -25,6 +25,7 @@
  */
 
 import { isoDate } from '../util';
+import { cmPerMm } from './precip';
 
 /** One hour of weather at ridge height. */
 export interface WindHour {
@@ -114,11 +115,8 @@ function ageWeight(ageH: number): number {
   return 1 - ((1 - OLDEST_WEIGHT) * (ageH - RECENT_H)) / (LOOKBACK_H - RECENT_H);
 }
 
-/** Share of the precipitation that falls as snow at ridge height. */
-const snowShare = (t: number) => Math.min(1, Math.max(0, (RAIN_T - t) / (RAIN_T - SNOW_T)));
-
-/** Centimetres of snow per mm of water: colder snow is lighter. */
-const cmPerMm = (t: number) => (t <= -10 ? 1.5 : t <= -4 ? 1.2 : t <= -1 ? 1.0 : 0.8);
+/** Share of the precipitation that falls as snow at ridge height, from the 850 hPa temperature. */
+export const snowShare = (t: number) => Math.min(1, Math.max(0, (RAIN_T - t) / (RAIN_T - SNOW_T)));
 
 /**
  * The snow surface hour by hour, from the precipitation and temperature so far.

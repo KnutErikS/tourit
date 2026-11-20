@@ -60,9 +60,9 @@ export interface StopOrGoResult {
 /** Within this many degrees below the limit, say "caution": DEM slopes are good to a few degrees. */
 export const MARGIN = 2;
 /** Low danger: single spots this steep can still release. */
-const LOW_SPOT = 40;
+export const LOW_SPOT = 40;
 
-const LIMIT: Record<number, number | null> = { 1: null, 2: 40, 3: 35, 4: 30, 5: 30 };
+export const LIMIT: Record<number, number | null> = { 1: null, 2: 40, 3: 35, 4: 30, 5: 30 };
 const AREA: Record<number, StopOrGoArea> = { 1: 'track', 2: 'track', 3: 'slope', 4: 'terrain', 5: 'terrain' };
 
 export const AREA_TEXT: Record<StopOrGoArea, string> = {

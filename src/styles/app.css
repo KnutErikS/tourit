@@ -467,4 +467,10 @@ dialog.dlg a{color:var(--accent);font-weight:600}
 .dlg-actions{gap:8px;flex-wrap:wrap}
 .dlg-steps{margin:0 0 10px;padding-left:22px;display:grid;gap:4px}
 .dlg-note{font-size:12.5px;color:var(--muted)}
+/* Tool explanations (ui/toolInfo.ts): a smaller ⓘ for card headings, lists in the dialog. */
+.info-btn.sm{width:26px;height:26px;border-radius:7px}
+.info-btn.sm svg{width:16px;height:16px}
+@media (max-width:640px){.info-btn.sm{width:34px;height:34px}.info-btn.sm svg{width:18px;height:18px}}
+dialog.dlg .dlg-list{margin:0 0 10px;padding-left:18px;display:grid;gap:6px}
+#tool-info-title:focus{outline:none}
 .share-ico{width:18px;height:18px;vertical-align:-3px;fill:none;stroke:var(--accent);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}

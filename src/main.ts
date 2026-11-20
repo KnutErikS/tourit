@@ -59,6 +59,7 @@ import { renderSummary } from './ui/summary';
 import { renderWeather } from './ui/weather';
 import { initShare } from './ui/share';
 import { initAbout } from './ui/about';
+import { initToolInfo } from './ui/toolInfo';
 import { initRoute, isDrawing } from './ui/routePage';
 import { $, fmtDate, fmtTime, isoDate } from './util';
 import { restoreView, saveView, trackView } from './viewState';
@@ -144,10 +145,14 @@ async function loadWind(date: string): Promise<void> {
   const { data, savedAt } = await fetchWindHistory(points, start, end, date);
   if (state.date !== date || state.regions !== regions) return;
   if (savedAt !== null) showingStored = true;
-  regions.forEach((r, i) => (r.wind = data.length === regions.length ? windLoading(data[i], end) : null));
+  regions.forEach((r, i) => {
+    const ok = data.length === regions.length;
+    r.wind = ok ? windLoading(data[i], end) : null;
+    r.hours = ok ? data[i] : null; // also used by the Verktøy tab (new snow, thaw)
+  });
   redrawLee();
 }
-const windFail = () => state.regions.forEach((r) => (r.wind = null));
+const windFail = () => state.regions.forEach((r) => ((r.wind = null), (r.hours = null)));
 
 function redrawLee(): void {
   aspectLayer.redraw();
@@ -163,6 +168,7 @@ async function loadObservations(date: string): Promise<void> {
   if (state.date !== date) return;
   if (savedAt !== null) showingStored = true;
   state.obs = obs;
+  state.obsDate = date;
   drawObservations(obs);
   update3DObs();
   const nSkred = obs.filter((o) => obsKind(o) === 'skred').length;
@@ -238,7 +244,7 @@ function go(date: string): void {
   suggestTomorrow();
   loadWarnings(date).catch(warnFail);
   loadObservations(date).catch(obsFail);
-  state.regions.forEach((r) => (r.wind = undefined));
+  state.regions.forEach((r) => ((r.wind = undefined), (r.hours = undefined)));
   loadWind(date).catch(windFail);
   applySnow();
   // Weather follows the date shown, and gets refreshed along with the warning.
@@ -553,6 +559,7 @@ function panelInsets(): { left: number; bottom: number } {
 initHeaderTools();
 initShare();
 initAbout();
+initToolInfo();
 initSearch((place) => {
   const ll = L.latLng(place.lat, place.lng);
   const z = Math.max(map.getZoom(), SEARCH_ZOOM);

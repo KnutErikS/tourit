@@ -1,6 +1,6 @@
 import type { Fetched } from './offline/dataCache';
 import type { PointWeather } from './domain/weather';
-import type { WindLoading } from './domain/wind';
+import type { WindHour, WindLoading } from './domain/wind';
 import type * as L from 'leaflet';
 
 /* ---------- NVE avalanche warning API (only the fields we use) ---------- */
@@ -88,6 +88,11 @@ export interface Region {
   warn: Warning | null;
   /** Lee aspects from the wind before the warning date; undefined until loaded, null if no data. */
   wind?: WindLoading | null;
+  /**
+   * The hourly weather behind `wind` (850 hPa, middle of the region), for the days
+   * before and the whole warning date; undefined until loaded, null if no data.
+   */
+  hours?: WindHour[] | null;
   poly?: L.Polygon;
 }
 
@@ -141,14 +146,29 @@ export interface RegobsObs {
     ForecastRegionTID?: number | null;
   };
   Observer?: { NickName?: string; CompetenceLevelName?: string };
-  AvalancheObs?: unknown;
-  AvalancheActivityObs2?: { EstimatedNumName?: string }[];
+  AvalancheObs?: {
+    DtAvalancheTime?: string | null;
+    /** 8 chars of 0/1, N..NV clockwise, like NVE's ValidExpositions. */
+    ValidExposition?: string | null;
+    /** m; -1 = not given */
+    HeightStartZone?: number | null;
+  } | null;
+  AvalancheActivityObs2?: { EstimatedNumName?: string; DtEnd?: string | null; ValidExposition?: string | null }[];
   DangerObs?: { DangerSignTID?: number }[];
+  CompressionTest?: RegobsTest[];
   Attachments?: RegobsAttachment[];
   Summaries?: {
     RegistrationName?: string;
     Summaries?: { Header?: string; Value?: unknown }[];
   }[];
+}
+
+/** A stability test in a Regobs report (only the fields we use). */
+export interface RegobsTest {
+  /** 21 ECTPV, 22 ECTP, 23 ECTN, 24 ECTX; other values are other tests. */
+  PropagationTID?: number | null;
+  TapsFracture?: number | null;
+  TapsFullPropagation?: number | null;
 }
 
 export type ObsKind = 'skred' | 'tegn' | 'obs';

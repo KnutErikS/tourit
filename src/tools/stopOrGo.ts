@@ -1,15 +1,16 @@
 import type * as L from 'leaflet';
 import { regionAt } from '../domain/geo';
-import { instabilitySigns, regionObs } from '../domain/observations';
 import { matchesProblem } from '../domain/problems';
-import { signsEnd, stopOrGo, type StopOrGoResult } from '../domain/stopOrGo';
+import { INSTABILITY, signGroup, type SignKind } from '../domain/signs';
+import { stopOrGo, type StopOrGoResult } from '../domain/stopOrGo';
 import { zoneAt } from '../route/runout';
 import { state } from '../state';
 import { slopeAround } from '../terrain/window';
 import type { TerrainPoint } from '../types';
+import { regionSigns } from './signs';
 
 export interface StopOrGoAssessment extends StopOrGoResult {
-  /** Labels of the instability signs that moved the level up ("Drønn i snøen", …). */
+  /** Labels of the instability signs that moved the level up ("drønn i snøen", …); empty when they didn't. */
   signs: string[];
   /** Region the point is in. */
   regionName: string | null;
@@ -18,15 +19,18 @@ export interface StopOrGoAssessment extends StopOrGoResult {
 /**
  * Stop or Go for one point (the tapped point, or your position): danger level
  * and avalanche problems of its region, the steepness around it, NVE's runout
- * bands at it, and Regobs signs of instability in the region.
+ * bands at it, and Regobs signs of instability in the region, weighted for the
+ * point's height and aspect (domain/signs.ts). At level 3 and above, poor ECT
+ * results count as a sign too (Rule 20).
  */
 export async function assessStopOrGo(ll: L.LatLng, terrain: TerrainPoint | null | undefined): Promise<StopOrGoAssessment> {
   const region = regionAt(state.regions, ll);
   const w = region?.warn ?? null;
   const level = w?.level ?? 0;
 
-  const signs = region ? instabilitySigns(regionObs(state.obs, state.regions, region), signsEnd(state.date)).map((s) => s.label) : [];
-  const uniqueSigns = [...new Set(signs)];
+  const hits = regionSigns(region, terrain);
+  const kinds: SignKind[] = level >= 3 ? [...INSTABILITY, 'poorTest'] : INSTABILITY;
+  const signs = hits ? signGroup(hits, kinds) : null;
 
   // No listed problem: treat the whole region as core zone (the cautious choice).
   // No terrain yet (still loading, or your position): null, which also counts as inside.
@@ -40,10 +44,10 @@ export async function assessStopOrGo(ll: L.LatLng, terrain: TerrainPoint | null 
   const res = stopOrGo({
     level,
     inCore,
-    signs: uniqueSigns.length > 0,
+    signs: signs?.on ?? false,
     steepTrack: win?.track ?? terrain?.slope ?? null,
     steepSlope: win?.slope ?? terrain?.slope ?? null,
     inRunout: zone !== null && zone !== 'steep',
   });
-  return { ...res, signs: uniqueSigns, regionName: region?.name ?? null };
+  return { ...res, signs: signs?.on ? signs.labels : [], regionName: region?.name ?? null };
 }

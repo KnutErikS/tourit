@@ -12,6 +12,8 @@ export const state = {
   selected: null as Region | null,
   picked: null as Picked | null,
   obs: [] as RegobsObs[],
+  /** The date `obs` was loaded for ('' = none yet); differs from `date` while a new day loads or after it failed. */
+  obsDate: '',
 
   /** Avalanche layer: minimum slope angle counted as avalanche terrain. */
   thr: 30,

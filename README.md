@@ -58,8 +58,8 @@ src/
   util.ts               DOM helper, esc(), safeUrl(), dates, fetch
   map.ts                Leaflet map + Kartverket topo basemap
   api/                  NVE warnings/regions, Regobs search, Kartverket place names, MET point forecast, Open-Meteo air profile
-  tools/                Assembles domain logic + data for the Verktøy tab (Stop or Go, …)
-  domain/               Pure logic: problem matching, point-in-polygon, observation types, MGRS, weather (rain/snow split, cloud layers, snow line, summaries), sun position and sun on slopes
+  tools/                Assembles domain logic + data for the Verktøy tab (Stop or Go, ALPTRUTh, your own ticks)
+  domain/               Pure logic: problem matching, point-in-polygon, observation types, MGRS, weather (rain/snow split, cloud layers, snow line, summaries), sun position and sun on slopes, Stop or Go, ALPTRUTh clues, weighted Regobs danger signs, new snow and rask oppbygging
   terrain/              Elevation tiles (LERC) → slope/aspect; canvas layer base
   layers/               2D layers: avalanche terrain, aspect, steepness, seNorge snow, regions, observations
   three/view3d.ts       3D view (MapLibre, loaded on demand)

@@ -203,6 +203,19 @@ details.ws > div{display:grid;gap:8px;padding-top:8px}
   /* Top-left, so it doesn't cover the zoom buttons on the right. */
   #hint{bottom:auto;top:calc(10px + env(safe-area-inset-top,0px));right:auto;left:calc(10px + env(safe-area-inset-left,0px))}
 }
+/* ---------- Tegnforklaring over kartet (panelet skjult) ---------- */
+/* PC: level with the floating burger, centred in the space between it and the map buttons on the right. */
+.map-legend{position:absolute;z-index:999;top:calc(12px + env(safe-area-inset-top,0px));
+  left:calc(72px + env(safe-area-inset-left,0px));right:calc(60px + env(safe-area-inset-right,0px));width:fit-content;margin-inline:auto;
+  max-width:420px;min-height:48px;box-sizing:border-box;align-content:center;display:grid;gap:8px;padding:8px 10px;background:var(--panel);color:var(--fg);
+  border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow)}
+body:not(.panel-hidden) .map-legend{display:none}
+.map-legend .legend + .legend,.map-legend .legend + .ml-rose{border-top:1px solid var(--line);padding-top:8px}
+.map-legend img,.map-legend .sw{width:14px;height:14px}
+.map-legend .ml-rose{line-height:0}
+/* Phones: level with the zoom hint, centred in the space between it and the map buttons on the right. */
+@media (max-width:640px){.map-legend{top:calc(10px + env(safe-area-inset-top,0px));left:calc(96px + env(safe-area-inset-left,0px));right:calc(58px + env(safe-area-inset-right,0px));max-width:none;min-height:30px;padding:6px 8px;gap:6px}
+  .map-legend .legend{gap:3px 8px;font-size:11px}}
 /* ---------- Lagrede områder ---------- */
 .btn:disabled{opacity:.5;cursor:default}
 .btn.danger{background:var(--d4);border-color:var(--d4);color:#fff}

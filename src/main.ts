@@ -281,6 +281,7 @@ function applySnow(): void {
   const kind = snowKind();
   setSnow(kind, state.date || startDate);
   renderSnowLegend($('snow-legend'), kind);
+  syncMapLegend();
   syncSnow3D();
 }
 applySnow();
@@ -307,6 +308,7 @@ bindToggle('l-bratt', steepnessLayer);
 bindToggle('l-snow', snowLayer);
 bindToggle('l-asp', aspectLayer);
 bindToggle('l-obs', obsGroup);
+for (const id of ['l-bratt', 'l-snow', 'l-asp']) $(id).addEventListener('change', syncMapLegend);
 
 steepOpacityInput.addEventListener('input', () => steepnessLayer.setOpacity(+steepOpacityInput.value));
 snowOpacityInput.addEventListener('input', () => snowLayer.setOpacity(+snowOpacityInput.value));
@@ -338,7 +340,22 @@ for (const id of ['s-lee', 'a-lee']) {
 
 $('asp-rose').innerHTML = roseSVG(null, ASP_RGB, 64);
 $('asp-legend').innerHTML = DIRS.map((d, k) => `<span><i class="sw" style="background:rgb(${ASP_RGB[k].join(',')})"></i>${d}</span>`).join('');
-void renderSteepnessLegend($('bratt-legend'));
+void renderSteepnessLegend($('bratt-legend')).then(syncMapLegend);
+
+/**
+ * The scales for steepness, snow and aspect, copied over the map so they can be read while
+ * the panel is hidden (CSS shows the box only then). One block per layer that is on.
+ */
+function syncMapLegend(): void {
+  const on = (id: string) => $<HTMLInputElement>(id).checked;
+  const parts: string[] = [];
+  if (on('l-bratt')) parts.push(`<div class="legend">${$('bratt-legend').innerHTML}</div>`);
+  if (on('l-snow')) parts.push(`<div class="legend">${$('snow-legend').innerHTML}</div>`);
+  if (on('l-asp')) parts.push(`<div class="ml-rose">${roseSVG(null, ASP_RGB, 64)}</div>`);
+  const el = $('map-legend');
+  el.innerHTML = parts.join('');
+  el.hidden = !parts.length;
+}
 
 /* ---------- zoom hint ---------- */
 

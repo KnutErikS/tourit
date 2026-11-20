@@ -48,6 +48,8 @@ export interface SlopeGrid {
    * without it the slope search follows steepness only, whatever way it faces.
    */
   elev?: Float32Array;
+  /** Aspect sector per cell, 0–7 clockwise from north (valid where `ok`). Only `neighbourhood` uses it. */
+  sector?: Uint8Array;
 }
 
 export interface SlopeWindow {
@@ -166,4 +168,51 @@ export function slopeWindow(g: SlopeGrid): SlopeWindow {
     }
   }
   return { track, slope, slopeArea: cells * g.cell * g.cell };
+}
+
+/* ---------- the neighbourhood of a point, for SLABS (domain/risk.ts) ---------- */
+
+/** SLABS looks at the terrain within this distance ("MSA40"). */
+export const MSA_RADIUS_M = 40;
+/** … and takes this percentile of its slope. */
+export const MSA_PERCENTILE = 0.85;
+/** Cells steeper than this count for the aspect share (SLABS "AOF"). */
+export const AOF_MIN_DEG = 25;
+/** Flatter than this (rise per metre, ~3°), the facing direction is unknown. */
+const FLAT = 0.05;
+
+export interface Neighbourhood {
+  /** MSA_PERCENTILE of the slope within the radius, degrees; null without data. */
+  msa: number | null;
+  /** Cells steeper than AOF_MIN_DEG within the radius, counted by aspect sector (0 = N). */
+  steepBySector: number[];
+  /** Elevation at the point, m. */
+  elev: number | null;
+  /** Which way the point faces, averaged over WINDOW_M, as a sector 0–7; null on flat ground or without elevation. */
+  sector: number | null;
+}
+
+/** Slope statistics around the middle of the grid, within `radiusM`. */
+export function neighbourhood(g: SlopeGrid, radiusM = MSA_RADIUS_M): Neighbourhood {
+  const n = g.size, mid = (n - 1) / 2, ctr = mid * n + mid, rr = radiusM / g.cell;
+  const vals: number[] = [];
+  const steepBySector = new Array<number>(8).fill(0);
+  for (let r = 0; r < n; r++)
+    for (let c = 0; c < n; c++) {
+      if ((r - mid) ** 2 + (c - mid) ** 2 > rr * rr) continue;
+      const i = r * n + c;
+      if (!g.ok[i]) continue;
+      vals.push(g.slope[i]);
+      if (g.sector && g.slope[i] > AOF_MIN_DEG) steepBySector[g.sector[i]]++;
+    }
+  vals.sort((a, b) => a - b);
+  const msa = vals.length ? vals[Math.max(0, Math.ceil(MSA_PERCENTILE * vals.length) - 1)] : null;
+
+  let sector: number | null = null;
+  if (g.elev) {
+    const dir = downhill({ ...g, elev: g.elev }, Math.max(0, Math.round(WINDOW_M / g.cell / 2 - 0.5)));
+    const e = dir.e[ctr], no = dir.n[ctr];
+    if (Math.hypot(e, no) > FLAT) sector = Math.floor((((Math.atan2(e, no) * 180) / Math.PI + 360 + 22.5) % 360) / 45);
+  }
+  return { msa, steepBySector, elev: g.elev && g.ok[ctr] ? g.elev[ctr] : null, sector };
 }

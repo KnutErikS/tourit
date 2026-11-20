@@ -2,12 +2,15 @@ import * as L from 'leaflet';
 import { regionAt } from '../domain/geo';
 import { map } from '../map';
 import { parseGpx } from '../route/gpx';
+import { GROUPS, type Group } from '../domain/risk';
+import { type RiskSample, type TerrainSample, scoreRoute, summarize, terrainAlong } from '../route/risk';
 import { ZONES, type Zone, type ZoneSection, zoneSections } from '../route/runout';
 import { type Draft, type SavedRoute, listRoutes, putRoute, readDraft, removeRoute, writeDraft } from '../route/store';
 import { state } from '../state';
 import { type ProfilePoint, type ProfileStats, TooManyTiles, cumulative, profileOf, statsOf } from '../terrain/elevation';
 import type { LatLngTuple } from '../types';
-import { $, esc } from '../util';
+import { $, esc, fmtDate } from '../util';
+import { infoButton } from './toolInfo';
 
 /**
  * "Tegn rute": draw a line with several points on the map and see its length,
@@ -45,6 +48,23 @@ let badge: HTMLElement | null = null;
 let runout: ZoneSection[] | null = null;
 let runoutErr = '';
 let runoutAbort: AbortController | null = null;
+/** The terrain along the route for SLABS and Munter (route/risk.ts); null while unknown. */
+let terrain: (TerrainSample | null)[] | null = null;
+let riskErr = '';
+let riskAbort: AbortController | null = null;
+
+/** Munter's 3rd class: your group, remembered on this device. */
+const GROUP_KEY = 'tourit.group';
+function readGroup(): Group {
+  try {
+    const g = localStorage.getItem(GROUP_KEY);
+    if (g && g in GROUPS) return g as Group;
+  } catch {
+    /* ignore */
+  }
+  return 'small';
+}
+let munterGroup: Group = readGroup();
 
 /* ---------- map layers ---------- */
 
@@ -158,11 +178,15 @@ function scheduleProfile(): void {
   runout = null;
   runoutErr = '';
   drawZones([]);
+  riskAbort?.abort();
+  terrain = null;
+  riskErr = '';
   if (!loading) return;
   timer = window.setTimeout(async () => {
     const mine = (job = { cancelled: false });
     const pts = points.slice();
     void loadRunout(pts);
+    void loadRisk(pts);
     try {
       const p = await profileOf(pts, mine, (done, total) => {
         const el = document.querySelector('.rt-prof-wait');
@@ -197,6 +221,37 @@ async function loadRunout(pts: L.LatLng[]): Promise<void> {
     runoutErr = navigator.onLine ? (e as Error)?.message || 'nettverksfeil' : 'uten nett';
   }
   render();
+}
+
+/** The terrain along the route for SLABS and Munter; scored when drawn (cheap). */
+async function loadRisk(pts: L.LatLng[]): Promise<void> {
+  const ctl = (riskAbort = new AbortController());
+  try {
+    const t = await terrainAlong(pts, ctl.signal, (share) => {
+      const el = document.getElementById('rt-risk-prog');
+      if (el && !ctl.signal.aborted) el.textContent = `Regner ut SLABS og Munter… ${Math.round(share * 100)} %`;
+    });
+    if (ctl.signal.aborted) return;
+    terrain = t;
+  } catch (e) {
+    if (ctl.signal.aborted) return;
+    riskErr = (e as Error)?.message || 'feil';
+  }
+  render();
+}
+
+/** Scores for the terrain, the day's warnings and the group; kept until one of them changes. */
+let scored: { key: string; terrain: (TerrainSample | null)[]; samples: RiskSample[] } | null = null;
+function currentRisk(): RiskSample[] {
+  if (!terrain) return [];
+  const key = `${state.date}|${munterGroup}|${state.regions.map((r) => r.warn?.level ?? '-').join('')}`;
+  if (scored?.terrain !== terrain || scored.key !== key) scored = { key, terrain, samples: scoreRoute(terrain, munterGroup) };
+  return scored.samples;
+}
+
+/** The day's warnings changed (new date, or they loaded): score the route again. */
+export function refreshRouteRisk(): void {
+  if (terrain) render();
 }
 
 /* ---------- formatting ---------- */
@@ -267,7 +322,7 @@ function statsHTML(): string {
       ${cell('Nedstigning', stats ? '↓ ' + fmtM(stats.descent) : '–')}
       ${cell('Høyeste', stats ? fmtM(stats.max) : '–')}
       ${cell('Laveste', stats ? fmtM(stats.min) : '–')}
-    </div>${runoutHTML()}${elev}${loading ? '' : profileSVG()}`;
+    </div>${runoutHTML()}${riskHTML()}${elev}${loading ? '' : profileSVG() + riskStrip()}`;
 }
 
 function runoutHTML(): string {
@@ -281,6 +336,65 @@ function runoutHTML(): string {
     .map((z) => `<li><i style="background:${ZONE_STYLE[z].color}" aria-hidden="true"></i><span>${esc(ZONE_STYLE[z].label)}</span><b>${esc(fmtLen(len[z]))}</b><small>${esc(ZONE_STYLE[z].help)}</small></li>`)
     .join('');
   return `<div class="rt-runout hit"><ul class="rt-zones">${rows}</ul><p>Utløp regnes fra bratte heng over ruta, også der du selv går på flatt terreng. Noen skred går lenger enn «langt utløp».</p></div>`;
+}
+
+const RISK_RED = '#b71c1c', RISK_ORANGE = '#ff9800';
+const num = (x: number, d = 1) => x.toFixed(d).replace('.', ',');
+
+function riskHTML(): string {
+  const head = `<div class="thead"><b class="kicker">Skredrisiko langs ruta</b>${infoButton('routeRisk')}</div>`;
+  const options = (Object.keys(GROUPS) as Group[])
+    .map((g) => `<option value="${g}"${g === munterGroup ? ' selected' : ''}>${esc(GROUPS[g].label)}</option>`)
+    .join('');
+  const select = `<label class="rt-group"><span>Gruppe (Munter)</span><select id="rt-group">${options}</select></label>`;
+  let body: string;
+  if (riskErr) body = `<p>Fikk ikke regnet ut SLABS og Munter (${esc(riskErr)}).</p>`;
+  else if (!terrain) body = '<p id="rt-risk-prog">Regner ut SLABS og Munter…</p>';
+  else {
+    const s = summarize(currentRisk());
+    if (!s.levels.length) body = '<p>Ingen snøskredvarsel for dagen der ruta går.</p>';
+    else {
+      const li = (color: string, label: string, m: number, small: string) =>
+        `<li><i style="background:${color}" aria-hidden="true"></i><span>${esc(label)}</span><b>${esc(fmtLen(m))}</b><small>${esc(small)}</small></li>`;
+      const rows = [
+        s.highM > 0 ? li(RISK_RED, 'SLABS høy', s.highM, 'over én faregrad over Stop or Go-grensen') : '',
+        s.elevatedM > 0 ? li(RISK_ORANGE, 'SLABS forhøyet', s.elevatedM, 'rundt Stop or Go-grensen') : '',
+        s.munterM > 0 ? li(RISK_RED, 'Munter ikke akseptabel', s.munterM, `restrisiko høyest ${num(s.maxRR)}`) : '',
+      ].join('');
+      const fine = [
+        s.highM + s.elevatedM === 0 ? 'SLABS: lav risiko hele veien.' : '',
+        s.munterM === 0 ? `Munter: akseptabel hele veien (restrisiko høyest ${num(s.maxRR)}).` : '',
+      ].filter(Boolean);
+      body =
+        (rows ? `<ul class="rt-zones">${rows}</ul>` : '') +
+        (fine.length ? `<p>${esc(fine.join(' '))}</p>` : '') +
+        `<p class="rsub">Faregrad ${s.levels.join(' og ')} i varselet for ${esc(fmtDate(state.date))}. SLABS bygger på sveitsiske data og er bare veiledende her.</p>`;
+    }
+  }
+  return `<div class="rt-risk">${head}${body}${select}</div>`;
+}
+
+/** Two rows under the profile, lined up with it: SLABS (orange/red) and Munter (red where not acceptable). */
+function riskStrip(): string {
+  if (!terrain || !stats || profile.length < 2) return '';
+  const r = currentRisk();
+  if (!r.some((x) => x.slabs)) return '';
+  const total = profile[profile.length - 1].d || 1;
+  const x = (d: number) => PAD.l + (Math.min(d, total) / total) * (PW - PAD.l - PAD.r);
+  const rect = (a: RiskSample, b: RiskSample | undefined, y: number, color: string) =>
+    `<rect x="${x(a.d).toFixed(1)}" y="${y}" width="${Math.max(1, x(b?.d ?? a.d) - x(a.d)).toFixed(1)}" height="7" fill="${color}"/>`;
+  let slabs = '', mun = '';
+  r.forEach((a, i) => {
+    const b = r[i + 1];
+    if (a.slabs?.cls === 'high') slabs += rect(a, b, 2, RISK_RED);
+    else if (a.slabs?.cls === 'elevated') slabs += rect(a, b, 2, RISK_ORANGE);
+    if (a.munter && !a.munter.ok) mun += rect(a, b, 13, RISK_RED);
+  });
+  const w = PW - PAD.l - PAD.r;
+  return `<svg class="rt-strip" viewBox="0 0 ${PW} 22" role="img" aria-label="SLABS og Munter langs ruta">
+    <text x="${PAD.l - 4}" y="8.5" text-anchor="end">SLABS</text><rect class="bg" x="${PAD.l}" y="2" width="${w}" height="7"/>${slabs}
+    <text x="${PAD.l - 4}" y="19.5" text-anchor="end">Munter</text><rect class="bg" x="${PAD.l}" y="13" width="${w}" height="7"/>${mun}
+  </svg>`;
 }
 
 function routeHTML(r: SavedRoute): string {
@@ -605,6 +719,17 @@ export function initRoute(): void {
   result.addEventListener('pointermove', onProfileMove);
   result.addEventListener('pointerdown', onProfileMove);
   result.addEventListener('pointerleave', onProfileLeave);
+  result.addEventListener('change', (e) => {
+    const sel = (e.target as Element).closest<HTMLSelectElement>('#rt-group');
+    if (!sel || !(sel.value in GROUPS)) return;
+    munterGroup = sel.value as Group;
+    try {
+      localStorage.setItem(GROUP_KEY, munterGroup);
+    } catch {
+      /* remembered until the page reloads */
+    }
+    render();
+  });
 
   map.on('click', onMapClick);
   line.on('click', onLineClick);

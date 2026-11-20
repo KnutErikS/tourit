@@ -62,7 +62,7 @@ import { initAbout } from './ui/about';
 import { initToolInfo } from './ui/toolInfo';
 import { initTools, renderTools, setToolsActive } from './ui/tools';
 import { initInfos } from './tools/infos';
-import { initRoute, isDrawing } from './ui/routePage';
+import { initRoute, isDrawing, refreshRouteRisk } from './ui/routePage';
 import { $, fmtDate, fmtTime, isoDate } from './util';
 import { restoreView, saveView, trackView } from './viewState';
 
@@ -115,6 +115,7 @@ async function loadWarnings(date: string): Promise<void> {
   avalancheLayer.redraw();
   update3D();
   renderPanels();
+  refreshRouteRisk(); // SLABS and Munter follow the day's warning
 
   const warned = state.regions.filter((r) => r.warn && r.warn.level >= 1);
   $('season').hidden = warned.length > 0;

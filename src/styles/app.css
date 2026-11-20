@@ -276,6 +276,15 @@ body:not(.panel-hidden) .map-legend{display:none}
 .rt-prof .curtxt{fill:var(--fg);font-weight:500}
 .rt-prof .ro{fill-opacity:.32}
 .rt-runout{margin:0;font-size:12.5px;line-height:1.45;padding:7px 9px;border-radius:6px;border:1px solid var(--line);background:var(--chip)}
+/* SLABS and Munter along the route (route/risk.ts). */
+.rt-risk{display:grid;gap:6px;font-size:12.5px;line-height:1.45;padding:7px 9px;border-radius:6px;border:1px solid var(--line);background:var(--chip)}
+.rt-risk p{margin:0}
+.rt-group{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.rt-group span{color:var(--muted)}
+.rt-group select{font:inherit;padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--fg)}
+.rt-strip{width:100%;height:auto;display:block}
+.rt-strip text{font:8px var(--f-mono),monospace;fill:var(--muted)}
+.rt-strip .bg{fill:var(--chip)}
 .rt-runout.hit{border-color:#e65100;background:color-mix(in srgb,#ff9800 10%,var(--chip))}
 .rt-runout p{margin:6px 0 0;font-size:11.5px;color:var(--muted)}
 .rt-zones{list-style:none;margin:0;padding:0;display:grid;gap:3px}

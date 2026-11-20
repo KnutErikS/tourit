@@ -1,12 +1,13 @@
 import { PATH_DEG, RED_AT } from '../domain/alptruth';
 import { LOADING_H, NEW_SNOW_CM, RAPID_24H_MM, RAPID_MM_H, RAPID_RUN_H, THAW_RAIN_MM } from '../domain/precip';
+import { ALL_HEIGHTS_DCE, DANGER_POTENTIAL, GROUPS, LEVEL_FACTOR } from '../domain/risk';
 import { HEIGHT_MID_M, HEIGHT_NEAR_M, SIGNS_H } from '../domain/signs';
-import { ASPECT_TOL_DEG, SLOPE_MIN_DEG, SLOPE_RADIUS_M, STRIP_M, TRACK_M, WINDOW_M } from '../domain/slopeWindow';
+import { AOF_MIN_DEG, ASPECT_TOL_DEG, MSA_PERCENTILE, MSA_RADIUS_M, SLOPE_MIN_DEG, SLOPE_RADIUS_M, STRIP_M, TRACK_M, WINDOW_M } from '../domain/slopeWindow';
 import { LIMIT, LOW_SPOT, MARGIN } from '../domain/stopOrGo';
 import { $ } from '../util';
 
 /**
- * The small ⓘ buttons beside the Verktøy tab's cards, and the dialog that
+ * The small ⓘ buttons beside the Verktøy tab's cards (and the route's risk box), and the dialog that
  * explains how each tool works. The numbers come from the code's own
  * constants, so the text follows when a threshold changes.
  *
@@ -14,12 +15,46 @@ import { $ } from '../util';
  * on the document opens the right text (cards are re-rendered often).
  */
 
-export type InfoTopic = 'stopOrGo' | 'alptruth';
+export type InfoTopic = 'stopOrGo' | 'alptruth' | 'routeRisk';
 
 const num = (x: number) => String(x).replace('.', ',');
 const STRIP_WIDTH = num(2 * STRIP_M);
 
+const GROUP_LIST = Object.values(GROUPS)
+  .map((g) => `${g.label.charAt(0).toLowerCase()}${g.label.slice(1)} → ${g.rf}`)
+  .join(', ');
+
 const TOPICS: Record<InfoTopic, { title: string; label: string; body: string }> = {
+  routeRisk: {
+    title: 'Slik virker SLABS og Munter',
+    label: 'Slik virker SLABS og Munter',
+    body: `
+<p>To måter å regne skredrisiko på, omtrent for hver 25. meter av ruta, ut fra dagens varsel der ruta går. Stripa under høydeprofilen viser hvor.</p>
+
+<p class="kicker">SLABS</p>
+<p>En modell fra sveitsiske ulykker sammenlignet med GPS-spor fra vanlige skiturer (ISSW 2024). Risikoen er fire faktorer ganget sammen:</p>
+<ul class="dlg-list">
+  <li><b>Bratthet:</b> ${Math.round(MSA_PERCENTILE * 100)}-persentilen av helningen innen ${MSA_RADIUS_M} m. Fra 20° til 40° øker risikoen 150 ganger.</li>
+  <li><b>Faregrad:</b> × ${num(LEVEL_FACTOR)} per faregrad.</li>
+  <li><b>Høyde:</b> hvor langt inne i varselets høydebånd du er, opptil × 15,7. Et skredproblem uten høydebånd regnes som ${ALL_HEIGHTS_DCE} m inne.</li>
+  <li><b>Himmelretning:</b> hvor stor del av terrenget over ${AOF_MIN_DEG}° rundt deg som vender mot varselets himmelretninger, opptil × 3,4.</li>
+</ul>
+<p>Studien oppgir ikke sine grenser. Våre: <b>forhøyet</b> fra risikoen i et 35° heng ved faregrad 3 i kanten av varselets høyder og retninger, <b>høy</b> fra én faregrad over det. Da havner Stop or Go-grensene (40° ved 2, 35° ved 3, 30° ved 4) nær «forhøyet», så de to verktøyene er enige. SLABS bygger på sveitsiske data og er bare veiledende i Norge.</p>
+
+<p class="kicker">Munters reduksjonsmetode</p>
+<p>Restrisiko = farepotensial ÷ reduksjonsfaktorene. Akseptabelt når den er 1 eller lavere.</p>
+<ul class="dlg-list">
+  <li><b>Farepotensial:</b> faregrad 1 → ${DANGER_POTENTIAL[1]}, 2 → ${DANGER_POTENTIAL[2]}, 3 → ${DANGER_POTENTIAL[3]}, 4 → ${DANGER_POTENTIAL[4]}.</li>
+  <li><b>1. klasse, det bratteste i henget</b> (som «hele henget» i Stop or Go): 35–39° → 2, 30–34° → 3, under 30° → 4. Ved faregrad 3 må det bratteste være under 40°, ved faregrad 4 under 30°.</li>
+  <li><b>2. klasse, himmelretning:</b> utenfor varselets retninger og høyder → 4; utenfor nordre halvdel (VNV–N–ØSØ) → 3; utenfor nordsektoren (NV–N–NØ) → 2. Gjelder ikke ved våt snø, og nordfaktorene gjelder ikke når varselet sier alle retninger.</li>
+  <li><b>3. klasse, gruppa:</b> ${GROUP_LIST}. Velg gruppe i boksen.</li>
+</ul>
+<p>Munter regner med at risikoen dobles per faregrad. Sveitsiske data viser omtrent fire ganger, så metoden er for snill ved faregrad 3.</p>
+
+<p class="kicker">Begrensninger</p>
+<p>Begge ser bare på terrenget og varselet: ikke på faretegn, snødekket eller hvor du faktisk går i henget. Bratthet og retning er fra terrengmodellen, nøyaktig til noen få grader.</p>
+<p class="dlg-note">Kilder: SLABS (ISSW 2024); Munter, bergundsteigen 2001; SLF.</p>`,
+  },
   stopOrGo: {
     title: 'Slik virker Stop or Go',
     label: 'Slik virker Stop or Go',

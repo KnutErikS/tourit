@@ -147,6 +147,11 @@
 <div id="hint" aria-live="polite">zoom 5</div>
 <!-- Legends for the layers that are on, over the map while the panel is hidden. -->
 <div id="map-legend" class="map-legend" aria-label="Tegnforklaring" hidden></div>
+<!-- Shown when a new version of the app has taken over (ui/update.ts). -->
+<div id="update" class="update" role="status" hidden>
+  <button type="button" class="update-go" id="update-reload"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg>Ny versjon – last inn på nytt</button>
+  <button type="button" class="update-x" id="update-close" aria-label="Ikke nå" title="Ikke nå">×</button>
+</div>
 
 <!-- "Om Skredterreng": disclaimer, contact and build number. Opens by itself on the first visit (ui/about.ts). -->
 <dialog id="about" class="about" aria-labelledby="about-title">

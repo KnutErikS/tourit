@@ -1,6 +1,7 @@
 import { OFFLINE_CACHE } from '../config';
 import { type SavedArea, listAreas, putArea, removeArea } from './store';
 import { SPARSE_KINDS, areaTiles } from './tiles';
+import { watchForUpdates } from '../ui/update';
 
 const CONCURRENCY = 6;
 
@@ -111,7 +112,10 @@ export async function requestPersistence(): Promise<boolean> {
 
 export function registerServiceWorker(): void {
   if (!('serviceWorker' in navigator)) return;
-  navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch((e) => console.warn('Service worker:', e));
+  navigator.serviceWorker
+    .register(`${import.meta.env.BASE_URL}sw.js`)
+    .then(watchForUpdates)
+    .catch((e) => console.warn('Service worker:', e));
 }
 
 export const offlineSupported = () => 'caches' in window && 'serviceWorker' in navigator;

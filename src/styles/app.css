@@ -451,3 +451,14 @@ dialog.about a{color:var(--accent);font-weight:600}
 .about-build{font-family:var(--f-mono),monospace;font-size:11.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:10px}
 .about-actions{display:flex;justify-content:flex-end}
 .about-actions .btn{padding:8px 16px}
+
+/* ---------- Ny versjon (ui/update.ts) ---------- */
+.update{position:absolute;z-index:1003;left:50%;transform:translateX(-50%);top:calc(12px + env(safe-area-inset-top,0px));
+  display:flex;align-items:stretch;max-width:calc(100vw - 32px);border-radius:999px;background:var(--accent);color:var(--accent-ink);box-shadow:var(--shadow);overflow:hidden}
+.update[hidden]{display:none}
+.update button{border:0;background:none;color:inherit;font:inherit;font-weight:600;cursor:pointer}
+.update-go{display:flex;align-items:center;gap:8px;padding:10px 6px 10px 16px;white-space:nowrap}
+.update-go svg{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.update-x{padding:0 14px 0 10px;font-size:20px;line-height:1;opacity:.75}
+.update-x:hover{opacity:1}
+.update button:focus-visible{outline:2px solid var(--accent-ink);outline-offset:-4px}

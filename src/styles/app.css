@@ -50,10 +50,10 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body),sans-serif;f
   background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);
   display:flex;flex-direction:column;overflow:hidden}
 #panel header{padding:14px 16px 10px;border-bottom:1px solid var(--line);display:grid;gap:10px}
-.brand{display:flex;align-items:center;gap:10px}
+.brand{display:flex;align-items:center;gap:8px}
 .brand h1{flex:1}
 h1{font-family:var(--f-display),sans-serif;font-weight:700;font-size:24px;letter-spacing:.01em;margin:0;line-height:1}
-.brand small{font-family:var(--f-mono),monospace;font-size:11px;color:var(--muted)}
+.brand small{font-family:var(--f-mono),monospace;font-size:10px;color:var(--muted);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .daterow{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .daterow input{font:inherit;font-family:var(--f-mono),monospace;font-size:13px;padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--fg)}
 button{font:inherit;cursor:pointer}
@@ -433,3 +433,21 @@ body.is3d #hint{display:none}
 #map3d .om{cursor:pointer}
 @media (max-width:640px){#map3d .maplibregl-ctrl-bottom-right{display:none}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ---------- Om Skredterreng (disclaimer, contact, build) ---------- */
+.info-btn{flex:none;width:32px;height:32px;padding:0;border:1px solid var(--line);border-radius:8px;background:var(--chip);color:var(--fg);display:grid;place-items:center;cursor:pointer}
+.info-btn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.info-btn:hover{border-color:var(--accent)}
+.info-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (max-width:640px){.info-btn{width:40px;height:40px}.info-btn svg{width:20px;height:20px}}
+.linkbtn{border:0;padding:0;background:none;font:inherit;color:var(--accent);text-decoration:underline;cursor:pointer}
+dialog.about{box-sizing:border-box;margin:auto;width:min(440px,calc(100vw - 32px));max-height:calc(100dvh - 32px);overflow:auto;padding:18px 20px 16px;
+  border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--fg);box-shadow:var(--shadow);font-size:13.5px;line-height:1.5}
+dialog.about::backdrop{background:rgba(8,14,22,.55)}
+dialog.about h2{margin:0 0 10px;font-family:var(--f-display),sans-serif;font-size:22px;font-weight:700;line-height:1.1}
+dialog.about p{margin:0 0 10px}
+dialog.about .kicker{margin-top:14px;margin-bottom:4px}
+dialog.about a{color:var(--accent);font-weight:600}
+.about-build{font-family:var(--f-mono),monospace;font-size:11.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:10px}
+.about-actions{display:flex;justify-content:flex-end}
+.about-actions .btn{padding:8px 16px}

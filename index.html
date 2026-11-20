@@ -31,6 +31,7 @@
       <button type="button" id="burger-in" class="burger-in" aria-controls="panel" aria-expanded="true" aria-label="Skjul panelet" title="Skjul panelet"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
       <h1>Skredterreng</h1>
       <small>Varsom · NVE · Kartverket</small>
+      <button type="button" class="info-btn" id="about-btn" aria-haspopup="dialog" aria-controls="about" aria-label="Om appen, ansvar og kontakt" title="Om appen, ansvar og kontakt"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.01"/></svg></button>
       <!-- Phones only: search and date picker fold away behind these (see ui/headerTools.ts). -->
       <button type="button" class="hdr-tool" id="tool-search" aria-controls="search-row" aria-expanded="false" aria-label="Søk etter fjell eller sted" title="Søk etter fjell eller sted"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg></button>
       <button type="button" class="hdr-tool" id="tool-date" aria-controls="date-row" aria-expanded="false" aria-label="Velg dag for skredvarsel" title="Velg dag for skredvarsel"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></button>
@@ -130,7 +131,7 @@
 
     <section class="summary" id="summary"><p class="empty">Trykk i kartet for å se varselet for et sted.</p></section>
 
-    <p class="foot">Data: Snøskredvarsler fra <a href="https://www.varsom.no/snoskred/varsling/" target="_blank" rel="noopener">varsom.no</a> (NVE), bratthet fra NVE, terrengmodell fra Kartverket (hoydedata.no). Terrengtreff er en automatisk tolkning av varselet og erstatter ikke egen vurdering i felt.</p>
+    <p class="foot">Data: Snøskredvarsler fra <a href="https://www.varsom.no/snoskred/varsling/" target="_blank" rel="noopener">varsom.no</a> (NVE), bratthet fra NVE, terrengmodell fra Kartverket (hoydedata.no). Terrengtreff er en automatisk tolkning av varselet og erstatter ikke egen vurdering i felt. <button type="button" class="linkbtn" id="about-foot">Ansvar, kontakt og versjon</button></p>
   </div>
   <div class="scroll" id="tab-warn" role="tabpanel" hidden>
     <div id="detail" style="padding-top:10px"><p class="empty">Trykk på et sted i kartet. Du får varselet for regionen stedet ligger i, og ser om akkurat det punktet er utsatt for skredproblemene.</p></div>
@@ -146,6 +147,18 @@
 <div id="hint" aria-live="polite">zoom 5</div>
 <!-- Legends for the layers that are on, over the map while the panel is hidden. -->
 <div id="map-legend" class="map-legend" aria-label="Tegnforklaring" hidden></div>
+
+<!-- "Om Skredterreng": disclaimer, contact and build number. Opens by itself on the first visit (ui/about.ts). -->
+<dialog id="about" class="about" aria-labelledby="about-title">
+  <h2 id="about-title">Om Skredterreng</h2>
+  <p class="kicker">Ansvarsfraskrivelse</p>
+  <p>Skredterreng er et hobbyprosjekt, ikke en offisiell tjeneste fra NVE eller Varsom. Terrengtreffene er en automatisk tolkning av skredvarselet mot en terrengmodell, og de kan være feil: små heng, skavler og terrengfeller kommer ikke med, og et punkt som ikke er bratt selv kan ligge i utløpet til et heng over.</p>
+  <p>Les alltid hele varselet på <a href="https://www.varsom.no/snoskred/varsling/" target="_blank" rel="noopener">varsom.no</a> og gjør din egen vurdering i felt. Du ferdes på eget ansvar.</p>
+  <p class="kicker">Feil eller tips?</p>
+  <p>Fant du en feil, eller har du forslag til forbedringer? Gi beskjed til utvikleren: <a id="about-contact" href="#" target="_blank" rel="noopener">Meld feil eller send tips ↗</a>. Skriv gjerne hva du gjorde og hvilken versjon du har.</p>
+  <p class="about-build">Versjon <span id="about-build"></span></p>
+  <div class="about-actions"><button type="button" class="btn primary" id="about-ok">Jeg forstår</button></div>
+</dialog>
 
 <script type="module" src="/src/main.ts"></script>
 </body>

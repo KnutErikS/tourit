@@ -1,5 +1,8 @@
 export type RGB = [number, number, number];
 
+/** Where "Meld feil eller send tips" goes (the build number is added to the text). */
+export const CONTACT_URL = 'https://github.com/KnutErikS/tourit/issues/new';
+
 /** External services. All are public, CORS-enabled and need no API key. */
 export const NVE_API = 'https://api01.nve.no/hydrology/forecast/avalanche/v6.3.2/api';
 export const REGOBS_API = 'https://api.regobs.no/v5';

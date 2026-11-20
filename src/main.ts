@@ -48,6 +48,7 @@ import { reportDemError, setStatus } from './ui/status';
 import { renderSummary } from './ui/summary';
 import { renderWeather } from './ui/weather';
 import { initShare } from './ui/share';
+import { initAbout } from './ui/about';
 import { initRoute, isDrawing } from './ui/routePage';
 import { $, fmtDate, fmtTime, isoDate } from './util';
 import { restoreView, saveView, trackView } from './viewState';
@@ -501,6 +502,7 @@ function panelInsets(): { left: number; bottom: number } {
 
 initHeaderTools();
 initShare();
+initAbout();
 initSearch((place) => {
   const ll = L.latLng(place.lat, place.lng);
   const z = Math.max(map.getZoom(), SEARCH_ZOOM);

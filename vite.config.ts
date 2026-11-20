@@ -1,3 +1,4 @@
+import { execSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -91,10 +92,30 @@ function swPrecache(): Plugin {
   };
 }
 
+/**
+ * Build number shown in the app ("Om Skredterreng"), so a bug report says which
+ * version it is about. On GitHub Actions: the workflow run number + commit;
+ * locally: the commit, marked "dev". Plus the build date.
+ */
+function buildId(): string {
+  const run = process.env.GITHUB_RUN_NUMBER;
+  let sha = (process.env.GITHUB_SHA ?? '').slice(0, 7);
+  if (!sha) {
+    try {
+      sha = execSync('git rev-parse --short=7 HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
+    } catch {
+      sha = 'ukjent';
+    }
+  }
+  const date = new Date().toISOString().slice(0, 10);
+  return `${run ? `bygg ${run}` : 'dev'} · ${sha} · ${date}`;
+}
+
 export default defineConfig({
   // Relative asset paths, so the built site works on any host or sub-path
   // (GitHub Pages project sites, Netlify, a plain folder on a web server).
   base: './',
+  define: { __BUILD__: JSON.stringify(buildId()) },
   plugins: [csp(), swPrecache()],
   server: { port: 5173, open: true },
   build: { target: 'es2022', sourcemap: true },

@@ -283,9 +283,17 @@ body:not(.panel-hidden) .map-legend{display:none}
 .rt-group span{color:var(--muted)}
 .rt-group select{font:inherit;padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--fg)}
 .rt-strip{width:100%;height:auto;display:block}
+.rt-mline{display:grid;gap:3px}
+.rt-mline .mhead{font-size:11px;color:var(--muted)}
+.rt-mline small{color:var(--muted);font-size:11px}
+.mcalc{display:inline-flex;align-items:center;gap:7px;font:500 14px/1.2 var(--f-mono),monospace;font-variant-numeric:tabular-nums}
+.mcalc.bad b{color:#b71c1c}
+.frac{display:inline-flex;flex-direction:column;align-items:center}
+.frac>span{padding:0 3px}
+.frac>span:first-child{border-bottom:1.5px solid currentColor}
 .rt-strip text{font:8px var(--f-mono),monospace;fill:var(--muted)}
 .rt-strip .bg{fill:var(--chip)}
-.rt-runout.hit{border-color:#e65100;background:color-mix(in srgb,#ff9800 10%,var(--chip))}
+.rt-runout.hit{background:color-mix(in srgb,#ff9800 10%,var(--chip))}
 .rt-runout p{margin:6px 0 0;font-size:11.5px;color:var(--muted)}
 .rt-zones{list-style:none;margin:0;padding:0;display:grid;gap:3px}
 .rt-zones li{display:grid;grid-template-columns:18px 1fr auto;column-gap:7px;align-items:center}

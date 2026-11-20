@@ -5,7 +5,7 @@ import { cumulative } from '../terrain/elevation';
 /**
  * Which parts of a route lie in avalanche terrain, read from NVE's "Bratthet
  * med utløp" tiles (the map on the steepness layer with runout on): steep
- * ground (27° and up, where avalanches start) and the three runout bands below
+ * ground (30° and up, where slab avalanches start; NVE's 27–30° class is left out) and the three runout bands below
  * it. The tiles have exact, unblended colours, so a pixel tells the class.
  * Using the tiles (not a query) means saved map areas work without signal.
  */
@@ -34,13 +34,17 @@ const MIN_ZOOM = 11;
 const CRS = L.CRS.EPSG3857;
 const RUNOUT_CLASSES = Object.keys(RUNOUT) as RunoutClass[];
 
+/** NVE's lowest steepness class (27–30°) in these tiles: yellow. Left out, steep counts from 30°. */
+const STEEP_27_30: [number, number, number] = [255, 255, 0];
+
 function zoneOf(r: number, g: number, b: number, a: number): Zone | null {
   if (a < 128) return null;
+  if (Math.abs(r - STEEP_27_30[0]) + Math.abs(g - STEEP_27_30[1]) + Math.abs(b - STEEP_27_30[2]) < 24) return null;
   for (const k of RUNOUT_CLASSES) {
     const [cr, cg, cb] = RUNOUT[k].rgb;
     if (Math.abs(r - cr) + Math.abs(g - cg) + Math.abs(b - cb) < 24) return k;
   }
-  return 'steep'; // any other opaque colour is one of the steepness classes
+  return 'steep'; // any other opaque colour is one of the steepness classes from 30° up
 }
 
 /** Decode one tile into a 256×256 array of zone indexes (255 = none). */

@@ -1,8 +1,9 @@
 import * as L from 'leaflet';
 import { regionAt } from '../domain/geo';
+import { RUNOUT } from '../config';
 import { map } from '../map';
 import { parseGpx } from '../route/gpx';
-import { GROUPS, type Group } from '../domain/risk';
+import { GROUPS, type Group, type Munter } from '../domain/risk';
 import { type RiskSample, type TerrainSample, scoreRoute, summarize, terrainAlong } from '../route/risk';
 import { ZONES, type Zone, type ZoneSection, zoneSections } from '../route/runout';
 import { type Draft, type SavedRoute, listRoutes, putRoute, readDraft, removeRoute, writeDraft } from '../route/store';
@@ -10,7 +11,7 @@ import { state } from '../state';
 import { type ProfilePoint, type ProfileStats, TooManyTiles, cumulative, profileOf, statsOf } from '../terrain/elevation';
 import type { LatLngTuple } from '../types';
 import { $, esc, fmtDate } from '../util';
-import { infoButton } from './toolInfo';
+import { infoButton, setInfoExtra } from './toolInfo';
 
 /**
  * "Tegn rute": draw a line with several points on the map and see its length,
@@ -25,6 +26,8 @@ import { infoButton } from './toolInfo';
 const ICON_ROUTE =
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="18" r="2"/><circle cx="19" cy="6" r="2"/><path d="M7 18h7a3 3 0 0 0 0-6h-4a3 3 0 0 1 0-6h7"/></svg>';
 const LINE = '#c2185b';
+/** SLABS / Munter colours: the strip under the profile and the border on the route line. */
+const RISK_RED = '#b71c1c', RISK_ORANGE = '#ff9800';
 /** Above this many points (typically an imported GPS track) the in-between handles are drawn smaller. */
 const DENSE = 40;
 
@@ -70,23 +73,37 @@ let munterGroup: Group = readGroup();
 
 map.createPane('route').style.zIndex = '450';
 const group = L.layerGroup().addTo(map);
+/**
+ * SLABS and Munter as a semi-transparent border around the route line, under
+ * the white halo: orange where SLABS is elevated, red where SLABS is high or
+ * Munter's residual risk is not acceptable (as in the strip under the profile).
+ */
+const riskGlow = {
+  elevated: L.polyline([], { pane: 'route', color: RISK_ORANGE, weight: 17, opacity: 0.45, lineCap: 'butt', interactive: false }).addTo(group),
+  high: L.polyline([], { pane: 'route', color: RISK_RED, weight: 17, opacity: 0.45, lineCap: 'butt', interactive: false }).addTo(group),
+};
 const halo = L.polyline([], { pane: 'route', color: '#fff', weight: 7, opacity: 0.85, interactive: false }).addTo(group);
 /**
- * Glow under the line in avalanche terrain: red on steep ground, then three
- * shades of orange for short, medium and long runout (darker = more avalanches reach it).
- * Orange rather than NVE's blues, so it stands out on top of the map.
+ * The route line's colour in avalanche terrain: red on steep ground (30° and
+ * up), then NVE's three blues for short, medium and long runout (darker = more
+ * avalanches reach it), the same as on the steepness map with runout. Blue
+ * keeps runout apart from SLABS and Munter, which use orange and red.
+ * Elsewhere the line keeps its own colour (LINE).
  */
+const rgb = (c: readonly number[]) => `rgb(${c.join(',')})`;
 const ZONE_STYLE: Record<Zone, { color: string; label: string; help: string }> = {
-  steep: { color: '#b71c1c', label: 'Bratt (27°+)', help: 'der skred kan løsne' },
-  short: { color: '#e65100', label: 'Kort utløp', help: 'halvparten av skredene når hit' },
-  medium: { color: '#ff9800', label: 'Middels utløp', help: 'ett av fire skred når hit' },
-  long: { color: '#ffcc80', label: 'Langt utløp', help: 'ett av tjue skred når hit' },
+  steep: { color: '#b71c1c', label: 'Bratt (30°+)', help: 'der skred kan løsne' },
+  // Runout in NVE's own blues (as on the map layer), so they don't mix with SLABS/Munter's orange and red.
+  short: { color: rgb(RUNOUT.short.rgb), label: 'Kort utløp', help: 'halvparten av skredene når hit' },
+  medium: { color: rgb(RUNOUT.medium.rgb), label: 'Middels utløp', help: 'ett av fire skred når hit' },
+  long: { color: rgb(RUNOUT.long.rgb), label: 'Langt utløp', help: 'ett av tjue skred når hit' },
 };
+const line = L.polyline([], { pane: 'route', color: LINE, weight: 4, bubblingMouseEvents: false }).addTo(group);
+// The zones colour the route line itself: drawn on top of it, not clickable, so taps still reach the line.
 const zoneLines = Object.fromEntries(
-  ZONES.map((z) => [z, L.polyline([], { pane: 'route', color: ZONE_STYLE[z].color, weight: 13, opacity: 0.9, lineCap: 'butt', interactive: false }).addTo(group)]),
+  ZONES.map((z) => [z, L.polyline([], { pane: 'route', color: ZONE_STYLE[z].color, weight: 5, opacity: 1, lineCap: 'butt', interactive: false }).addTo(group)]),
 ) as Record<Zone, L.Polyline>;
 const drawZones = (s: ZoneSection[]) => ZONES.forEach((z) => zoneLines[z].setLatLngs(s.filter((x) => x.zone === z).map((x) => x.lls)));
-const line = L.polyline([], { pane: 'route', color: LINE, weight: 4, bubblingMouseEvents: false }).addTo(group);
 const vertices = L.layerGroup().addTo(group);
 const cursor = L.circleMarker([0, 0], { pane: 'route', radius: 6, color: '#fff', weight: 2, fillColor: LINE, fillOpacity: 1, interactive: false });
 
@@ -180,6 +197,7 @@ function scheduleProfile(): void {
   drawZones([]);
   riskAbort?.abort();
   terrain = null;
+  drawRiskGlow();
   riskErr = '';
   if (!loading) return;
   timer = window.setTimeout(async () => {
@@ -250,6 +268,34 @@ function currentRisk(): RiskSample[] {
 }
 
 /** The day's warnings changed (new date, or they loaded): score the route again. */
+/** Gaps between scored spots longer than this (no terrain data) break the border, metres. */
+const GLOW_GAP_M = 100;
+
+/** Draw the SLABS/Munter border along the route from the current scores (or clear it). */
+function drawRiskGlow(): void {
+  const parts: Record<'elevated' | 'high', L.LatLng[][]> = { elevated: [], high: [] };
+  if (terrain && points.length > 1) {
+    const r = currentRisk();
+    let cur: { cls: 'elevated' | 'high'; lls: L.LatLng[] } | null = null;
+    r.forEach((a, i) => {
+      const b = r[i + 1];
+      const cls = a.slabs?.cls === 'high' || (a.munter && !a.munter.ok) ? 'high' : a.slabs?.cls === 'elevated' ? 'elevated' : null;
+      // Each spot stands for the stretch to the next one (as in the summary).
+      if (!cls || !b || b.d - a.d > GLOW_GAP_M) {
+        cur = null;
+        return;
+      }
+      if (cur?.cls === cls) cur.lls.push(b.ll);
+      else {
+        cur = { cls, lls: [a.ll, b.ll] };
+        parts[cls].push(cur.lls);
+      }
+    });
+  }
+  riskGlow.elevated.setLatLngs(parts.elevated);
+  riskGlow.high.setLatLngs(parts.high);
+}
+
 export function refreshRouteRisk(): void {
   if (terrain) render();
 }
@@ -338,8 +384,43 @@ function runoutHTML(): string {
   return `<div class="rt-runout hit"><ul class="rt-zones">${rows}</ul><p>Utløp regnes fra bratte heng over ruta, også der du selv går på flatt terreng. Noen skred går lenger enn «langt utløp».</p></div>`;
 }
 
-const RISK_RED = '#b71c1c', RISK_ORANGE = '#ff9800';
 const num = (x: number, d = 1) => x.toFixed(d).replace('.', ',');
+
+/** 16, 0,67: whole numbers as they are, others with two decimals. */
+const fig = (x: number) => (Number.isInteger(x) ? String(x) : x.toFixed(2).replace('.', ','));
+const frac = (top: string, bottom: string) => `<span class="frac"><span>${top}</span><span>${bottom}</span></span>`;
+
+/** Munter as a fraction: 16 / (2×2×2) = 16 / 8 = 2, with what each number stands for. */
+function munterCalc(m: Munter, level: number): string {
+  const prod = m.rf1 * m.rf2 * m.rf3;
+  const eq =
+    `<span class="mcalc${m.ok ? '' : ' bad'}" aria-label="${esc(`${m.dp} delt på ${m.rf1} ganger ${m.rf2} ganger ${m.rf3} er ${fig(m.rr)}`)}">` +
+    `${frac(String(m.dp), `(${m.rf1}×${m.rf2}×${m.rf3})`)}<span>=</span>${frac(String(m.dp), String(prod))}<span>=</span><b>${fig(m.rr)}</b></span>`;
+  const verdict = m.rule ?? (m.ok ? 'akseptabel (1 eller lavere)' : 'ikke akseptabel (over 1)');
+  return `${eq}<small>${m.dp} = faregrad ${level}; ${m.rf1} bratthet × ${m.rf2} himmelretning × ${m.rf3} gruppe. ${esc(verdict)}</small>`;
+}
+
+/** The Munter line for one spot (in the route risk ⓘ dialog). */
+function munterLine(a: RiskSample | undefined, label: string): string {
+  if (!a) return '';
+  if (!a.munter) return `<span class="mhead">${esc(label)}</span><small>Ingen snøskredvarsel her.</small>`;
+  return `<span class="mhead">${esc(label)}</span>${munterCalc(a.munter, a.level)}`;
+}
+
+/** The spot with the highest residual risk (the first, if several tie). */
+function worstMunter(r: RiskSample[]): RiskSample | undefined {
+  let worst: RiskSample | undefined;
+  for (const a of r) if (a.munter && (!worst?.munter || a.munter.rr > worst.munter.rr)) worst = a;
+  return worst;
+}
+const worstLabel = (a: RiskSample) => `Munter, høyest restrisiko (ved ${fmtLen(a.d)})`;
+
+/** The ⓘ dialog for the route's risk box shows Munter worked out for this route's worst spot. */
+setInfoExtra('routeRisk', () => {
+  const worst = terrain && !riskErr ? worstMunter(currentRisk()) : undefined;
+  if (!worst?.munter) return '';
+  return `<p class="kicker">Utregning for ruta</p><div class="rt-mline">${munterLine(worst, worstLabel(worst))}</div>`;
+});
 
 function riskHTML(): string {
   const head = `<div class="thead"><b class="kicker">Skredrisiko langs ruta</b>${infoButton('routeRisk')}</div>`;
@@ -368,6 +449,7 @@ function riskHTML(): string {
       body =
         (rows ? `<ul class="rt-zones">${rows}</ul>` : '') +
         (fine.length ? `<p>${esc(fine.join(' '))}</p>` : '') +
+
         `<p class="rsub">Faregrad ${s.levels.join(' og ')} i varselet for ${esc(fmtDate(state.date))}. SLABS bygger på sveitsiske data og er bare veiledende her.</p>`;
     }
   }
@@ -412,6 +494,7 @@ function routeHTML(r: SavedRoute): string {
 }
 
 function render(): void {
+  drawRiskGlow(); // on the map, whether the route page is open or not
   const routes = listRoutes();
   if (badge) {
     badge.textContent = routes.length ? String(routes.length) : '';

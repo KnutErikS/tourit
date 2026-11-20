@@ -67,17 +67,18 @@ const TOPICS: Record<InfoTopic, { title: string; label: string; body: string }> 
   <li><b>Høyde:</b> hvor langt inne i varselets høydebånd du er, opptil × 15,7. Et skredproblem uten høydebånd regnes som ${ALL_HEIGHTS_DCE} m inne.</li>
   <li><b>Himmelretning:</b> hvor stor del av terrenget over ${AOF_MIN_DEG}° rundt deg som vender mot varselets himmelretninger, opptil × 3,4.</li>
 </ul>
-<p>Studien oppgir ikke sine grenser. Våre: <b>forhøyet</b> fra risikoen i et 35° heng ved faregrad 3 i kanten av varselets høyder og retninger, <b>høy</b> fra én faregrad over det. Da havner Stop or Go-grensene (40° ved 2, 35° ved 3, 30° ved 4) nær «forhøyet», så de to verktøyene er enige. SLABS bygger på sveitsiske data og er bare veiledende i Norge.</p>
+<p>Studien oppgir ikke sine grenser. Våre grenser er inspirert av Stop or Go.</p>
 
 <p class="kicker">Munters reduksjonsmetode</p>
 <p>Restrisiko = farepotensial ÷ reduksjonsfaktorene. Akseptabelt når den er 1 eller lavere.</p>
 <ul class="dlg-list">
   <li><b>Farepotensial:</b> faregrad 1 → ${DANGER_POTENTIAL[1]}, 2 → ${DANGER_POTENTIAL[2]}, 3 → ${DANGER_POTENTIAL[3]}, 4 → ${DANGER_POTENTIAL[4]}.</li>
-  <li><b>1. klasse, det bratteste i henget</b> (som «hele henget» i Stop or Go): 35–39° → 2, 30–34° → 3, under 30° → 4. Ved faregrad 3 må det bratteste være under 40°, ved faregrad 4 under 30°.</li>
+  <li><b>1. klasse, det bratteste i henget</b> (som «hele henget» i Stop or Go): 35–39° → 2, rundt 35° → 3, 30–34° → 4, under 30° → 8 (i hele grader; 40° og brattere gir ingen reduksjon). Ved faregrad 3 må det bratteste være under 40°, ved faregrad 4 under 30°.</li>
   <li><b>2. klasse, himmelretning:</b> utenfor varselets retninger og høyder → 4; utenfor nordre halvdel (VNV–N–ØSØ) → 3; utenfor nordsektoren (NV–N–NØ) → 2. Gjelder ikke ved våt snø, og nordfaktorene gjelder ikke når varselet sier alle retninger.</li>
   <li><b>3. klasse, gruppa:</b> ${GROUP_LIST}. Velg gruppe i boksen.</li>
 </ul>
 <p>Munter regner med at risikoen dobles per faregrad. Sveitsiske data viser omtrent fire ganger, så metoden er for snill ved faregrad 3.</p>
+<!--extra-->
 
 <p class="kicker">Begrensninger</p>
 <p>Begge ser bare på terrenget og varselet: ikke på faretegn, snødekket eller hvor du faktisk går i henget. Bratthet og retning er fra terrengmodellen, nøyaktig til noen få grader.</p>
@@ -162,11 +163,19 @@ export function infoButton(topic: InfoTopic): string {
   return `<button type="button" class="info-btn sm" data-info="${topic}" aria-haspopup="dialog" aria-controls="tool-info" aria-label="${t.label}" title="${t.label}">${ICON}</button>`;
 }
 
+/** Extra content worked out when a dialog opens (e.g. the route's own Munter calculation), trusted HTML. */
+const extras: Partial<Record<InfoTopic, () => string>> = {};
+
+/** Let a page add live content to a topic's dialog, at its `<!--extra-->` mark. */
+export function setInfoExtra(topic: InfoTopic, html: () => string): void {
+  extras[topic] = html;
+}
+
 export function openToolInfo(topic: InfoTopic): void {
   const t = TOPICS[topic];
   const dlg = $<HTMLDialogElement>('tool-info');
   $('tool-info-title').textContent = t.title;
-  $('tool-info-body').innerHTML = t.body;
+  $('tool-info-body').innerHTML = t.body.replace('<!--extra-->', extras[topic]?.() ?? '');
   // The title has autofocus, so the dialog opens at the top (not scrolled down to "Lukk").
   if (!dlg.open) dlg.showModal();
   dlg.scrollTop = 0;

@@ -18,7 +18,9 @@ import type { NveProblemRaw } from '../types';
  *
  * Munter's reduction method (bergundsteigen 2001): residual risk = danger
  * potential ÷ the reduction factors; acceptable at 1 or less.
- *   1st class, steepest part of the slope: 35–39° → 2, 30–34° → 3, under 30° → 4.
+ *   1st class, steepest part of the slope (in whole degrees): 35–39° → 2, around 35° → 3,
+ *     30–34° → 4; 40° and steeper → 1 (no reduction). We read "around 35°" as 35°
+ *     itself, so the bands meet. Under 30° → 8: our choice (the source stops at 30°).
  *     At level 3 a 1st-class factor is required; at level 4 only under 30°.
  *   2nd class, aspect: outside the warning's aspects/heights → 4; outside the
  *     north half (WNW–N–ESE) → 3; outside the north sector (NW–N–NE) → 2.
@@ -123,7 +125,16 @@ const N_SECTOR = [7, 0, 1];
 const N_HALF = [7, 0, 1, 2];
 
 /** 1st class, from the steepest part of the slope. */
-export const rf1 = (steepest: number) => (steepest >= 40 ? 1 : steepest >= 35 ? 2 : steepest >= 30 ? 3 : 4);
+/**
+ * 1st class, from the steepest part of the slope, rounded to whole degrees as
+ * Munter counts them: 40°+ → 1, 36–39° → 2, 35° → 3, 30–34° → 4, under 30° → 8
+ * (bergundsteigen 4/2001: 35–39° → 2, a slope "around 35°" → 3, 30–34° → 4;
+ * under 30° → 8 is our choice, the source gives no factor below 30°).
+ */
+export function rf1(steepest: number): number {
+  const d = Math.round(steepest);
+  return d >= 40 ? 1 : d >= 36 ? 2 : d === 35 ? 3 : d >= 30 ? 4 : 8;
+}
 
 export interface Rf2Input {
   /** Which way the slope faces, 0–7; null on flat ground. */
@@ -172,7 +183,7 @@ export function munter(i: MunterInput): Munter {
   const rr = dp / (r1 * r2 * r3);
   let rule: string | undefined;
   if (i.level >= 5) rule = 'Ved faregrad 5 er ingen bratte heng akseptable.';
-  else if (i.level >= 4 && r1 < 4) rule = 'Ved faregrad 4 bare under 30°.';
+  else if (i.level >= 4 && Math.round(i.steepest) >= 30) rule = 'Ved faregrad 4 bare under 30°.';
   else if (i.level >= 3 && r1 < 2) rule = 'Ved faregrad 3 må det bratteste være under 40°.';
   return { dp, rf1: r1, rf2: r2, rf3: r3, rr, ok: rr <= 1 && !rule, ...(rule && { rule }) };
 }

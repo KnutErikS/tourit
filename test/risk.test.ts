@@ -49,7 +49,10 @@ test('AOF: share of the steep terrain facing the warning’s aspects', () => {
 });
 
 test('Munter factors', () => {
-  assert.deepEqual([42, 37, 32, 25].map(rf1), [1, 2, 3, 4]);
+  // bergundsteigen 4/2001: 35–39° → 2, around 35° → 3, 30–34° → 4; whole degrees.
+  // Under 30° → 8 is our choice.
+  assert.deepEqual([42, 40, 39, 37, 36, 35, 34, 32, 30, 29, 25].map(rf1), [1, 1, 2, 2, 2, 3, 4, 4, 4, 8, 8]);
+  assert.deepEqual([39.6, 39.4, 35.4, 34.6, 34.4, 29.6, 29.4].map(rf1), [1, 2, 3, 3, 4, 4, 8]);
   const base = { sector: 0, inCore: true, allAspects: false, wet: false };
   assert.equal(rf2(base), 1); // north
   assert.equal(rf2({ ...base, sector: 2 }), 2); // east: outside NW–N–NE, inside WNW–N–ESE
@@ -69,7 +72,15 @@ test('Munter: residual risk and the level rules', () => {
   const tooSteep = m({ steepest: 42, sector: 4, group: 'smallSpaced', inCore: false });
   assert.equal(tooSteep.ok, false); // 8 / (1 · 4 · 3) < 1, but level 3 needs a 1st-class factor
   assert.match(tooSteep.rule!, /under 40°/);
-  assert.equal(m({ level: 4, steepest: 32, inCore: false, group: 'smallSpaced' }).ok, false);
+  assert.equal(m({ level: 4, steepest: 32, inCore: false, group: 'smallSpaced' }).ok, false); // 30–34° → 4 now, but level 4 needs under 30°
+  assert.match(m({ level: 4, steepest: 32 }).rule!, /under 30°/);
+  // Level 4 under 30°: 16 / (8 · 1 · 2) = 1, acceptable.
+  const flat4 = m({ level: 4, steepest: 25 });
+  assert.deepEqual([flat4.rf1, flat4.rr, flat4.ok, flat4.rule], [8, 1, true, undefined]);
+  // The bergundsteigen/Powderguide example: level 3, ~34°, NE (no 2nd-class factor), small group → 8 / (4 · 1 · 2) = 1, acceptable.
+  const ex = m({ steepest: 34, sector: 1, group: 'small' });
+  assert.deepEqual([ex.rf1, ex.rr, ex.ok], [4, 1, true]);
+  assert.equal(m({ steepest: 34, sector: 1, group: 'smallSpaced' }).rr, 8 / 12);
   const l2 = m({ level: 2, steepest: 42 }); // no level rule at 2, but 4 / (1 · 1 · 2) = 2
   assert.deepEqual([l2.rr, l2.ok, l2.rule], [2, false, undefined]);
 });

@@ -61,6 +61,51 @@ function csp(): Plugin {
 }
 
 /**
+ * Where the app is published. Link previews (Open Graph) need absolute URLs,
+ * so change this if the site moves (e.g. to a custom domain).
+ */
+const SITE_URL = 'https://knuteriks.github.io/tourit/';
+
+/**
+ * Link preview tags: the title, text and picture Messenger, SMS, Slack etc.
+ * show for a shared link. The picture is public/og-image.png (source:
+ * docs/og-image.html). Crawlers ignore the #hash, so every shared view gets
+ * the same preview.
+ */
+function shareTags(): Plugin {
+  const title = 'Skredterreng Norge';
+  const description =
+    'Skredvarsel, bratthet og skredterreng i kartet for hele Norge – med vær, observasjoner og ruteplanlegging. Data fra Varsom/NVE, Regobs, Kartverket og yr.';
+  const image = new URL('og-image.png', SITE_URL).href;
+  const meta = (attr: 'property' | 'name', key: string, content: string) => ({ tag: 'meta', attrs: { [attr]: key, content }, injectTo: 'head' as const });
+  return {
+    name: 'tourit-share-tags',
+    transformIndexHtml(html) {
+      return {
+        html,
+        tags: [
+          meta('property', 'og:type', 'website'),
+          meta('property', 'og:site_name', 'Skredterreng'),
+          meta('property', 'og:locale', 'nb_NO'),
+          meta('property', 'og:url', SITE_URL),
+          meta('property', 'og:title', title),
+          meta('property', 'og:description', description),
+          meta('property', 'og:image', image),
+          meta('property', 'og:image:type', 'image/png'),
+          meta('property', 'og:image:width', '1200'),
+          meta('property', 'og:image:height', '630'),
+          meta('property', 'og:image:alt', 'Skredterreng – skredvarsel, bratthet og skredterreng for hele Norge'),
+          meta('name', 'twitter:card', 'summary_large_image'),
+          meta('name', 'twitter:title', title),
+          meta('name', 'twitter:description', description),
+          meta('name', 'twitter:image', image),
+        ],
+      };
+    },
+  };
+}
+
+/**
  * Write the list of built files into dist/sw.js, so the service worker can
  * store the app on install and open it without network (see public/sw.js).
  * Left out: source maps, .woff (every browser that runs the app takes .woff2)
@@ -116,7 +161,7 @@ export default defineConfig({
   // (GitHub Pages project sites, Netlify, a plain folder on a web server).
   base: './',
   define: { __BUILD__: JSON.stringify(buildId()) },
-  plugins: [csp(), swPrecache()],
+  plugins: [csp(), shareTags(), swPrecache()],
   server: { port: 5173, open: true },
   build: { target: 'es2022', sourcemap: true },
 });

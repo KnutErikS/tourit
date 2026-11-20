@@ -36,13 +36,14 @@ export function pointSteps(hours: WindHour[] | null | undefined, weather: PointW
     temp: s.temp,
     precip: s.precip,
     snowMm: s.precip * snowFraction(s),
+    cloud: s.cloud,
   }));
   const metStart = met.length ? met[0].time : Infinity;
   const icon: PrecipStep[] = [];
   for (const h of hours ?? []) {
     // Open-Meteo's precipitation is for the hour ending at `time`.
     if (h.temp == null || h.precip == null || h.time > metStart) continue;
-    icon.push({ time: h.time - HOUR, hours: 1, temp: h.temp, precip: h.precip, snowMm: h.precip * snowShare(h.temp) });
+    icon.push({ time: h.time - HOUR, hours: 1, temp: h.temp, precip: h.precip, snowMm: h.precip * snowShare(h.temp), cloud: h.cloud });
   }
   return [...icon, ...met];
 }

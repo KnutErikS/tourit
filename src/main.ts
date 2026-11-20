@@ -61,6 +61,7 @@ import { initShare } from './ui/share';
 import { initAbout } from './ui/about';
 import { initToolInfo } from './ui/toolInfo';
 import { initTools, renderTools, setToolsActive } from './ui/tools';
+import { initInfos } from './tools/infos';
 import { initRoute, isDrawing } from './ui/routePage';
 import { $, fmtDate, fmtTime, isoDate } from './util';
 import { restoreView, saveView, trackView } from './viewState';
@@ -564,6 +565,7 @@ initShare();
 initAbout();
 initToolInfo();
 initTools();
+initInfos(renderPanels); // the point's info chips appear once worked out
 initSearch((place) => {
   const ll = L.latLng(place.lat, place.lng);
   const z = Math.max(map.getZoom(), SEARCH_ZOOM);

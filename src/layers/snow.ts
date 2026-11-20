@@ -72,3 +72,45 @@ export function renderSnowLegend(el: HTMLElement, kind: SnowKind): void {
 }
 
 export const SNOW_ATTRIBUTION = ATTRIBUTION;
+
+/* ---------- snow or bare ground at one point ---------- */
+
+export type SnowCover = 'snow' | 'bare';
+/** seNorge's "Barmark" colour in the snow-depth map. */
+const BARE: [number, number, number] = [0xcc, 0xf5, 0x7a];
+const coverCache = new Map<string, Promise<SnowCover | null>>();
+
+/**
+ * Snow on the ground at the point on `date`, by seNorge's snow-depth map (1 km
+ * grid). The WMS has no GetFeatureInfo, so this reads the colour of the middle
+ * pixel of a 3 × 3 image. null = no data there (sea, outside the model) or no network.
+ */
+export function snowCoverAt(ll: L.LatLng, date: string): Promise<SnowCover | null> {
+  const p = L.CRS.EPSG3857.project(ll);
+  const key = `${date}:${Math.round(p.x / 250)},${Math.round(p.y / 250)}`;
+  let hit = coverCache.get(key);
+  if (hit) return hit;
+  const r = 150;
+  const q = new URLSearchParams({
+    SERVICE: 'WMS', VERSION: '1.1.1', REQUEST: 'GetMap', LAYERS: 'sd', STYLES: '', SRS: 'EPSG:3857',
+    BBOX: [p.x - r, p.y - r, p.x + r, p.y + r].map((v) => v.toFixed(0)).join(','),
+    WIDTH: '3', HEIGHT: '3', FORMAT: 'image/png', TRANSPARENT: 'true', TIME: date,
+  });
+  hit = (async (): Promise<SnowCover | null> => {
+    const res = await fetch(`${SNOW_WMS_URL}?${q}`, { mode: 'cors' });
+    if (!res.ok) return null;
+    const bmp = await createImageBitmap(await res.blob());
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 3;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
+    ctx.drawImage(bmp, 0, 0);
+    bmp.close();
+    const [r0, g0, b0, a] = ctx.getImageData(1, 1, 1, 1).data;
+    if (a < 128) return null;
+    return Math.abs(r0 - BARE[0]) + Math.abs(g0 - BARE[1]) + Math.abs(b0 - BARE[2]) < 24 ? 'bare' : 'snow';
+  })().catch(() => null);
+  coverCache.set(key, hit);
+  hit.then((v) => v === null && coverCache.delete(key)); // try again next time
+  if (coverCache.size > 200) coverCache.delete(coverCache.keys().next().value!);
+  return hit;
+}

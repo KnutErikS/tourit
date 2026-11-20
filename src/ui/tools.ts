@@ -6,7 +6,9 @@ import type { StopOrGoStatus } from '../domain/stopOrGo';
 import type { PointWeather } from '../domain/weather';
 import { state } from '../state';
 import { terrainAt } from '../terrain/dem';
+import type { Info } from '../domain/infos';
 import { assessAlptruth, type AlptruthAssessment } from '../tools/alptruth';
+import { assessInfos } from '../tools/infos';
 import { assessStopOrGo, type StopOrGoAssessment } from '../tools/stopOrGo';
 import { setTick } from '../tools/ticks';
 import type { TerrainPoint } from '../types';
@@ -83,7 +85,7 @@ function positionLine(t: Target): string {
 }
 
 function head(t: Target, region: string | null): string {
-  const where = t.kind === 'pick' ? pointLine() : positionLine(t);
+  const where = t.kind === 'pick' ? pointLine({ chips: false }) : positionLine(t);
   const hint =
     t.kind === 'pick' && currentPosition()
       ? 'Viser valgt punkt. Trykk på nålen i kartet for å følge posisjonen din.'
@@ -135,6 +137,13 @@ function alptruthCard(a: AlptruthAssessment): string {
   </section>`;
 }
 
+/** The infos that apply to the point today, red flags first; nothing when none do. */
+function infoList(list: Info[]): string {
+  if (!list.length) return '';
+  const items = list.map((i) => `<li class="info-${i.level}">${esc(i.text)}</li>`).join('');
+  return `<section class="infos" aria-label="Infoer for punktet"><ul>${items}</ul></section>`;
+}
+
 const EMPTY =
   '<p class="empty">Trykk på et sted i kartet, eller slå på Min posisjon <span aria-hidden="true">◎</span>. Da ser du Stop or Go og ALPTRUTh for punktet.</p>';
 const FOOT = '<p class="foot">Verktøyene er hjelpemidler i planleggingen og erstatter ikke egen vurdering i felt.</p>';
@@ -154,12 +163,16 @@ async function compute(): Promise<void> {
   // Keep what is on screen while working it out, dimmed, unless it is another point.
   if (!shown || !shown.ll.equals(t.ll)) el.innerHTML = '<p class="empty">Regner ut…</p>';
   el.classList.add('busy');
-  const [sog, alp] = await Promise.all([assessStopOrGo(t.ll, t.terrain), assessAlptruth(t.ll, t.terrain, t.weather)]);
+  const [sog, alp, list] = await Promise.all([
+    assessStopOrGo(t.ll, t.terrain),
+    assessAlptruth(t.ll, t.terrain, t.weather),
+    assessInfos(t.ll, t.terrain, t.weather).catch((): Info[] => []),
+  ]);
   if (my !== token) return;
   shown = t;
   shownAlp = alp;
   el.classList.remove('busy');
-  el.innerHTML = head(t, alp.regionName) + stopOrGoCard(sog) + `<div id="alp-card">${alptruthCard(alp)}</div>` + FOOT;
+  el.innerHTML = head(t, alp.regionName) + infoList(list) + stopOrGoCard(sog) + `<div id="alp-card">${alptruthCard(alp)}</div>` + FOOT;
 }
 
 /** Work the cards out again soon (several data loads in a row become one run). Only while the tab is open. */

@@ -1,7 +1,9 @@
 import { DIRS } from '../config';
 import { pointVerdict } from '../domain/problems';
+import type { Info } from '../domain/infos';
 import { toMgrs } from '../domain/mgrs';
 import { state } from '../state';
+import { pickedInfos } from '../tools/infos';
 import { esc } from '../util';
 import type { Problem, Region } from '../types';
 
@@ -16,13 +18,23 @@ export function pointFacts(): string {
   return `<b>${Math.round(t.elev)} moh.</b><b>${t.slope.toFixed(0)}°</b><b>${DIRS[t.sector]}-vendt</b>`;
 }
 
-/** "Valgt punkt · 1180 moh. · 34° · NØ-vendt" line. */
-export function pointLine(): string {
+/** Small chips for the infos (domain/infos.ts), coloured by level; '' for none. */
+export function infoChips(list: Info[] | undefined): string {
+  if (!list?.length) return '';
+  const chips = list.map((i) => `<span class="ichip ichip-${i.level}" title="${esc(i.text)}">${esc(i.chip)}</span>`).join('');
+  return `<span class="ichips" aria-label="Infoer for punktet">${chips}</span>`;
+}
+
+/**
+ * "Valgt punkt · 1180 moh. · 34° · NØ-vendt" line, with the point's info chips
+ * (they appear once worked out). The Verktøy tab lists the infos instead: `chips: false`.
+ */
+export function pointLine({ chips = true } = {}): string {
   const picked = state.picked;
   if (!picked) return '';
   const mgrs = toMgrs(picked.ll.lat, picked.ll.lng);
   const grid = mgrs ? `<span class="pick-mgrs"><span>MGRS</span> <b>${esc(mgrs)}</b></span>` : '';
-  return `<div class="pick"><span>Valgt punkt</span>${pointFacts()}${grid}</div>`;
+  return `<div class="pick"><span>Valgt punkt</span>${pointFacts()}${grid}${chips ? infoChips(pickedInfos()) : ''}</div>`;
 }
 
 /** "Gjelder punktet" / "Ikke her · reason" chip for one problem. */

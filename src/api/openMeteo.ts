@@ -76,6 +76,7 @@ interface OmPoint {
     wind_direction_850hPa: (number | null)[];
     temperature_850hPa?: (number | null)[];
     precipitation?: (number | null)[];
+    cloud_cover?: (number | null)[];
   };
 }
 
@@ -88,17 +89,17 @@ export interface WindPoint {
 const utcDate = (ms: number) => new Date(ms).toISOString().slice(0, 10);
 
 /**
- * Hourly 850 hPa wind and temperature, and precipitation, for many points in one request, from `start` to `end` (ms).
+ * Hourly 850 hPa wind and temperature, precipitation and cloud cover, for many points in one request, from `start` to `end` (ms).
  * `key` names the stored copy (one per warning date), for use without network.
  */
 export async function fetchWindHistory(points: WindPoint[], start: number, end: number, key: string): Promise<Fetched<WindHour[][]>> {
-  // v2: hours carry temperature + precipitation; a stored v1 copy would lack them.
-  return withStored('wind', `v2:${key}`, async () => {
+  // v3: hours carry cloud cover too (Verktøy: night refreeze, first fine day); older stored copies lack it.
+  return withStored('wind', `v3:${key}`, async () => {
     const api = start < Date.now() - RECENT_DAYS * DAY ? OPEN_METEO_HISTORY_API : OPEN_METEO_API;
     const url =
       `${api}/forecast?latitude=${points.map((p) => p.lat.toFixed(2)).join(',')}` +
       `&longitude=${points.map((p) => p.lon.toFixed(2)).join(',')}` +
-      `&hourly=wind_speed_850hPa,wind_direction_850hPa,temperature_850hPa,precipitation&models=${MODEL}&wind_speed_unit=ms&timeformat=unixtime` +
+      `&hourly=wind_speed_850hPa,wind_direction_850hPa,temperature_850hPa,precipitation,cloud_cover&models=${MODEL}&wind_speed_unit=ms&timeformat=unixtime` +
       `&start_date=${utcDate(start)}&end_date=${utcDate(end)}`;
     const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -108,7 +109,14 @@ export async function fetchWindHistory(points: WindPoint[], start: number, end: 
       h.time.flatMap((t, i) => {
         const speed = h.wind_speed_850hPa[i], from = h.wind_direction_850hPa[i];
         if (speed == null || from == null) return [];
-        return [{ time: t * 1000, speed, from, temp: h.temperature_850hPa?.[i] ?? undefined, precip: h.precipitation?.[i] ?? undefined }];
+        return [{
+          time: t * 1000,
+          speed,
+          from,
+          temp: h.temperature_850hPa?.[i] ?? undefined,
+          precip: h.precipitation?.[i] ?? undefined,
+          cloud: h.cloud_cover?.[i] ?? undefined,
+        }];
       }),
     );
   });

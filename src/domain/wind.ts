@@ -39,6 +39,8 @@ export interface WindHour {
   temp?: number;
   /** Precipitation in the hour ending at `time`, mm. */
   precip?: number;
+  /** Total cloud cover at `time`, %. */
+  cloud?: number;
 }
 
 /** What the snow surface is like for the wind to work on. */

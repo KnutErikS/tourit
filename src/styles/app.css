@@ -502,4 +502,13 @@ dialog.dlg .dlg-list{margin:0 0 10px;padding-left:18px;display:grid;gap:6px}
 .alp-text small{flex-basis:100%;font-size:12px;color:var(--muted);line-height:1.4}
 .alp-mine{font-size:10.5px;font-weight:600;padding:0 6px;border-radius:99px;background:var(--accent);color:var(--accent-ink)}
 @media (max-width:640px){.alp-clue{padding:8px}}
+/* Infos (domain/infos.ts): a list at the top of Verktøy, chips in the point line. */
+.infos ul{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.infos li{font-size:13px;line-height:1.45;padding:7px 10px 7px 12px;border-radius:8px;background:var(--chip);border-left:4px solid var(--d3)}
+.infos li.info-warn{border-left-color:var(--d4)}
+.infos li.info-ok{border-left-color:var(--d1)}
+.ichips{flex-basis:100%;display:flex;flex-wrap:wrap;gap:4px}
+.ichip{font-size:11px;font-weight:600;padding:1px 8px;border-radius:99px;border:1px solid var(--d3);color:var(--fg);background:color-mix(in srgb,var(--d3) 14%,transparent);white-space:nowrap}
+.ichip-warn{border-color:var(--d4);background:var(--d4);color:#fff}
+.ichip-ok{border-color:var(--d1);background:color-mix(in srgb,var(--d1) 14%,transparent)}
 .share-ico{width:18px;height:18px;vertical-align:-3px;fill:none;stroke:var(--accent);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}

@@ -11,6 +11,13 @@
  * - Mildvær (Rule 4, "thaw"): above 0 °C or rain (at least THAW_RAIN_MM) in
  *   the hours that matter. THAW_RAIN_MM is our own.
  *
+ * And the weather infos for the Verktøy tab (texts in domain/infos.ts):
+ * - Kritisk nysnømengde (Rule 5): new snow over CRIT_H hours against the
+ *   critical amount for the conditions (SLF, Alpenverein).
+ * - Regn på snø, Første mildvær, Første fine dag (Rule 7: Varsom, SLF).
+ * - Nattefrost (Rule 13): did it refreeze last night? Cut-offs from the rules
+ *   note, our own starting values.
+ *
  * Steps can be of any length (MET gives 1 h, later 6 h); a step that is only
  * partly inside a window counts by the part inside.
  *
@@ -29,6 +36,8 @@ export interface PrecipStep {
   precip: number;
   /** The part of it that fell as snow, mm water. */
   snowMm: number;
+  /** Total cloud cover, % (at the start of the step), if known. */
+  cloud?: number;
 }
 
 export const LOADING_H = 48;
@@ -44,7 +53,7 @@ const HOUR = 3_600_000;
 export const cmPerMm = (t: number) => (t <= -10 ? 1.5 : t <= -4 ? 1.2 : t <= -1 ? 1.0 : 0.8);
 
 /** Share (0–1) of a step that lies inside [from, to). */
-function inside(s: PrecipStep, from: number, to: number): number {
+export function inside(s: PrecipStep, from: number, to: number): number {
   if (s.hours <= 0) return 0;
   const a = Math.max(s.time, from), b = Math.min(s.time + s.hours * HOUR, to);
   return b > a ? (b - a) / (s.hours * HOUR) : 0;
@@ -127,4 +136,171 @@ export function thaw(steps: PrecipStep[], from: number, to: number): Thaw | null
   const rainMm = steps.reduce((a, s) => a + inside(s, from, to) * Math.max(0, s.precip - s.snowMm), 0);
   const warm = maxTemp > 0, rain = rainMm >= THAW_RAIN_MM;
   return { on: warm || rain, warm, maxTemp, rainMm, rain };
+}
+
+/* ---------- infos (Rules 5, 7, 13) ---------- */
+
+/** Steps that start inside [from, to): for instants (temperature, cloud). */
+const startingIn = (steps: PrecipStep[], from: number, to: number) => steps.filter((s) => s.time >= from && s.time < to);
+/** Snowing: at least this many mm/h as snow. */
+const SNOWING_MM_H = 0.1;
+const snowing = (s: PrecipStep) => s.hours > 0 && s.snowMm / s.hours >= SNOWING_MM_H;
+const mean = (xs: number[]) => xs.reduce((a, x) => a + x, 0) / xs.length;
+
+export const CRIT_H = 72;
+/** Wind you can hear, ~40 km/h (SLF); here the 850 hPa wind. */
+export const CRIT_WIND_MS = 11;
+/** Cold snowfall: mean temperature below this, °C. */
+export const CRIT_COLD_C = -8;
+/** Show the new-snow info from this share of the critical amount; a warning from 1. */
+export const CRIT_SHOW = 0.7;
+export type CritClass = 'favourable' | 'average' | 'unfavourable';
+/** Critical new snow, cm, by conditions (SLF "Achtung Lawinen", Alpenverein Stop or Go). */
+export const CRIT_CM: Record<CritClass, [number, number]> = { favourable: [30, 50], average: [20, 30], unfavourable: [10, 20] };
+
+/** The snow surface before the snowfall started (domain/wind.ts `surfaces`). */
+export type SurfaceKind = 'fresh' | 'old' | 'crust' | 'wet';
+
+export interface Critical {
+  /** New snow over CRIT_H hours, cm. */
+  cm: number;
+  cls: CritClass;
+  /** CRIT_CM[cls] */
+  range: [number, number];
+  /** cm / the low end of the range: cautious. */
+  ratio: number;
+  /** The unfavourable conditions found, in Norwegian. */
+  factors: string[];
+}
+
+/**
+ * New snow over the CRIT_H hours before `end` against the critical amount.
+ * Unfavourable conditions (SLF): strong wind during the snowfall, a cold
+ * snowfall, and an old surface underneath (old snow or a crust). 0 of them →
+ * favourable, 1 → average, 2 or more → unfavourable. `wind` is the 850 hPa
+ * wind by hour; `surfaces` the snow surface by hour (both for the region).
+ * null when the steps don't cover the window.
+ */
+export function criticalNewSnow(
+  steps: PrecipStep[],
+  end: number,
+  wind: { time: number; speed: number }[],
+  surfaces: { time: number; surface: SurfaceKind }[],
+): Critical | null {
+  const from = end - CRIT_H * HOUR;
+  if (coverage(steps, from, end) < MIN_COVERAGE) return null;
+  const cm = newSnowCm(steps, from, end);
+  const snowy = steps.filter((s) => snowing(s) && inside(s, from, end) > 0);
+  const factors: string[] = [];
+  if (snowy.length) {
+    const first = Math.min(...snowy.map((s) => s.time)), last = Math.max(...snowy.map((s) => s.time + s.hours * HOUR));
+    const during = wind.filter((w) => w.time >= first && w.time <= last).map((w) => w.speed);
+    const maxWind = during.length ? Math.max(...during) : 0;
+    if (maxWind >= CRIT_WIND_MS) factors.push(`sterk vind ${Math.round(maxWind)} m/s`);
+    const t = mean(snowy.map((s) => s.temp));
+    if (t < CRIT_COLD_C) factors.push(`kaldt snøfall ${Math.round(t)} °C`);
+    const before = surfaces.filter((s) => s.time < first).at(-1)?.surface;
+    if (before === 'crust') factors.push('skare under');
+    else if (before === 'old') factors.push('gammel snø under');
+  }
+  const cls: CritClass = factors.length === 0 ? 'favourable' : factors.length === 1 ? 'average' : 'unfavourable';
+  const range = CRIT_CM[cls];
+  return { cm, cls, range, ratio: cm / range[0], factors };
+}
+
+/** Rain: a step where at most this share falls as snow (Rule 7). */
+export const RAIN_SNOW_SHARE = 0.1;
+/** At least this much rain counts, mm (our own: ignore a few drops). */
+export const RAIN_MIN_MM = 0.5;
+export const RAIN_H = 12;
+
+export interface RainAround {
+  /** Rain in the RAIN_H hours before / after the reference time, mm. */
+  before: number;
+  after: number;
+  on: boolean;
+}
+
+/** Rain (not sleet or snow) in the RAIN_H hours before and after `ref`. null when no steps cover them. */
+export function rainAround(steps: PrecipStep[], ref: number): RainAround | null {
+  const from = ref - RAIN_H * HOUR, to = ref + RAIN_H * HOUR;
+  if (!steps.some((s) => inside(s, from, to) > 0)) return null;
+  const rain = (a: number, b: number) =>
+    steps.reduce((sum, s) => (s.precip > 0 && s.snowMm / s.precip <= RAIN_SNOW_SHARE ? sum + inside(s, a, b) * s.precip : sum), 0);
+  const before = rain(from, ref), after = rain(ref, to);
+  return { before, after, on: before >= RAIN_MIN_MM || after >= RAIN_MIN_MM };
+}
+
+/** First mild day (Rule 7): this much new snow in the FIRST_THAW_H hours before the day. */
+export const FIRST_THAW_CM = 10;
+export const FIRST_THAW_H = 48;
+
+/**
+ * Første mildvær: on the day (`dayFrom`–`dayTo`) the temperature reaches 0 °C,
+ * after at least FIRST_THAW_CM of new snow in the FIRST_THAW_H hours before
+ * `dayStart`, and it hasn't been 0 °C since that snow fell. null otherwise.
+ */
+export function firstThaw(steps: PrecipStep[], dayStart: number, dayFrom: number, dayTo: number): { cm: number; maxTemp: number } | null {
+  const from = dayStart - FIRST_THAW_H * HOUR;
+  if (coverage(steps, from, dayStart) < MIN_COVERAGE) return null;
+  const cm = newSnowCm(steps, from, dayStart);
+  const day = startingIn(steps, dayFrom, dayTo);
+  if (cm < FIRST_THAW_CM || !day.length) return null;
+  const maxTemp = Math.max(...day.map((s) => s.temp));
+  if (maxTemp < 0) return null;
+  const snowEnd = Math.max(...steps.filter((s) => snowing(s) && inside(s, from, dayStart) > 0).map((s) => s.time + s.hours * HOUR));
+  if (startingIn(steps, snowEnd, dayStart).some((s) => s.temp >= 0)) return null; // it was mild already
+  return { cm, maxTemp };
+}
+
+/** First fine day (Rule 7): this much new snow in the FIRST_FINE_H hours before the day … */
+export const FIRST_FINE_CM = 20;
+export const FIRST_FINE_H = 72;
+/** … and the day's mean cloud cover below this, % (our own). */
+export const FINE_CLOUD = 30;
+
+/**
+ * Første fine dag: little cloud on the day (`dayFrom`–`dayTo`, mean below
+ * FINE_CLOUD) after at least FIRST_FINE_CM of new snow in the FIRST_FINE_H
+ * hours before `dayStart`, with no new snow on the day itself, and the day
+ * before not fine already (when known). null otherwise or without cloud data.
+ */
+export function firstFineDay(steps: PrecipStep[], dayStart: number, dayFrom: number, dayTo: number): { cm: number; cloud: number } | null {
+  const from = dayStart - FIRST_FINE_H * HOUR;
+  if (coverage(steps, from, dayStart) < MIN_COVERAGE) return null;
+  const cm = newSnowCm(steps, from, dayStart);
+  if (cm < FIRST_FINE_CM || newSnowCm(steps, dayFrom, dayTo) >= 1) return null;
+  const clouds = (a: number, b: number) => startingIn(steps, a, b).flatMap((s) => (s.cloud == null ? [] : [s.cloud]));
+  const today = clouds(dayFrom, dayTo);
+  if (!today.length || mean(today) >= FINE_CLOUD) return null;
+  const yesterday = clouds(dayFrom - 24 * HOUR, dayTo - 24 * HOUR);
+  if (yesterday.length && mean(yesterday) < FINE_CLOUD) return null; // not the first
+  return { cm, cloud: mean(today) };
+}
+
+export type Refreeze = 'good' | 'weak' | 'none';
+export const HARD_FREEZE_C = -5;
+
+/**
+ * Did it refreeze in the night [from, to)? (Rule 13; cut-offs are the rules
+ * note's starting values.)
+ * - none: lowest temperature above 0 °C, or cloud ≥ 80 % and above −1 °C;
+ * - good: cloud below 50 % and down to −2 °C or colder, or down to
+ *   HARD_FREEZE_C whatever the cloud (our own: that cold, the crust freezes anyway);
+ * - weak: anything else.
+ * Without cloud data it goes by temperature alone. null without steps.
+ */
+export function refreeze(steps: PrecipStep[], from: number, to: number): { state: Refreeze; min: number; cloud: number | null } | null {
+  const night = startingIn(steps, from, to);
+  if (!night.length) return null;
+  const min = Math.min(...night.map((s) => s.temp));
+  const cs = night.flatMap((s) => (s.cloud == null ? [] : [s.cloud]));
+  const cloud = cs.length ? mean(cs) : null;
+  const state: Refreeze =
+    min > 0 || (cloud != null && cloud >= 80 && min > -1)
+      ? 'none'
+      : min <= HARD_FREEZE_C || (min <= -2 && (cloud == null || cloud < 50))
+        ? 'good'
+        : 'weak';
+  return { state, min, cloud };
 }

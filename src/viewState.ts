@@ -10,9 +10,10 @@ import { $, isoDate } from './util';
  * layer settings and the warning date ("today" is stored as "today", so a
  * later visit opens on that day's date).
  *
- * URL hash: `#zoom/lat/lng/layers/date`, e.g. `#12/61.63601/8.31234/sbo/2026-03-14`.
+ * URL hash: `#zoom/lat/lng/layers/date/@lat,lng`, e.g. `#12/61.63601/8.31234/sbo/2026-03-14/@61.64012,8.30051`.
  * Layers are one letter each (s = skredfare, b = bratthet, a = himmelretning,
  * o = observasjoner, n = snø (seNorge), `-` = none); the date is left out when it is today.
+ * `@lat,lng` is the picked point, only in shared links: opening one selects that point.
  * Everything after lat/lng is optional. A hash wins over the stored view.
  */
 
@@ -34,6 +35,8 @@ export interface View {
   layers?: string;
   /** YYYY-MM-DD, or 'today'. */
   date?: string;
+  /** Picked point [lat, lng] (shared links only). */
+  point?: [number, number];
   settings?: Partial<Record<(typeof SETTINGS)[number], string>>;
   rest?: boolean;
   lee?: boolean;
@@ -56,13 +59,23 @@ function readStored(): View | null {
   }
 }
 
-/** Parse `#z/lat/lng[/layers[/date]]`; null if the hash isn't a view. */
+/** `@61.64012,8.30051` → [lat, lng], or undefined. */
+function parsePoint(s: string | undefined): [number, number] | undefined {
+  const m = /^@(-?\d{1,2}(?:\.\d+)?),(-?\d{1,3}(?:\.\d+)?)$/.exec(s ?? '');
+  if (!m) return undefined;
+  const lat = +m[1], lng = +m[2];
+  return validPos(0, lat, lng) ? [lat, lng] : undefined;
+}
+
+/** Parse `#z/lat/lng[/layers[/date]][/@lat,lng]`; null if the hash isn't a view. */
 export function parseHash(hash = location.hash): View | null {
-  const parts = hash.replace(/^#/, '').split('/');
+  let parts = hash.replace(/^#/, '').split('/');
+  const point = parts.length > 3 ? parsePoint(parts[parts.length - 1]) : undefined;
+  if (point) parts = parts.slice(0, -1);
   if (parts.length < 3) return null;
   const [zoom, lat, lng] = parts.slice(0, 3).map(Number);
   if (!validPos(zoom, lat, lng)) return null;
-  const v: View = { zoom, lat, lng };
+  const v: View = { zoom, lat, lng, point };
   const layers = parts[3];
   if (layers !== undefined && /^(-|[sbaon]*)$/.test(layers)) {
     v.layers = layers === '-' ? '' : layers;
@@ -98,12 +111,15 @@ function hashFor(v: View): string {
   const d = Math.min(6, Math.max(2, Math.ceil(v.zoom * 0.35)));
   let h = `#${Math.round(v.zoom)}/${v.lat.toFixed(d)}/${v.lng.toFixed(d)}/${v.layers || '-'}`;
   if (v.date && v.date !== 'today') h += `/${v.date}`;
+  // 5 decimals ≈ 1 m: the exact spot the sharer tapped.
+  if (v.point) h += `/@${v.point[0].toFixed(5)},${v.point[1].toFixed(5)}`;
   return h;
 }
 
-/** Link to the current view (for sharing). */
+/** Link to the current view (for sharing), with the picked point if there is one. */
 export function shareUrl(): string {
-  return location.href.replace(/#.*$/, '') + hashFor(currentView());
+  const ll = state.picked?.ll;
+  return location.href.replace(/#.*$/, '') + hashFor({ ...currentView(), point: ll ? [ll.lat, ll.lng] : undefined });
 }
 
 let ready = false;
@@ -162,10 +178,11 @@ const resolveDate = (d: string | undefined): string => (d && DATE_RE.test(d) ? d
 
 /**
  * Before the layers are bound: set the map view, the layer checkboxes and the
- * settings inputs from the URL hash / stored view. Returns the date to open.
+ * settings inputs from the URL hash / stored view. Returns the date to open,
+ * and the point to select when the link has one.
  * Only touches the DOM inputs; main.ts reads them when it binds the layers.
  */
-export function restoreView(): string {
+export function restoreView(): { date: string; point?: [number, number] } {
   const stored = readStored();
   const fromHash = parseHash();
   const v = fromHash ?? stored;
@@ -179,14 +196,14 @@ export function restoreView(): string {
   if (stored?.rest !== undefined) $<HTMLInputElement>('s-rest').checked = stored.rest;
   if (stored?.runout !== undefined) $<HTMLInputElement>('b-runout').checked = stored.runout;
   if (stored?.lee !== undefined) $<HTMLInputElement>('s-lee').checked = $<HTMLInputElement>('a-lee').checked = stored.lee;
-  return resolveDate(fromHash ? fromHash.date : stored?.date);
+  return { date: resolveDate(fromHash ? fromHash.date : stored?.date), point: fromHash?.point };
 }
 
 /**
  * After startup: keep storage + URL in step with the map and the controls,
  * and follow a hash pasted into the address bar of an open tab.
  */
-export function trackView(go: (date: string) => void): void {
+export function trackView(go: (date: string) => void, pick: (point: [number, number]) => void): void {
   ready = true;
   map.on('moveend', saveView);
   for (const id of [...Object.values(LAYERS), 's-rest', 's-lee', 'a-lee', 'b-runout', ...SETTINGS]) $(id).addEventListener('change', saveView);
@@ -199,6 +216,7 @@ export function trackView(go: (date: string) => void): void {
       const date = resolveDate(v.date);
       if (date !== state.date) go(date);
     }
+    if (v.point) pick(v.point);
     saveView();
   });
   saveView();

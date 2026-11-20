@@ -260,7 +260,7 @@ setInterval(() => document.visibilityState === 'visible' && state.regions.length
 /* ---------- layer controls ---------- */
 
 // Map view, layer checkboxes and settings from the link or the last visit.
-const startDate = restoreView();
+const { date: startDate, point: startPoint } = restoreView();
 const thrSelect = $<HTMLSelectElement>('s-thr');
 const aspMinSelect = $<HTMLSelectElement>('a-min');
 const restBox = $<HTMLInputElement>('s-rest');
@@ -518,18 +518,31 @@ initSearch((place) => {
   void pickPoint(ll);
 });
 
+/**
+ * A shared link with a point (`/@lat,lng`): select it, show its warning, and keep it
+ * in view beside the panel (PC) or above the bottom sheet (phone).
+ */
+function openSharedPoint([lat, lng]: [number, number]): void {
+  const ll = L.latLng(lat, lng);
+  setTab('warn');
+  const z = map.getZoom(), inset = panelInsets();
+  map.setView(map.unproject(map.project(ll, z).add([-inset.left / 2, inset.bottom / 2]), z), z, { animate: false });
+  void pickPoint(ll);
+}
+
 onZoom();
 state.date = startDate;
 followToday = startDate === todayIso();
 loadedAt = Date.now();
 dateEl.value = state.date;
 suggestTomorrow();
-trackView(go);
+trackView(go, openSharedPoint);
 setStatus('Henter varslingsregioner…', 'busy');
 fetchRegions()
   .then((regions) => {
     state.regions = regions;
     drawRegions(regions);
+    if (startPoint) openSharedPoint(startPoint); // needs the regions to find the warning
     loadObservations(state.date).catch(obsFail);
     loadWind(state.date).catch(windFail);
     return loadWarnings(state.date);

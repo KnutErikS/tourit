@@ -441,16 +441,16 @@ body.is3d #hint{display:none}
 .info-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 @media (max-width:640px){.info-btn{width:40px;height:40px}.info-btn svg{width:20px;height:20px}}
 .linkbtn{border:0;padding:0;background:none;font:inherit;color:var(--accent);text-decoration:underline;cursor:pointer}
-dialog.about{box-sizing:border-box;margin:auto;width:min(440px,calc(100vw - 32px));max-height:calc(100dvh - 32px);overflow:auto;padding:18px 20px 16px;
+dialog.dlg{box-sizing:border-box;margin:auto;width:min(440px,calc(100vw - 32px));max-height:calc(100dvh - 32px);overflow:auto;padding:18px 20px 16px;
   border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--fg);box-shadow:var(--shadow);font-size:13.5px;line-height:1.5}
-dialog.about::backdrop{background:rgba(8,14,22,.55)}
-dialog.about h2{margin:0 0 10px;font-family:var(--f-display),sans-serif;font-size:22px;font-weight:700;line-height:1.1}
-dialog.about p{margin:0 0 10px}
-dialog.about .kicker{margin-top:14px;margin-bottom:4px}
-dialog.about a{color:var(--accent);font-weight:600}
+dialog.dlg::backdrop{background:rgba(8,14,22,.55)}
+dialog.dlg h2{margin:0 0 10px;font-family:var(--f-display),sans-serif;font-size:22px;font-weight:700;line-height:1.1}
+dialog.dlg p{margin:0 0 10px}
+dialog.dlg .kicker{margin-top:14px;margin-bottom:4px}
+dialog.dlg a{color:var(--accent);font-weight:600}
 .about-build{font-family:var(--f-mono),monospace;font-size:11.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:10px}
-.about-actions{display:flex;justify-content:flex-end}
-.about-actions .btn{padding:8px 16px}
+.dlg-actions{display:flex;justify-content:flex-end}
+.dlg-actions .btn{padding:8px 16px}
 
 /* ---------- Ny versjon (ui/update.ts) ---------- */
 .update{position:absolute;z-index:1003;left:50%;transform:translateX(-50%);top:calc(12px + env(safe-area-inset-top,0px));
@@ -462,3 +462,7 @@ dialog.about a{color:var(--accent);font-weight:600}
 .update-x{padding:0 14px 0 10px;font-size:20px;line-height:1;opacity:.75}
 .update-x:hover{opacity:1}
 .update button:focus-visible{outline:2px solid var(--accent-ink);outline-offset:-4px}
+.dlg-actions{gap:8px;flex-wrap:wrap}
+.dlg-steps{margin:0 0 10px;padding-left:22px;display:grid;gap:4px}
+.dlg-note{font-size:12.5px;color:var(--muted)}
+.share-ico{width:18px;height:18px;vertical-align:-3px;fill:none;stroke:var(--accent);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}

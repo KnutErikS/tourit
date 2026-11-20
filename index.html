@@ -154,7 +154,7 @@
 </div>
 
 <!-- "Om Skredterreng": disclaimer, contact and build number. Opens by itself on the first visit (ui/about.ts). -->
-<dialog id="about" class="about" aria-labelledby="about-title">
+<dialog id="about" class="dlg" aria-labelledby="about-title">
   <h2 id="about-title">Om Skredterreng</h2>
   <p class="kicker">Ansvarsfraskrivelse</p>
   <p>Skredterreng er et hobbyprosjekt, ikke en offisiell tjeneste fra NVE eller Varsom. Terrengtreffene er en automatisk tolkning av skredvarselet mot en terrengmodell, og de kan være feil: små heng, skavler og terrengfeller kommer ikke med, og et punkt som ikke er bratt selv kan ligge i utløpet til et heng over.</p>
@@ -162,7 +162,21 @@
   <p class="kicker">Feil eller tips?</p>
   <p>Fant du en feil, eller har du forslag til forbedringer? Gi beskjed til utvikleren: <a id="about-contact" href="#" target="_blank" rel="noopener">Meld feil eller send tips ↗</a>. Skriv gjerne hva du gjorde og hvilken versjon du har.</p>
   <p class="about-build">Versjon <span id="about-build"></span></p>
-  <div class="about-actions"><button type="button" class="btn primary" id="about-ok">Jeg forstår</button></div>
+  <div class="dlg-actions"><button type="button" class="btn primary" id="about-ok">Jeg forstår</button></div>
+</dialog>
+
+<!-- iPhone/iPad in the browser: saved areas can be cleared by Safari (ui/iosHint.ts). -->
+<dialog id="ios-save" class="dlg" aria-labelledby="ios-save-title">
+  <h2 id="ios-save-title">Lagre på iPhone</h2>
+  <p>Nettleseren kan rydde bort lagrede områder hvis siden ikke har vært brukt på en stund. Da er kartet borte når du står på fjellet uten dekning.</p>
+  <p>Legg heller appen til på Hjem-skjerm og lagre områdene der:</p>
+  <ol class="dlg-steps">
+    <li>Trykk på Del-knappen <svg class="share-ico" viewBox="0 0 24 24" role="img" aria-label="Del"><path d="M12 15V3M8 7l4-4 4 4M7 10H5v11h14V10h-2"/></svg> i nettleseren.</li>
+    <li>Velg «Legg til på Hjem-skjerm».</li>
+    <li>Åpne Skredterreng fra Hjem-skjermen og lagre området der.</li>
+  </ol>
+  <p class="dlg-note">Områder du lagrer her i nettleseren, blir ikke med over til appen på Hjem-skjermen.</p>
+  <div class="dlg-actions"><button type="button" class="btn" id="ios-save-anyway">Lagre her likevel</button><button type="button" class="btn primary" id="ios-save-ok">OK, jeg gjør det</button></div>
 </dialog>
 
 <script type="module" src="/src/main.ts"></script>

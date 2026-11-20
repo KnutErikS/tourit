@@ -6,6 +6,7 @@ import { type SavedArea, isComplete, listAreas, putArea } from '../offline/store
 import { type AreaSpec, boundsOf, estimate } from '../offline/tiles';
 import { state } from '../state';
 import { $, esc } from '../util';
+import { confirmIosSave, iosBrowser } from './iosHint';
 
 /**
  * "Lagrede områder": a save button and a download icon on the map. The icon
@@ -292,6 +293,7 @@ export function initOffline(): void {
       <button class="btn" id="off-close" aria-label="Lukk">Lukk</button>
     </header>
     <div class="off-body">
+      <div class="notice" id="off-ios" hidden><div><b>Bruker du iPhone eller iPad?</b> Nettleseren kan rydde bort lagrede områder hvis siden ikke har vært brukt på en stund. Legg appen til på Hjem-skjerm (Del-knappen → «Legg til på Hjem-skjerm») og lagre områdene der.</div></div>
       <button class="btn primary" id="off-new-btn">Lagre nytt område</button>
       <section class="off-new" id="off-new" hidden>
         <p class="desc">Området innenfor den stiplede rammen lagres på denne enheten. Flytt eller zoom kartet for å endre det.</p>
@@ -322,7 +324,8 @@ export function initOffline(): void {
     mode = 'list';
     renderMode();
   });
-  $('off-go').addEventListener('click', startSave);
+  $('off-go').addEventListener('click', () => confirmIosSave(startSave));
+  $('off-ios').hidden = !iosBrowser();
   for (const id of ['off-maxz', 'off-bratt', 'off-terrain']) $(id).addEventListener('change', updatePreview);
   $('off-list').addEventListener('click', (e) => void onListClick(e));
   map.on('moveend', updatePreview);

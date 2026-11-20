@@ -36,18 +36,22 @@ export async function assessStopOrGo(ll: L.LatLng, terrain: TerrainPoint | null 
   // No terrain yet (still loading, or your position): null, which also counts as inside.
   const inCore = !w?.problems.length ? true : terrain ? w.problems.some((p) => matchesProblem(p, terrain.sector, terrain.elev)) : null;
 
+  // Runout counts from level 4, and from level 3 when unknown signs could lift it there.
+  // undefined = the map couldn't be read (offline outside a saved area): unknown, not "outside".
   const [win, zone] = await Promise.all([
     slopeAround(ll).catch(() => null),
-    level >= 4 ? zoneAt(ll).catch(() => null) : Promise.resolve(null),
+    level >= 3 ? zoneAt(ll).catch(() => undefined) : Promise.resolve(null),
   ]);
 
   const res = stopOrGo({
     level,
     inCore,
-    signs: signs?.on ?? false,
+    // null = the day's observations aren't loaded (still loading, failed, or offline and not stored).
+    signs: signs ? signs.on : null,
     steepTrack: win?.track ?? terrain?.slope ?? null,
     steepSlope: win?.slope ?? terrain?.slope ?? null,
-    inRunout: zone !== null && zone !== 'steep',
+    // NVE's steep classes are not runout; the steepness itself is checked against the limit.
+    inRunout: zone === undefined ? null : zone !== null && zone !== 'steep',
   });
   return { ...res, signs: signs?.on ? signs.labels : [], regionName: region?.name ?? null };
 }

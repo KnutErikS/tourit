@@ -27,8 +27,12 @@ export interface Fetched<T> {
 
 /** Thrown when the network failed and there is nothing stored for this key. */
 export class NotStoredError extends Error {
-  constructor(readonly kind: Kind, readonly key: string, cause: unknown) {
+  readonly kind: Kind;
+  readonly key: string;
+  constructor(kind: Kind, key: string, cause: unknown) {
     super((cause as Error)?.message || 'nettverksfeil');
+    this.kind = kind;
+    this.key = key;
   }
 }
 

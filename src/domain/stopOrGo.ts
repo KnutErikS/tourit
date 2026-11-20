@@ -17,6 +17,14 @@
  * - Signs of instability in the last 48 h (fresh avalanches, whumpfs,
  *   shooting cracks) move it one level up (SLF RiskCheck).
  *
+ * Missing data never gives a more lenient answer than the data could:
+ * - unknown core zone (no terrain yet) counts as inside;
+ * - unknown signs (Regobs not loaded) keep the warning's level, but if the
+ *   answer would be worse with signs, "go" becomes "caution";
+ * - unknown runout (NVE's map couldn't be read) where runout counts turns
+ *   "go" into "caution".
+ * Each of them is said in the result.
+ *
  * Pure: no imports at runtime, so `node --test` can load it as it is.
  * This is a planning aid, not a verdict on the slope.
  */
@@ -32,14 +40,17 @@ export interface StopOrGoInput {
    * null = not known (no terrain yet): treated as inside, the cautious choice.
    */
   inCore: boolean | null;
-  /** Signs of instability nearby in the last 48 h. */
-  signs: boolean;
+  /** Signs of instability nearby in the last 48 h. null = not known (Regobs not loaded). */
+  signs: boolean | null;
   /** Steepest 20 × 20 m around the point itself, degrees (null = no terrain data). */
   steepTrack: number | null;
   /** Steepest 20 × 20 m on the slope the point is on, degrees. */
   steepSlope: number | null;
-  /** The point lies in one of NVE's runout bands (or in steep terrain on that map). */
-  inRunout: boolean;
+  /**
+   * The point lies in one of NVE's runout bands. null = not known (the map couldn't be
+   * read); only asked for when runout can count (level 3 and up).
+   */
+  inRunout: boolean | null;
 }
 
 export interface StopOrGoResult {
@@ -89,13 +100,28 @@ export function signsEnd(date: string, now = Date.now()): number {
   return Math.min(new Date(date + 'T23:59:59').getTime(), now);
 }
 
-/** The level the limit is looked up with. Unknown core zone (null) counts as inside. */
-export function usedLevel(level: number, inCore: boolean | null, signs: boolean): number {
+/** The level the limit is looked up with. Unknown core zone (null) counts as inside; unknown signs (null) as none. */
+export function usedLevel(level: number, inCore: boolean | null, signs: boolean | null): number {
   if (level < 1) return 0;
   let l = level;
   if (inCore === false) l -= 1;
   if (signs) l += 1;
   return Math.min(5, Math.max(1, l));
+}
+
+/** Status for one level, before runout: the limit, the area it applies to and the steepness compared. */
+function judge(used: number, i: StopOrGoInput) {
+  const limit = LIMIT[used];
+  const area = AREA[used];
+  const steepness = area === 'track' ? i.steepTrack : i.steepSlope;
+  let status: StopOrGoStatus;
+  if (steepness === null) status = 'none';
+  else if (limit === null) status = steepness >= LOW_SPOT ? 'caution' : 'go';
+  else if (steepness >= limit) status = 'stop';
+  else if (steepness >= limit - MARGIN) status = 'caution';
+  else status = 'go';
+  if (area === 'terrain' && i.inRunout === true && status !== 'none') status = 'stop';
+  return { limit, area, steepness, status };
 }
 
 export function stopOrGo(i: StopOrGoInput): StopOrGoResult {
@@ -104,34 +130,33 @@ export function stopOrGo(i: StopOrGoInput): StopOrGoResult {
     return { status: 'none', level: i.level, used: 0, limit: null, area: 'track', steepness: null, adjustments: [], reasons: ['Ingen snøskredvarsel for dagen.'] };
   }
   const used = usedLevel(i.level, i.inCore, i.signs);
-  const limit = LIMIT[used];
-  const area = AREA[used];
-  const steepness = area === 'track' ? i.steepTrack : i.steepSlope;
+  const { limit, area, steepness, status: judged } = judge(used, i);
 
   const adjustments: Adjustment[] = [];
   if (i.inCore === false) adjustments.push({ dir: 'down', text: 'Utenfor himmelretningene og høydene i varselet: én faregrad ned.' });
   if (i.inCore === null) adjustments.push({ dir: 'same', text: 'Kjenner ikke himmelretning og høyde for punktet: bruker faregraden i varselet.' });
-  if (i.signs) adjustments.push({ dir: 'up', text: 'Faretegn i området siste 48 t: én faregrad opp.' });
+  if (i.signs === true) adjustments.push({ dir: 'up', text: 'Faretegn i området siste 48 t: én faregrad opp.' });
+  if (i.signs === null) adjustments.push({ dir: 'same', text: 'Mangler observasjoner fra Regobs: vet ikke om det er meldt faretegn i området siste 48 t.' });
 
   if (steepness === null) {
     reasons.unshift('Mangler terrengdata for punktet.');
     return { status: 'none', level: i.level, used, limit, area, steepness, adjustments, reasons };
   }
 
-  let status: StopOrGoStatus;
-  if (limit === null) {
-    status = steepness >= LOW_SPOT ? 'caution' : 'go';
-    if (status === 'caution') reasons.unshift(`Enkelte svært bratte punkt (≥ ${LOW_SPOT}°) kan løsne også ved faregrad 1.`);
-  } else if (steepness >= limit) {
-    status = 'stop';
-  } else if (steepness >= limit - MARGIN) {
+  let status = judged;
+  if (area === 'terrain' && i.inRunout === true) reasons.unshift('Punktet ligger i utløpssone fra bratt terreng.');
+  if (limit === null && status === 'caution') reasons.unshift(`Enkelte svært bratte punkt (≥ ${LOW_SPOT}°) kan løsne også ved faregrad 1.`);
+
+  // Unknown signs: what would the answer be if there were some?
+  const worst = i.signs === null ? judge(usedLevel(i.level, i.inCore, true), i) : null;
+  if (worst && status === 'go' && worst.status !== 'go' && worst.limit !== null) {
     status = 'caution';
-  } else {
-    status = 'go';
+    reasons.push(`Uten Regobs: med faretegn i området ville grensen vært under ${worst.limit}° (${AREA_TEXT[worst.area]}).`);
   }
-  if (area === 'terrain' && i.inRunout && status !== 'stop') {
-    status = 'stop';
-    reasons.unshift('Punktet ligger i utløpssone fra bratt terreng.');
+  // Unknown runout where runout counts (now, or with signs): can't say "go".
+  if ((area === 'terrain' || worst?.area === 'terrain') && i.inRunout === null && status !== 'stop') {
+    if (status === 'go') status = 'caution';
+    reasons.push('Fikk ikke lest NVEs utløpskart: vet ikke om punktet ligger i en utløpssone.');
   }
   return { status, level: i.level, used, limit, area, steepness, adjustments, reasons };
 }

@@ -98,13 +98,20 @@ export interface Region {
 
 /* ---------- Terrain ---------- */
 
-/** Slope/aspect/elevation for an n×n grid covering one map tile. */
+/**
+ * Slope/aspect/elevation for an n×n grid covering one map tile (terrain/analyze.ts).
+ * Compact tiles hold slope and elevation rounded down to whole degrees and metres:
+ * exact for comparisons with whole numbers (the map layers), not for averages.
+ * Only zoom-14 tiles (`PRECISE_Z` in terrain/dem.ts) are precise.
+ */
 export interface DemTile {
   n: number;
-  slope: Float32Array; // degrees
+  slope: Float32Array | Uint8Array; // degrees
   sector: Uint8Array; // 0..7, index into DIRS
-  elev: Float32Array; // metres
+  elev: Float32Array | Int16Array; // metres
   ok: Uint8Array; // 1 where valid
+  /** Whole degrees / metres, rounded down (see above). */
+  compact: boolean;
 }
 
 export interface TerrainPoint {

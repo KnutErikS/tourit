@@ -1,9 +1,9 @@
 import * as L from 'leaflet';
 import { SLOPE_RADIUS_M, WINDOW_M, slopeWindow, type SlopeGrid, type SlopeWindow } from '../domain/slopeWindow';
-import { getDem } from './dem';
+import { PRECISE_Z, getDem } from './dem';
 
-/** Same zoom as `terrainAt`: ~4–9 m cells in Norway. */
-const Z = 14;
+/** Same zoom as `terrainAt`, the one stored precise (box means of slope need the decimals): ~4–9 m cells in Norway. */
+const Z = PRECISE_Z;
 const CIRC = 40075016.68557849;
 
 /** The zoom-14 DEM tiles a square of `halfM` metres around `ll` touches, as "x/y". */

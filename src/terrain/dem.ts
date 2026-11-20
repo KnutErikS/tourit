@@ -1,18 +1,45 @@
 import * as L from 'leaflet';
-import { load as loadLerc, decode as decodeLerc, type LercData } from 'lerc';
+import { load as loadLerc, decode as decodeLerc } from 'lerc';
 import lercWasmUrl from 'lerc/lerc-wasm.wasm?url';
 import { DTM_URL } from '../config';
 import type { DemTile, TerrainPoint } from '../types';
+import { analyze, tileBytes } from './analyze';
+import { TileCache } from './tileCache';
 
 /**
  * Raw elevation from Kartverket's DTM ImageServer (hoydedata.no), fetched as
- * LERC float32 per Web Mercator tile, then turned into slope/aspect here.
+ * LERC float32 per Web Mercator tile, then turned into slope/aspect
+ * (terrain/analyze.ts).
+ *
+ * Memory: tiles are kept in a cache with a byte budget, least recently used
+ * out first. All tiles but zoom 14 are stored compact (5 bytes per cell
+ * instead of 10, see analyze.ts): a 2×-oversampled zoom 10–11 tile is then
+ * ~1.3 MB instead of ~2.6 MB, a plain one ~0.33 MB; zoom 14 stays ~0.65 MB.
  */
 
 const CIRC = 40075016.68557849; // Web Mercator world width in metres
 const ORIG = 20037508.342789244;
-const MAX_CACHE = 500;
-const cache = new Map<string, Promise<DemTile>>();
+
+/**
+ * The zoom that point analysis reads (terrainAt, the 20 × 20 m slope window,
+ * SLABS along routes): its tiles are stored precise. The map layers share them.
+ */
+export const PRECISE_Z = 14;
+
+/**
+ * Cache budget: the tiles a full screen of both computed layers needs at the
+ * worst zoom (a 2× tile plus a plain one per map tile, ~1.65 MB, plus Leaflet's
+ * buffer around the screen), with room to pan back, within 64–192 MB. A phone
+ * gets ~85 MB; a 1920 × 1080 screen hits the 192 MB cap.
+ */
+function budgetBytes(): number {
+  const w = typeof screen !== 'undefined' ? Math.max(screen.width, screen.height) : 1920;
+  const h = typeof screen !== 'undefined' ? Math.min(screen.width, screen.height) : 1080;
+  const tiles = (Math.ceil(w / 256) + 3) * (Math.ceil(h / 256) + 3);
+  const need = tiles * 1.65 * 2 ** 20 * 1.5;
+  return Math.round(Math.min(192 * 2 ** 20, Math.max(64 * 2 ** 20, need)));
+}
+const cache = new TileCache<DemTile>(budgetBytes(), tileBytes);
 
 // lerc ≥4 decodes via WebAssembly; the module must be loaded once before decode().
 // Point it at the wasm file Vite emits, since the package's own relative lookup
@@ -57,52 +84,25 @@ export function getDem(x: number, y: number, z: number, f = 1): Promise<DemTile>
   const ymax = ORIG - y * size;
   const url = demUrl(x, y, z, f);
 
+  const compact = !(z === PRECISE_Z && f === 1);
   const p = Promise.all([
     fetch(url).then((r) => {
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return r.arrayBuffer();
     }),
     ensureLerc(),
-  ]).then(([buf]) => analyze(decodeLerc(buf), res, ymax + res, n));
+  ]).then(([buf]) => analyze(decodeLerc(buf), res, ymax + res, n, compact));
 
-  cache.set(key, p);
-  p.catch(() => cache.delete(key));
-  if (cache.size > MAX_CACHE) cache.delete(cache.keys().next().value!);
+  cache.set(key, p); // drops it again if it fails, so the next call retries
   return p;
 }
 
-/** Slope (Horn's method) and aspect for n×n cells from an (n+2)×(n+2) grid. */
-export function analyze(d: LercData, res: number, ytop: number, n: number): DemTile {
-  const W = d.width, Z = d.pixels[0], M = d.mask;
-  const N = n * n;
-  const slope = new Float32Array(N), sector = new Uint8Array(N), elev = new Float32Array(N), ok = new Uint8Array(N);
-  if (W !== n + 2 || d.height !== n + 2) return { n, slope, sector, elev, ok };
-
-  const good = (i: number) => (!M || M[i]) && Z[i] > -500 && Z[i] < 9000;
-  for (let r = 0; r < n; r++) {
-    // Ground distance between cells shrinks with latitude in Web Mercator.
-    const ym = ytop - (r + 1.5) * res;
-    const g = res * Math.cos(Math.atan(Math.sinh(ym / 6378137)));
-    for (let c = 0; c < n; c++) {
-      const i = (r + 1) * W + (c + 1), o = r * n + c;
-      const a = i - W - 1, b = i - W, cc = i - W + 1, dd = i - 1, f = i + 1, gg = i + W - 1, h = i + W, ii = i + W + 1;
-      if (!(good(i) && good(a) && good(b) && good(cc) && good(dd) && good(f) && good(gg) && good(h) && good(ii))) continue;
-      const dzx = (Z[cc] + 2 * Z[f] + Z[ii] - (Z[a] + 2 * Z[dd] + Z[gg])) / (8 * g); // rise towards east
-      const dzr = (Z[gg] + 2 * Z[h] + Z[ii] - (Z[a] + 2 * Z[b] + Z[cc])) / (8 * g); // rise towards south (row dir)
-      slope[o] = (Math.atan(Math.hypot(dzx, dzr)) * 180) / Math.PI;
-      let asp = (Math.atan2(-dzx, dzr) * 180) / Math.PI;
-      if (asp < 0) asp += 360;
-      sector[o] = Math.floor(((asp + 22.5) % 360) / 45);
-      elev[o] = Z[i];
-      ok[o] = 1;
-    }
-  }
-  return { n, slope, sector, elev, ok };
-}
+/** For checking memory in the console during development: `__demCache()`. */
+if (import.meta.env.DEV) (window as unknown as { __demCache: () => unknown }).__demCache = () => ({ tiles: cache.size, mb: +(cache.bytes / 2 ** 20).toFixed(1), budgetMb: +(cache.budget / 2 ** 20).toFixed(1) });
 
 /** Elevation, slope and aspect at one point, sampled from a zoom-14 tile (~5–10 m cells). */
 export async function terrainAt(ll: L.LatLng): Promise<TerrainPoint | null> {
-  const z = 14;
+  const z = PRECISE_Z;
   const p = L.CRS.EPSG3857.latLngToPoint(ll, z);
   const x = Math.floor(p.x / 256), y = Math.floor(p.y / 256);
   const an = await getDem(x, y, z, 1);

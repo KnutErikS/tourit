@@ -1,0 +1,12 @@
+{
+  // Type-checks test/ (and the src/ modules the tests import) the way `node --test` runs them:
+  // Node strips the types itself, so imports keep their .ts extension and only erasable
+  // TypeScript is allowed (no enums, namespaces or constructor parameter properties).
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "allowImportingTsExtensions": true,
+    "erasableSyntaxOnly": true
+  },
+  "include": ["test"]
+}

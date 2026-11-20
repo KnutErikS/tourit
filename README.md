@@ -85,20 +85,20 @@ Every 25 m (at most 600 spots, 150 DEM tiles). **SLABS**: MSA40 × 4.3 per dange
 
 ## Develop
 
-Requires Node 20.19+.
+Requires Node 22.18+ (the tests run the TypeScript files directly with Node's built-in type stripping).
 
 ```bash
 npm install
 npm run dev        # http://localhost:5173
-npm run typecheck
-npm test           # node:test on the pure logic in src/domain (no extra packages)
+npm run typecheck  # src/, and test/ via tsconfig.test.json
+npm test           # node:test on the pure logic in src/domain and src/terrain/analyze.ts
 npm run build      # typecheck + build to dist/
 npm run preview    # serve dist/
 ```
 
 ## Deploy
 
-Every push to `main` builds and publishes to GitHub Pages (`.github/workflows/deploy.yml`, uses `npm ci`, so commit `package-lock.json`). One-time setup: repo → Settings → Pages → Source: **GitHub Actions**. The site lands on `https://<user>.github.io/<repo>/`.
+Every push to `main` type-checks, runs the tests, builds and publishes to GitHub Pages (`.github/workflows/deploy.yml`, uses `npm ci`, so commit `package-lock.json`). A failing check stops the deploy. One-time setup: repo → Settings → Pages → Source: **GitHub Actions**. The site lands on `https://<user>.github.io/<repo>/`.
 
 `dist/` uses relative paths, so any static host works (Netlify, Cloudflare Pages, …).
 

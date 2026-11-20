@@ -2,7 +2,7 @@ import type * as L from 'leaflet';
 import { fetchPointWeather } from '../api/met';
 import { DIRS, DNAME } from '../config';
 import type { ClueKey } from '../domain/alptruth';
-import { LOW_SPOT, type StopOrGoStatus } from '../domain/stopOrGo';
+import { LOW_SPOT, MARGIN, type StopOrGoStatus } from '../domain/stopOrGo';
 import type { PointWeather } from '../domain/weather';
 import { state } from '../state';
 import { terrainAt } from '../terrain/dem';
@@ -104,7 +104,9 @@ function hereLine(s: StopOrGoAssessment, where: string): string {
   const head = `Brattest ${st}° ${where}`;
   if (s.limit == null) return s.status === 'caution' ? `${head}: enkeltpunkter på ${LOW_SPOT}°+ kan løsne` : head;
   const d = st - s.limit;
-  const vs = d > 0 ? `${d}° over grensen` : d === 0 ? 'akkurat på grensen' : `${-d}° under grensen${s.status === 'caution' ? ', så nær at det er usikkert' : ''}`;
+  // "Varsomt" can also come from missing data (then the reasons say so), not only from being close.
+  const close = s.status === 'caution' && s.steepness >= s.limit - MARGIN;
+  const vs = d > 0 ? `${d}° over grensen` : d === 0 ? 'akkurat på grensen' : `${-d}° under grensen${close ? ', så nær at det er usikkert' : ''}`;
   const runout = s.area === 'terrain' && s.status === 'stop' && st < s.limit ? ', men i en utløpssone' : '';
   return `${head}: ${vs}${runout}`;
 }

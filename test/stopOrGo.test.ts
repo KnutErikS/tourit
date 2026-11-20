@@ -86,3 +86,49 @@ test('adjustments: one row per change of level, with its direction', () => {
   assert.equal(r.used, 3);
   assert.deepEqual(run({}).adjustments, []);
 });
+
+/* ---------- missing data never gives a more lenient answer ---------- */
+
+test('unknown signs: the warning level is used, and said so', () => {
+  const r = run({ level: 3, signs: null, steepSlope: 30 });
+  assert.equal(r.used, 3);
+  assert.deepEqual(r.adjustments.map((x) => x.dir), ['same']);
+  assert.match(r.adjustments[0].text, /Mangler observasjoner fra Regobs/);
+});
+
+test('unknown signs: "go" becomes "caution" when signs would make it stricter', () => {
+  // Level 2, 37° on the whole slope: go at level 2 (track 30°), stop at level 3.
+  const r = run({ level: 2, signs: null, steepTrack: 30, steepSlope: 37 });
+  assert.equal(r.status, 'caution');
+  assert.equal(r.used, 2);
+  assert.ok(r.reasons.some((t) => /Uten Regobs.*35°/.test(t)), r.reasons.join(' | '));
+  // Gentle enough for level 3 as well: still go.
+  assert.equal(run({ level: 2, signs: null, steepTrack: 25, steepSlope: 28 }).status, 'go');
+  // Known: no signs gives go as before.
+  assert.equal(run({ level: 2, signs: false, steepTrack: 30, steepSlope: 37 }).status, 'go');
+});
+
+test('unknown signs never soften a stop', () => {
+  assert.equal(run({ level: 3, signs: null, steepSlope: 36 }).status, 'stop');
+});
+
+test('level 4 with unknown runout: no "go", and the reason is given', () => {
+  const r = run({ level: 4, steepSlope: 25, inRunout: null });
+  assert.equal(r.status, 'caution');
+  assert.ok(r.reasons.some((t) => /utløpskart/.test(t)));
+  // Too steep anyway: stop, no runout talk needed.
+  assert.equal(run({ level: 4, steepSlope: 31, inRunout: null }).status, 'stop');
+});
+
+test('level 3 with unknown signs and unknown runout: runout could count, so caution', () => {
+  // With signs it would be level 4 (whole terrain, out of runout): the runout is unknown.
+  const r = run({ level: 3, signs: null, steepSlope: 25, inRunout: null });
+  assert.equal(r.status, 'caution');
+  assert.ok(r.reasons.some((t) => /utløpskart/.test(t)));
+  // Signs known to be absent: level 3 doesn't look at runout.
+  assert.equal(run({ level: 3, signs: false, steepSlope: 25, inRunout: null }).status, 'go');
+});
+
+test('unknown runout below level 3 is ignored', () => {
+  assert.equal(run({ level: 2, signs: false, steepTrack: 30, inRunout: null }).status, 'go');
+});

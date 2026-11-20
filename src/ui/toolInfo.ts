@@ -119,6 +119,13 @@ const TOPICS: Record<InfoTopic, { title: string; label: string; body: string }> 
   <li><b>Gå:</b> slakere enn det.</li>
 </ul>
 
+<p class="kicker">Når data mangler</p>
+<ul class="dlg-list">
+  <li>Manglende data gir aldri et mildere svar. Det står alltid i kortet hva som mangler.</li>
+  <li><b>Regobs ikke lastet:</b> faregraden i varselet brukes. Ville svaret blitt strengere med faretegn i området, blir «Gå» til «Varsomt».</li>
+  <li><b>NVEs utløpskart ikke lest</b> (uten nett utenfor et lagret område): der utløp teller, blir «Gå» til «Varsomt».</li>
+</ul>
+
 <p class="kicker">Begrensninger</p>
 <p>Et heng som svinger, som en skål, kan ha bratte partier rundt svingen som stripa ikke får med. Skavler, små heng og terrengfeller vises ikke. ${TRACK_M} m, ${SLOPE_MIN_DEG}°, ${SLOPE_RADIUS_M} m, ${STRIP_WIDTH} m og ${ASPECT_TOL_DEG}° er våre egne valg, ikke testet mot ulykkesdata.</p>
 <p class="dlg-note">Kilder: Alpenverein, Stop or Go; SLF, Graphical Reduction Method og RiskCheck.</p>`,

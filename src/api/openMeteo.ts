@@ -121,3 +121,81 @@ export async function fetchWindHistory(points: WindPoint[], start: number, end: 
     );
   });
 }
+
+/* ---------- weather history at a point, for loading, thaw and the infos ---------- */
+
+/** One hour at the point, 2 m above the ground at the point's height. */
+export interface PointHour {
+  /** End of the hour, ms (Open-Meteo's precipitation is for the hour ending here). */
+  time: number;
+  /** °C */
+  temp: number;
+  /** Relative humidity, % */
+  rh?: number;
+  /** mm water in the hour */
+  precip: number;
+  /** Total cloud cover, % */
+  cloud?: number;
+}
+
+interface OmHistory {
+  hourly: {
+    time: number[];
+    temperature_2m: (number | null)[];
+    relative_humidity_2m?: (number | null)[];
+    precipitation?: (number | null)[];
+    cloud_cover?: (number | null)[];
+  };
+}
+
+/** Days before the chosen day to fetch: covers 72 h before its start, with a day to spare for UTC dates. */
+const HISTORY_DAYS = 4;
+/** Heights are rounded to this, m, so nearby taps on the same slope share one answer. */
+const HEIGHT_STEP = 50;
+const historyMemory = new Map<string, { data: Promise<Fetched<PointHour[]>>; expires: number }>();
+
+/**
+ * Hourly weather at the point from HISTORY_DAYS before `date` (YYYY-MM-DD,
+ * local) to the end of it: past hours are ICON's own forecasts, the rest the
+ * current forecast. `elev` (m, from the DEM) is passed as Open-Meteo's
+ * `elevation`, which downscales to that height; without it Open-Meteo uses
+ * its own 90 m terrain model at the point.
+ * Rounded to ~1 km and HEIGHT_STEP m; kept in memory for an hour and stored
+ * on the device for use without network.
+ */
+export function fetchPointHistory(lat: number, lon: number, elev: number | null | undefined, date: string): Promise<Fetched<PointHour[]>> {
+  const la = +lat.toFixed(2), lo = +lon.toFixed(2);
+  const h = elev != null && Number.isFinite(elev) ? Math.round(elev / HEIGHT_STEP) * HEIGHT_STEP : null;
+  const key = `${la},${lo},${h ?? 'dem'}:${date}`;
+  const hit = historyMemory.get(key);
+  if (hit && hit.expires > Date.now()) return hit.data;
+
+  const dayStart = new Date(date + 'T00:00:00').getTime();
+  const start = dayStart - HISTORY_DAYS * DAY;
+  const data = withStored('history', key, async () => {
+    const api = start < Date.now() - RECENT_DAYS * DAY ? OPEN_METEO_HISTORY_API : OPEN_METEO_API;
+    const url =
+      `${api}/forecast?latitude=${la}&longitude=${lo}` +
+      (h != null ? `&elevation=${h}` : '') +
+      `&hourly=temperature_2m,relative_humidity_2m,precipitation,cloud_cover&models=${MODEL}&timeformat=unixtime` +
+      `&start_date=${utcDate(start)}&end_date=${utcDate(dayStart + DAY - 1)}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const { hourly: x } = (await res.json()) as OmHistory;
+    return x.time.flatMap((t, i): PointHour[] => {
+      const temp = x.temperature_2m[i];
+      if (temp == null) return [];
+      return [{
+        time: t * 1000,
+        temp,
+        rh: x.relative_humidity_2m?.[i] ?? undefined,
+        precip: x.precipitation?.[i] ?? 0,
+        cloud: x.cloud_cover?.[i] ?? undefined,
+      }];
+    });
+  });
+  historyMemory.set(key, { data, expires: Date.now() + TTL_MS });
+  // A stored copy (no network) is not kept in memory, so the next call tries the network again.
+  data.then((r) => r.savedAt !== null && historyMemory.delete(key), () => historyMemory.delete(key));
+  return data;
+}

@@ -40,6 +40,17 @@ export interface PrecipStep {
   cloud?: number;
 }
 
+/**
+ * History up to where the forecast starts, then the forecast: a history step
+ * counts only if it ends by the forecast's first step (the forecast wins
+ * where both have the hour). Without a forecast, all of the history counts.
+ */
+export function mergeSteps(history: PrecipStep[], forecast: PrecipStep[]): PrecipStep[] {
+  const start = forecast.length ? Math.min(...forecast.map((s) => s.time)) : Infinity;
+  const before = history.filter((s) => s.time + Math.max(s.hours, 0) * 3_600_000 <= start);
+  return [...before, ...forecast].sort((a, b) => a.time - b.time);
+}
+
 export const LOADING_H = 48;
 export const NEW_SNOW_CM = 15;
 export const RAPID_MM_H = 2.5;

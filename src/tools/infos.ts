@@ -11,6 +11,7 @@ import { state } from '../state';
 import type { Picked, TerrainPoint } from '../types';
 import { isoDate } from '../util';
 import { pointSteps } from './alptruth';
+import { pointHistory } from './history';
 import { regionSigns } from './signs';
 
 const HOUR = 3_600_000;
@@ -38,7 +39,7 @@ export async function assessInfoRows(ll: L.LatLng, terrain: TerrainPoint | null 
   const date = state.date;
   const region = regionAt(state.regions, ll);
   const hours = region?.hours ?? [];
-  const steps = pointSteps(hours, weather);
+  const steps = pointSteps(hours, weather, await pointHistory(ll, terrain, date));
   const at = (t: string) => new Date(date + t).getTime();
   const dayStart = at('T00:00:00'), dayFrom = at('T08:00:00'), dayTo = at('T16:00:00');
   const end = windowEnd(date);

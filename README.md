@@ -55,7 +55,7 @@ A: avalanches in Regobs · L: > 15 cm new snow in 48 h, rask oppbygging (≥ 2.5
 
 ### Weather behind loading, thaw and the infos (`domain/precip.ts`, `tools/alptruth.ts`)
 
-Steps are MET's forecast for the point (temperature adjusted to the point's height, rain/snow by wet-bulb) from now on, and before that Open-Meteo's ICON history for the **middle of the forecast region** at **850 hPa (~1300–1500 m)**. New snow = water × 0.8–1.5 cm/mm by temperature.
+Steps are MET's forecast for the point (temperature adjusted to the point's height, rain/snow by wet-bulb) from now on. Before that comes the point's own history: Open-Meteo's ICON hours at the tapped point, 2 m above the ground, with `elevation=` the DEM height rounded to 50 m (Open-Meteo downscales to that height: at 69.6° N, 100 m vs 1200 m came out ~0.63 °C per 100 m apart), rain/snow by wet-bulb like MET (`tools/history.ts`, `api/openMeteo.ts` `fetchPointHistory`). Answers are shared within ~1 km and 50 m of height, kept in memory for an hour and stored for use without network. If the point's history can't be had (no network, nothing stored), it falls back to the region's ICON hours at 850 hPa (~1300–1500 m) in the middle of the forecast region, as before. Wind (the 850 hPa wind for lee slopes and the critical-snow wind factor) and the old-snow surface stay per region: ridge-height wind is what moves snow. New snow = water × 0.8–1.5 cm/mm by temperature.
 
 | Info | Hits when |
 | --- | --- |
@@ -72,7 +72,7 @@ Every 25 m (at most 600 spots, 150 DEM tiles). **SLABS**: MSA40 × 4.3 per dange
 
 ### Precision: known limits, biggest first
 
-1. **History weather is not at the point.** The hours before MET's forecast starts (last night, the last 2–3 days of snow) come from one ICON point per forecast region at 850 hPa. A point 1000 m lower is typically ~6 °C warmer (standard lapse rate), so the rain/snow split, nattefrost, første mildvær and the new-snow totals can be off for low and high points, and a free-air temperature misses the clear-night cooling of the snow surface. Fix: fetch hourly history per tapped point from Open-Meteo (`temperature_2m`, `relative_humidity_2m`, `precipitation`, `snowfall`, `cloud_cover`, with `elevation=` the DEM height and `past_days`; MET Nordic 1 km is offered there for Norway), and use wet-bulb at 2 m like the MET part.
+1. **History weather at the point (fixed).** The hours before MET's forecast now come from the tapped point at its own height (see above) instead of one 850 hPa point per region; that point is still the fallback without network. Still approximate: ICON is a ~7 km model, so clear-night inversions in narrow valleys and showers on single slopes are smoothed; the old-snow surface (crust or not) and the wind still come from the region. Next step: try MET Nordic (1 km, on Open-Meteo for Norway) for the last 2–3 days, once its `past_days` support is confirmed.
 2. **Munter's 1st-class factors differ from the source.** bergundsteigen 2001 gives 35–39° → 2, *around 35°* → 3, 30–34° → 4, and counts the steepest part only if it is 20 m high. `rf1` gives 30–34° → 3 and < 30° → 4, so 30–34° slopes come out stricter than Munter. Fix in `domain/risk.ts`.
 3. **Regobs signs use the whole forecast region** with height/aspect weights but no distance. Regions are tens of km across. Fix: weight by distance as well (e.g. 1 within 10 km, 0.5 within 25 km, else 0.25 – ours).
 4. **The avalanche-terrain layer depends on zoom.** At z11–12 cells are ~14–18 m, so short steep pitches are smoothed and the colouring can disagree with Stop or Go (20 × 20 m on ~4 m cells) and with NVE's steepness map. Fix: oversample z12 by 2 (~9 m), at 4× the DEM load there; the map's pixel slope and the tool's 20 m average will still differ by a degree or two.
@@ -118,8 +118,8 @@ src/
   types.ts              Types for NVE/Regobs data
   util.ts               DOM helper, esc(), safeUrl(), dates, fetch
   map.ts                Leaflet map + Kartverket topo basemap
-  api/                  NVE warnings/regions, Regobs search, Kartverket place names, MET point forecast, Open-Meteo air profile
-  tools/                Assembles domain logic + data for the Verktøy tab (Stop or Go, ALPTRUTh, infos, Regobs signs, your own ticks)
+  api/                  NVE warnings/regions, Regobs search, Kartverket place names, MET point forecast, Open-Meteo air profile, region wind and point weather history
+  tools/                Assembles domain logic + data for the Verktøy tab (Stop or Go, ALPTRUTh, infos, Regobs signs, the point's weather history, your own ticks)
   domain/               Pure logic, tested with node:test: problem matching, point-in-polygon, observation types, MGRS, weather (rain/snow, cloud layers, snow line), sun, wind loading, Stop or Go and the 20 × 20 m slope window, ALPTRUTh, weighted Regobs signs, new snow / loading / thaw / refreeze (precip.ts), infos, SLABS and Munter (risk.ts)
   terrain/              Elevation tiles (LERC) → slope/aspect; canvas layer base
   route/                Routes: GPX, storage, NVE steep/runout check (runout.ts), SLABS + Munter along the route (risk.ts)

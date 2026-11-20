@@ -1,7 +1,7 @@
 import type * as L from 'leaflet';
 import { alptruth, type Alptruth, type AlptruthInput } from '../domain/alptruth';
 import { regionAt } from '../domain/geo';
-import { loadingBefore, thaw, type PrecipStep } from '../domain/precip';
+import { loadingBefore, mergeSteps, thaw, type PrecipStep } from '../domain/precip';
 import { signGroup } from '../domain/signs';
 import { snowFraction, type PointWeather } from '../domain/weather';
 import { snowShare, windowEnd, type WindHour } from '../domain/wind';
@@ -9,6 +9,7 @@ import { zoneAt } from '../route/runout';
 import { state } from '../state';
 import { slopeAround } from '../terrain/window';
 import type { TerrainPoint } from '../types';
+import { pointHistory } from './history';
 import { regionSigns } from './signs';
 import { loadTicks } from './ticks';
 
@@ -25,11 +26,13 @@ const DAY_FROM = 'T08:00:00';
 const DAY_TO = 'T16:00:00';
 
 /**
- * Weather steps at the point: Open-Meteo's hourly ICON history for the region
- * (850 hPa, ~1400 m) up to where MET's forecast for the point starts, then
- * MET (adjusted to the point's height, rain/snow by wet-bulb).
+ * Weather steps at the point: MET's forecast for the point (adjusted to the
+ * point's height, rain/snow by wet-bulb) from where it starts, and before
+ * that the history: the point's own (`history`, Open-Meteo at the point's
+ * height, see tools/history.ts) when we have it, else the region's ICON hours
+ * (850 hPa, ~1400 m, the middle of the region) as a fallback.
  */
-export function pointSteps(hours: WindHour[] | null | undefined, weather: PointWeather | null | undefined): PrecipStep[] {
+export function pointSteps(hours: WindHour[] | null | undefined, weather: PointWeather | null | undefined, history?: PrecipStep[] | null): PrecipStep[] {
   const met: PrecipStep[] = (weather?.steps ?? []).map((s) => ({
     time: s.time,
     hours: s.hours,
@@ -38,14 +41,14 @@ export function pointSteps(hours: WindHour[] | null | undefined, weather: PointW
     snowMm: s.precip * snowFraction(s),
     cloud: s.cloud,
   }));
-  const metStart = met.length ? met[0].time : Infinity;
+  if (history?.length) return mergeSteps(history, met);
   const icon: PrecipStep[] = [];
   for (const h of hours ?? []) {
     // Open-Meteo's precipitation is for the hour ending at `time`.
-    if (h.temp == null || h.precip == null || h.time > metStart) continue;
+    if (h.temp == null || h.precip == null) continue;
     icon.push({ time: h.time - HOUR, hours: 1, temp: h.temp, precip: h.precip, snowMm: h.precip * snowShare(h.temp), cloud: h.cloud });
   }
-  return [...icon, ...met];
+  return mergeSteps(icon, met);
 }
 
 /**
@@ -62,9 +65,10 @@ export async function assessAlptruth(
   const level = region?.warn?.level ?? 0;
   const hits = regionSigns(region, terrain);
 
+  const history = pointHistory(ll, terrain, state.date); // in parallel with the terrain
   const [win, zone] = await Promise.all([slopeAround(ll).catch(() => null), zoneAt(ll).catch(() => undefined)]);
 
-  const steps = pointSteps(region?.hours, weather);
+  const steps = pointSteps(region?.hours, weather, await history);
   const input: AlptruthInput = {
     level,
     signs: hits && {

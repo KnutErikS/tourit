@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { loadingBefore, newSnowCm, rapidLoading, thaw, type PrecipStep } from '../src/domain/precip.ts';
+import { loadingBefore, mergeSteps, newSnowCm, rapidLoading, thaw, type PrecipStep } from '../src/domain/precip.ts';
 
 const END = Date.parse('2026-02-10T10:00:00Z');
 const H = 3_600_000;
@@ -59,3 +59,30 @@ test('thaw: above 0 °C, or at least 0.5 mm rain; null without steps', () => {
   assert.equal(thaw([at(2, -0.5, 0.3, 0)], from, to)!.on, false);
   assert.equal(thaw([], from, to), null);
 });
+
+/* ---------- mergeSteps: history, then the forecast ---------- */
+
+{
+  const t0 = Date.UTC(2026, 0, 10, 0);
+  const step = (h: number, temp: number) => ({ time: t0 + h * H, hours: 1, temp, precip: 1, snowMm: 1 });
+
+  test('mergeSteps: history up to where the forecast starts, then the forecast', () => {
+    const history = [0, 1, 2, 3, 4, 5].map((h) => step(h, -10));
+    const forecast = [3, 4, 5, 6].map((h) => step(h, -1));
+    const m = mergeSteps(history, forecast);
+    assert.deepEqual(m.map((s) => (s.time - t0) / H), [0, 1, 2, 3, 4, 5, 6]);
+    assert.deepEqual(m.map((s) => s.temp), [-10, -10, -10, -1, -1, -1, -1]);
+  });
+
+  test('mergeSteps: without a forecast, all of the history counts', () => {
+    const history = [0, 1, 2].map((h) => step(h, -5));
+    assert.equal(mergeSteps(history, []).length, 3);
+  });
+
+  test('mergeSteps: a 6 h forecast step still wins over the hours it covers', () => {
+    const history = [0, 1, 2].map((h) => step(h, -5));
+    const m = mergeSteps(history, [{ time: t0 + 2 * H, hours: 6, temp: 0, precip: 6, snowMm: 0 }]);
+    assert.deepEqual(m.map((s) => (s.time - t0) / H), [0, 1, 2]);
+    assert.equal(m[2].hours, 6);
+  });
+}

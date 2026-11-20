@@ -22,7 +22,7 @@ export function pointFacts(): string {
 export function infoChips(list: Info[] | undefined): string {
   if (!list?.length) return '';
   const chips = list.map((i) => `<span class="ichip ichip-${i.level}" title="${esc(i.text)}">${esc(i.chip)}</span>`).join('');
-  return `<span class="ichips" aria-label="Infoer for punktet">${chips}</span>`;
+  return `<span class="ichips" aria-label="Facts for punktet">${chips}</span>`;
 }
 
 /**

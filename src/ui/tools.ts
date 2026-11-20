@@ -1,14 +1,14 @@
 import type * as L from 'leaflet';
 import { fetchPointWeather } from '../api/met';
-import { DIRS } from '../config';
+import { DIRS, DNAME } from '../config';
 import type { ClueKey } from '../domain/alptruth';
-import type { StopOrGoStatus } from '../domain/stopOrGo';
+import { LOW_SPOT, type StopOrGoStatus } from '../domain/stopOrGo';
 import type { PointWeather } from '../domain/weather';
 import { state } from '../state';
 import { terrainAt } from '../terrain/dem';
-import type { Info } from '../domain/infos';
+import { hitsOf, type InfoRow, type InfoState } from '../domain/infos';
 import { assessAlptruth, type AlptruthAssessment } from '../tools/alptruth';
-import { assessInfos } from '../tools/infos';
+import { assessInfoRows } from '../tools/infos';
 import { assessStopOrGo, type StopOrGoAssessment } from '../tools/stopOrGo';
 import { setTick } from '../tools/ticks';
 import type { TerrainPoint } from '../types';
@@ -95,27 +95,54 @@ function head(t: Target, region: string | null): string {
   return `${where}<p class="rsub">${esc(region ?? 'Utenfor varslingsregionene')} · ${esc(fmtDate(state.date))}${hint ? ` · ${hint}` : ''}</p>`;
 }
 
+const ARROW = { down: '↓', up: '↑', same: '=' } as const;
+
+/** "Brattest 33° i hele henget: 3° over grensen" for the summary. */
+function hereLine(s: StopOrGoAssessment, where: string): string {
+  if (s.steepness == null) return 'Mangler terrengdata';
+  const st = Math.round(s.steepness);
+  const head = `Brattest ${st}° ${where}`;
+  if (s.limit == null) return s.status === 'caution' ? `${head}: enkeltpunkter på ${LOW_SPOT}°+ kan løsne` : head;
+  const d = st - s.limit;
+  const vs = d > 0 ? `${d}° over grensen` : d === 0 ? 'akkurat på grensen' : `${-d}° under grensen${s.status === 'caution' ? ', så nær at det er usikkert' : ''}`;
+  const runout = s.area === 'terrain' && s.status === 'stop' && st < s.limit ? ', men i en utløpssone' : '';
+  return `${head}: ${vs}${runout}`;
+}
+
 function stopOrGoCard(s: StopOrGoAssessment): string {
   const status = s.level >= 1 && s.steepness == null ? 'Mangler terrengdata' : STATUS[s.status];
   const where = s.area === 'track' ? 'der sporet går' : 'i hele henget';
-  const limit =
-    s.level < 1
-      ? ''
-      : s.limit == null
-        ? `Ingen generell grense ved faregrad ${s.used}`
-        : `Under ${s.limit}° ${where}${s.area === 'terrain' ? ', utenfor utløpssoner' : ''}`;
-  const facts = [
-    s.level >= 1 ? `Faregrad ${s.level} i varselet${s.used !== s.level ? `, ${s.used} brukt` : ''}` : '',
-    s.steepness != null ? `Brattest ${Math.round(s.steepness)}° ${where}` : '',
-  ].filter(Boolean);
-  const reasons = [...s.reasons];
-  if (s.signs.length) reasons.push(`Meldt i Regobs: ${s.signs.join(', ')}.`);
-  return `<section class="tcard" aria-labelledby="sog-h">
-    <div class="thead"><h3 class="kicker" id="sog-h">Stop or Go</h3>${infoButton('stopOrGo')}</div>
-    <div class="sog-verdict"><span class="sog-pill sog-${s.status}">${esc(status)}</span>${limit ? `<span class="sog-limit">${esc(limit)}</span>` : ''}</div>
-    ${facts.length ? `<p class="rsub">${facts.map(esc).join(' · ')}</p>` : ''}
-    ${reasons.length ? `<ul class="treasons">${reasons.map((r) => `<li>${esc(r)}</li>`).join('')}</ul>` : ''}
-  </section>`;
+  const head = `<div class="thead"><h3 class="kicker" id="sog-h">Stop or Go</h3>${infoButton('stopOrGo')}</div>`;
+  const verdict = `<div class="sog-verdict"><span class="sog-pill sog-${s.status}">${esc(status)}</span>${
+    s.steepness != null ? `<span class="sog-limit">Brattest ${Math.round(s.steepness)}° ${where}</span>` : ''
+  }</div>`;
+  const others = s.reasons.length ? `<ul class="treasons">${s.reasons.map((r) => `<li>${esc(r)}</li>`).join('')}</ul>` : '';
+  if (s.level < 1) return `<section class="tcard" aria-labelledby="sog-h">${head}${verdict}${others}</section>`;
+
+  // Why the level moved: one row per adjustment, the arrow on the side.
+  const adj = s.adjustments.length
+    ? `<ul class="sog-adj">${s.adjustments
+        .map((a) => {
+          const signs = a.dir === 'up' && s.signs.length ? `<small>Meldt i Regobs: ${esc(s.signs.join(', '))}.</small>` : '';
+          return `<li class="adj-${a.dir}"><span class="adj-arrow" aria-label="${a.dir === 'down' ? 'ned' : a.dir === 'up' ? 'opp' : 'uendret'}">${ARROW[a.dir]}</span><span>${esc(a.text)}${signs}</span></li>`;
+        })
+        .join('')}</ul>`
+    : '';
+
+  // The sum for the point: the level used, and what it means in degrees.
+  const lvl = (n: number) => `${n} ${DNAME[n] ?? ''}`.trim();
+  const means =
+    s.limit == null
+      ? `Ingen generell grense. Enkeltpunkter på ${LOW_SPOT}° og brattere kan løsne.`
+      : `Under ${s.limit}° ${where}${s.area === 'terrain' ? ', og utenfor utløpssoner' : ''}.`;
+  const row = (k: string, v: string, cls = '') => `<div${cls ? ` class="${cls}"` : ''}><dt>${k}</dt><dd>${esc(v)}</dd></div>`;
+  const sum = `<dl class="sog-sum">
+    ${row('Faregrad i varselet', lvl(s.level))}
+    ${row('Brukt for punktet', lvl(s.used), s.used !== s.level ? 'changed' : '')}
+    ${row('Det betyr', means)}
+    ${row('Her', hereLine(s, where))}
+  </dl>`;
+  return `<section class="tcard" aria-labelledby="sog-h">${head}${verdict}${adj}${sum}${others}</section>`;
 }
 
 function alptruthCard(a: AlptruthAssessment): string {
@@ -137,11 +164,34 @@ function alptruthCard(a: AlptruthAssessment): string {
   </section>`;
 }
 
-/** The infos that apply to the point today, red flags first; nothing when none do. */
-function infoList(list: Info[]): string {
-  if (!list.length) return '';
-  const items = list.map((i) => `<li class="info-${i.level}">${esc(i.text)}</li>`).join('');
-  return `<section class="infos" aria-label="Infoer for punktet"><ul>${items}</ul></section>`;
+/** The fold-out with all infos stays open or closed across redraws. */
+let allInfosOpen = false;
+const STATE_MARK: Record<InfoState, string> = { hit: '!', no: '–', unknown: '?' };
+const STATE_TEXT: Record<InfoState, string> = { hit: 'Treff', no: 'Nei', unknown: 'Ukjent' };
+
+/**
+ * The Facts card: the infos that hit, red flags first, and a fold-out with
+ * all of them, hit or not, and why.
+ */
+function infoCard(rows: InfoRow[]): string {
+  const hits = hitsOf(rows);
+  const list = hits.length
+    ? `<ul class="inf-hits">${hits.map((i) => `<li class="info-${i.level}">${esc(i.text)}</li>`).join('')}</ul>`
+    : '<p class="rsub">Ingen facts slår til for punktet i dag.</p>';
+  const all = rows
+    .map(
+      (r) => `<li class="inf-row inf-${r.state}${r.level ? ` info-${r.level}` : ''}">
+        <span class="inf-mark" aria-hidden="true">${STATE_MARK[r.state]}</span>
+        <span class="inf-body"><b>${esc(r.name)}</b><span class="inf-state">${STATE_TEXT[r.state]}</span><small>${esc(r.text)}</small></span>
+      </li>`,
+    )
+    .join('');
+  const red = hits.some((i) => i.level === 'warn');
+  return `<section class="tcard infos" aria-labelledby="inf-h">
+    <div class="thead"><h3 class="kicker" id="inf-h">Facts</h3>${infoButton('infos')}<span class="alp-count${red ? ' red' : ''}">${hits.length} treff</span></div>
+    ${list}
+    <details class="inf-all"${allInfosOpen ? ' open' : ''}><summary>Alle ${rows.length} facts og hvorfor</summary><ul class="inf-rows">${all}</ul></details>
+  </section>`;
 }
 
 const EMPTY =
@@ -166,13 +216,13 @@ async function compute(): Promise<void> {
   const [sog, alp, list] = await Promise.all([
     assessStopOrGo(t.ll, t.terrain),
     assessAlptruth(t.ll, t.terrain, t.weather),
-    assessInfos(t.ll, t.terrain, t.weather).catch((): Info[] => []),
+    assessInfoRows(t.ll, t.terrain, t.weather).catch((): InfoRow[] => []),
   ]);
   if (my !== token) return;
   shown = t;
   shownAlp = alp;
   el.classList.remove('busy');
-  el.innerHTML = head(t, alp.regionName) + infoList(list) + stopOrGoCard(sog) + `<div id="alp-card">${alptruthCard(alp)}</div>` + FOOT;
+  el.innerHTML = head(t, alp.regionName) + (list.length ? infoCard(list) : '') + stopOrGoCard(sog) + `<div id="alp-card">${alptruthCard(alp)}</div>` + FOOT;
 }
 
 /** Work the cards out again soon (several data loads in a row become one run). Only while the tab is open. */
@@ -208,6 +258,10 @@ async function onClue(key: ClueKey): Promise<void> {
 }
 
 export function initTools(): void {
+  // 'toggle' doesn't bubble: listen while it passes down.
+  $('tools').addEventListener('toggle', (e) => {
+    if ((e.target as Element).matches?.('.inf-all')) allInfosOpen = (e.target as HTMLDetailsElement).open;
+  }, true);
   $('tools').addEventListener('click', (e) => {
     const btn = (e.target as Element).closest<HTMLElement>('[data-clue]');
     if (btn) void onClue(btn.dataset.clue as ClueKey);

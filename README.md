@@ -11,6 +11,11 @@ Avalanche terrain map for Norway. A static web app (no backend, no API keys) bui
 - **Observasjoner** – Regobs snow observations for the chosen day and the two days before, with photos.
 - **Skredvarsel tab** – the full warning for a region, with avalanche problems, advice and weather.
 - **Tap the map** – elevation, slope and aspect at that point, and whether each avalanche problem applies there.
+- **Verktøy tab** – checks for the tapped point, or your position when nothing is tapped (tap the pin again to remove it):
+  - **Stop or Go** – the slope limit for the day's danger level (below 40° / 35° / 30° at level 2 / 3 / 4), measured on the steepest 20 × 20 m where you are or on the whole slope, one level lower outside the warning's aspects and heights, one level higher after whumpfs, shooting cracks or fresh avalanches in Regobs.
+  - **ALPTRUTh** – the seven obvious clues (McCammon), six filled in from data; tick or untick any of them yourself (kept on the device per day, and per spot for the slope clues). Three or more turns it red.
+  - **Infos** – shown when they hit: kritisk nysnømengde, regn på snø, første mildvær, første fine dag, nattefrost, glidesprekker and dårlige tester in Regobs. The same hits appear as chips on the tapped point.
+- **Route risk** – SLABS relative risk and Munter's reduction method every 25 m along a drawn or imported route, with your group setting.
 - **Vær tab** – MET Norway's forecast (yr's data) for the tapped point, with the temperature adjusted to the point's height: sky (low/middle/high cloud), precipitation split into snow/sleet/rain with estimated new snow, temperature, wind, and a 3-hourly timeline for the chosen day. From Open-Meteo (DWD's ICON model, ~7 days): cloud cover by height, so the tab says whether the point is in, above or below the cloud and where the lowest layer is, plus the freezing level and the snow line.
 - **Sol og dagslys** (Vær tab) – sunrise, sunset and daylight (civil twilight) for the tapped point and date, polar night and midnight sun included, plus when direct sun reaches the point's own slope and 30° slopes of each aspect, with the strongest clear-sky sun in W/m². Computed on the device, so it works offline and for any date.
 - **Place search** – mountains, peaks, valleys, towns etc. from Kartverket's place-name register. Choosing a hit flies there and selects it.
@@ -21,6 +26,62 @@ Avalanche terrain map for Norway. A static web app (no backend, no API keys) bui
 - **Phone layout** – the panel is a bottom sheet: drag up for fullscreen, down to hide. The burger brings it back.
 
 Before 1 December there are no warnings; use **Vis 14. mars 2026** to see a day from last season.
+
+## How the numbers are worked out
+
+Every rule, its source and our own cut-offs are documented in the code comments (mostly `src/domain/`); this is the overview. **Ours** marks a cut-off we chose ourselves and haven't tested against observations.
+
+### Terrain
+
+| What | How | Resolution |
+| --- | --- | --- |
+| Slope, aspect, elevation | Kartverket DTM fetched per map tile, slope by Horn's 3×3 method, aspect in 8 sectors (`terrain/dem.ts`) | z14 cells are 9.55 m × cos(lat): ~4.5 m at 62° N, ~3.4 m at 69° N |
+| Avalanche-terrain layer | Pixel slope ≥ 27/30/35° and inside the aspect + height band of a problem; ≥ 35° drawn stronger | The tile's own zoom: ~18 m cells at z11 (2× oversampled, steepest of 2×2) and z12, ~9 m at z13, ~4 m at z14 |
+| "Steepest part" (Stop or Go, route) | Slope averaged over 20 × 20 m (SLF), then the steepest such box within 10 m of the point (*track*), or on the connected slope ≥ 20°, facing within 45° of yours, in a 50 m strip along the fall line, up to 150 m away (*whole slope*) (`domain/slopeWindow.ts`; 10 m, 20°, 45°, 50 m and 150 m are ours) | z14 |
+| SLABS terrain | MSA40 = 85th percentile of cell slopes within 40 m; AOF = share of > 25° cells facing the warning's aspects | z14 |
+| Runout | NVE's "bratthet med utløp" tiles read pixel by pixel (exact colours) | z14 tiles |
+
+### Stop or Go (`domain/stopOrGo.ts`)
+
+Level → limit and area: 1 none (caution on spots ≥ 40°), 2 < 40° on the track, 3 < 35° on the whole slope, 4–5 < 30° on the whole slope and outside runout. The level is first moved one down outside the warning's aspect/height (SLF one-level rule) and one up for signs of instability in the last 48 h (SLF RiskCheck). "Caution" within 2° below the limit (ours, for DEM error).
+
+### Regobs signs (`domain/signs.ts`)
+
+Reports in the point's forecast region in the 48 h up to the end of the chosen day (never later than now). Each report is weighted by height (within 200 m 1, within 500 m 0.5, else 0.25) and, for avalanches, aspect (same or neighbouring sector 1, else 0.5); a group of signs is "on" at a summed weight of 1 (all ours). ECT results use SLF's four classes (Techel et al. 2020); class 1–2 counts as a poor test.
+
+### ALPTRUTh (`domain/alptruth.ts`)
+
+A: avalanches in Regobs · L: > 15 cm new snow in 48 h, rask oppbygging (≥ 2.5 mm/h as snow for 3 h in a row, or ≥ 25 mm in 24 h), a lee slope of the last 72 h of wind, or Regobs loading signs · P: steepest part ≥ 30° (ours) or inside NVE's steep terrain / runout bands · T: yours to tick · R: level ≥ 3 · U: whumpfs, shooting cracks or poor ECTs · Th: above 0 °C or ≥ 0.5 mm rain between 08 and 16 (ours), or Regobs warming/wet signs. Red at 3 or more.
+
+### Weather behind loading, thaw and the infos (`domain/precip.ts`, `tools/alptruth.ts`)
+
+Steps are MET's forecast for the point (temperature adjusted to the point's height, rain/snow by wet-bulb) from now on, and before that Open-Meteo's ICON history for the **middle of the forecast region** at **850 hPa (~1300–1500 m)**. New snow = water × 0.8–1.5 cm/mm by temperature.
+
+| Info | Hits when |
+| --- | --- |
+| Kritisk nysnømengde | New snow over 72 h ≥ 70 % of the low end of the critical amount: 30 / 20 / 10 cm for 0 / 1 / ≥ 2 unfavourable factors (850 hPa wind ≥ 11 m/s during the snowfall, mean snowfall temperature < −8 °C, old snow or crust underneath) (SLF, Alpenverein); a warning at ≥ 100 % |
+| Regn på snø | ≥ 0.5 mm of rain (≤ 10 % as snow) in the 12 h before or after, where seNorge shows snow |
+| Første mildvær | ≥ 0 °C between 08 and 16 after ≥ 10 cm new snow in 48 h, and not mild since that snow |
+| Første fine dag | Mean cloud < 30 % between 08 and 16 after ≥ 20 cm new snow in 72 h, no new snow that day, and the day before not fine (30 % is ours) |
+| Nattefrost | Sunset to sunrise at the point: none if the low stays above 0 °C (or ≥ 80 % cloud and above −1 °C), good if ≤ −5 °C or ≤ −2 °C under < 50 % cloud, else weak (ours); shown when the day or the day before reaches 0 °C |
+| Glidesprekker, dårlig test | Regobs, last 48 h, weighted as above |
+
+### Route risk (`domain/risk.ts`, `route/risk.ts`)
+
+Every 25 m (at most 600 spots, 150 DEM tiles). **SLABS**: MSA40 × 4.3 per danger level × DCE (metres into the warning's heights) × AOF, interpolated in log space between the published knots (ISSW 2024). The paper doesn't publish its class cut-offs; ours put "elevated" at the risk of a 35° slope at level 3 at the edge of the warning's heights, facing its aspects, and "high" one level above. **Munter**: danger potential 2/4/8/16/32 ÷ (slope × aspect × group factors), acceptable at ≤ 1; 2nd-class factors void with a wet-snow problem.
+
+### Precision: known limits, biggest first
+
+1. **History weather is not at the point.** The hours before MET's forecast starts (last night, the last 2–3 days of snow) come from one ICON point per forecast region at 850 hPa. A point 1000 m lower is typically ~6 °C warmer (standard lapse rate), so the rain/snow split, nattefrost, første mildvær and the new-snow totals can be off for low and high points, and a free-air temperature misses the clear-night cooling of the snow surface. Fix: fetch hourly history per tapped point from Open-Meteo (`temperature_2m`, `relative_humidity_2m`, `precipitation`, `snowfall`, `cloud_cover`, with `elevation=` the DEM height and `past_days`; MET Nordic 1 km is offered there for Norway), and use wet-bulb at 2 m like the MET part.
+2. **Munter's 1st-class factors differ from the source.** bergundsteigen 2001 gives 35–39° → 2, *around 35°* → 3, 30–34° → 4, and counts the steepest part only if it is 20 m high. `rf1` gives 30–34° → 3 and < 30° → 4, so 30–34° slopes come out stricter than Munter. Fix in `domain/risk.ts`.
+3. **Regobs signs use the whole forecast region** with height/aspect weights but no distance. Regions are tens of km across. Fix: weight by distance as well (e.g. 1 within 10 km, 0.5 within 25 km, else 0.25 – ours).
+4. **The avalanche-terrain layer depends on zoom.** At z11–12 cells are ~14–18 m, so short steep pitches are smoothed and the colouring can disagree with Stop or Go (20 × 20 m on ~4 m cells) and with NVE's steepness map. Fix: oversample z12 by 2 (~9 m), at 4× the DEM load there; the map's pixel slope and the tool's 20 m average will still differ by a degree or two.
+5. **Wind loading is per region** (one 850 hPa point): coastal and inland parts of a region get the same lee aspects, and terrain steering is ignored. Fix: a few points per region, or the tapped point for the tools.
+6. **SLABS terrain on finer cells than the paper may have used.** MSA40 here comes from ~4 m cells; if the Swiss model used a coarser DEM, rough terrain reads steeper here and the risk comes out high. Check the paper's DEM resolution before tuning the cut-offs.
+7. **No terrain shadow** in the sun model, so first-sun times and the energy on a slope are too generous in narrow valleys and with a low sun, which matters most in Nord-Norge in winter. Fix: a horizon from the DEM along the sun's azimuth.
+8. **seNorge is a 1 km grid**, and its snow depth runs ~+50 % high around 1000–1200 m (Saloranta 2012). "Snow / bare" at the point is the cell's value, so it can be wrong near the snow line in steep terrain.
+9. **New-snow density** (0.8–1.5 cm/mm) is a rough fit; measured hourly new snow averaged 68 kg/m³ in the Alps, denser where windy, and no published formula fit it well (Helfricht et al. 2018), so a different formula alone wouldn't add much.
+10. **Fixed clock windows** (08–16 day, 21–06 fallback night) use the device's time zone and ignore short polar-night days.
 
 ## Develop
 
@@ -58,9 +119,10 @@ src/
   util.ts               DOM helper, esc(), safeUrl(), dates, fetch
   map.ts                Leaflet map + Kartverket topo basemap
   api/                  NVE warnings/regions, Regobs search, Kartverket place names, MET point forecast, Open-Meteo air profile
-  tools/                Assembles domain logic + data for the Verktøy tab (Stop or Go, ALPTRUTh, your own ticks)
-  domain/               Pure logic: problem matching, point-in-polygon, observation types, MGRS, weather (rain/snow split, cloud layers, snow line, summaries), sun position and sun on slopes, Stop or Go, ALPTRUTh clues, weighted Regobs danger signs, new snow and rask oppbygging
+  tools/                Assembles domain logic + data for the Verktøy tab (Stop or Go, ALPTRUTh, infos, Regobs signs, your own ticks)
+  domain/               Pure logic, tested with node:test: problem matching, point-in-polygon, observation types, MGRS, weather (rain/snow, cloud layers, snow line), sun, wind loading, Stop or Go and the 20 × 20 m slope window, ALPTRUTh, weighted Regobs signs, new snow / loading / thaw / refreeze (precip.ts), infos, SLABS and Munter (risk.ts)
   terrain/              Elevation tiles (LERC) → slope/aspect; canvas layer base
+  route/                Routes: GPX, storage, NVE steep/runout check (runout.ts), SLABS + Munter along the route (risk.ts)
   layers/               2D layers: avalanche terrain, aspect, steepness, seNorge snow, regions, observations
   three/view3d.ts       3D view (MapLibre, loaded on demand)
   offline/              Saved areas: tile lists, download/delete, metadata

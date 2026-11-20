@@ -21,7 +21,8 @@ test('unknown core zone (no terrain yet) counts as inside, with a reason', () =>
   const r = run({ level: 3, inCore: null, steepSlope: 36 });
   assert.equal(r.used, 3);
   assert.equal(r.status, 'stop');
-  assert.ok(r.reasons.some((s) => /Kjenner ikke himmelretning/.test(s)), r.reasons.join(' | '));
+  assert.deepEqual(r.adjustments.map((x) => x.dir), ['same']);
+  assert.match(r.adjustments[0].text, /Kjenner ikke himmelretning/);
 });
 
 test('signsEnd: end of a past day, now for today and for future days', () => {
@@ -77,4 +78,11 @@ test('missing terrain gives none, with a reason', () => {
   const r = run({ steepTrack: null, steepSlope: null });
   assert.equal(r.status, 'none');
   assert.match(r.reasons[0], /terrengdata/);
+});
+
+test('adjustments: one row per change of level, with its direction', () => {
+  const r = run({ level: 3, inCore: false, signs: true, steepSlope: 33 });
+  assert.deepEqual(r.adjustments.map((x) => x.dir), ['down', 'up']);
+  assert.equal(r.used, 3);
+  assert.deepEqual(run({}).adjustments, []);
 });

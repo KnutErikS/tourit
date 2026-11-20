@@ -496,6 +496,18 @@ dialog.dlg .dlg-list{margin:0 0 10px;padding-left:18px;display:grid;gap:6px}
 .sog-stop{background:var(--d4)}
 .sog-limit{font-weight:600}
 .treasons{margin:0;padding-left:18px;display:grid;gap:3px;font-size:12.5px;color:var(--muted)}
+/* Stop or Go: why the level moved (arrow on the side), and the sum for the point. */
+.sog-adj{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.sog-adj li{display:grid;grid-template-columns:24px 1fr;gap:8px;align-items:start;font-size:12.5px;line-height:1.4}
+.sog-adj small{display:block;color:var(--muted)}
+.adj-arrow{width:24px;height:24px;border-radius:6px;display:grid;place-items:center;font-size:16px;font-weight:700;color:#fff;background:var(--d0)}
+.adj-down .adj-arrow{background:var(--d1)}
+.adj-up .adj-arrow{background:var(--d4)}
+.sog-sum{margin:0;display:grid;gap:3px;padding:8px 10px;border-radius:8px;background:var(--chip);font-size:12.5px}
+.sog-sum > div{display:grid;grid-template-columns:118px 1fr;gap:8px}
+.sog-sum dt{color:var(--muted)}
+.sog-sum dd{margin:0;font-weight:600}
+.sog-sum .changed dd{color:var(--accent)}
 .alp-count{margin-left:auto;font-family:var(--f-mono),monospace;font-size:13px;font-weight:600;padding:2px 10px;border-radius:99px;border:1px solid var(--line);background:var(--chip)}
 .alp-count.red{background:var(--d4);border-color:var(--d4);color:#fff}
 .alp-list{list-style:none;margin:0;padding:0;display:grid;gap:4px}
@@ -513,9 +525,22 @@ dialog.dlg .dlg-list{margin:0 0 10px;padding-left:18px;display:grid;gap:6px}
 @media (max-width:640px){.alp-clue{padding:8px}}
 /* Infos (domain/infos.ts): a list at the top of Verktøy, chips in the point line. */
 .infos ul{list-style:none;margin:0;padding:0;display:grid;gap:6px}
-.infos li{font-size:13px;line-height:1.45;padding:7px 10px 7px 12px;border-radius:8px;background:var(--chip);border-left:4px solid var(--d3)}
-.infos li.info-warn{border-left-color:var(--d4)}
-.infos li.info-ok{border-left-color:var(--d1)}
+.inf-hits li{font-size:13px;line-height:1.45;padding:7px 10px 7px 12px;border-radius:8px;background:var(--chip);border-left:4px solid var(--d3)}
+.inf-hits li.info-warn{border-left-color:var(--d4)}
+.inf-hits li.info-ok{border-left-color:var(--d1)}
+/* All infos, hit or not, and why. */
+.inf-all summary{cursor:pointer;font-size:12.5px;font-weight:600;color:var(--accent)}
+.inf-all[open] summary{margin-bottom:6px}
+.inf-row{display:grid;grid-template-columns:20px 1fr;gap:8px;align-items:start}
+.inf-mark{width:20px;height:20px;border-radius:5px;display:grid;place-items:center;font-size:12px;font-weight:700;border:1.5px solid var(--line);color:var(--muted)}
+.inf-hit .inf-mark{background:var(--d3);border-color:var(--d3);color:#fff}
+.inf-hit.info-warn .inf-mark{background:var(--d4);border-color:var(--d4)}
+.inf-hit.info-ok .inf-mark{background:var(--d1);border-color:var(--d1)}
+.inf-unknown .inf-mark{border-style:dashed}
+.inf-body{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;min-width:0}
+.inf-state{font-size:11px;font-weight:600;color:var(--muted)}
+.inf-hit .inf-state{color:var(--fg)}
+.inf-body small{flex-basis:100%;font-size:12px;color:var(--muted);line-height:1.4}
 .ichips{flex-basis:100%;display:flex;flex-wrap:wrap;gap:4px}
 .ichip{font-size:11px;font-weight:600;padding:1px 8px;border-radius:99px;border:1px solid var(--d3);color:var(--fg);background:color-mix(in srgb,var(--d3) 14%,transparent);white-space:nowrap}
 .ichip-warn{border-color:var(--d4);background:var(--d4);color:#fff}

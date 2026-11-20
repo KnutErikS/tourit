@@ -235,22 +235,35 @@ export function rainAround(steps: PrecipStep[], ref: number): RainAround | null 
 export const FIRST_THAW_CM = 10;
 export const FIRST_THAW_H = 48;
 
+export interface FirstThaw {
+  hit: boolean;
+  /** Why not, when it doesn't hit. */
+  why: 'hit' | 'littleSnow' | 'noDay' | 'cold' | 'mildBefore';
+  /** New snow in the FIRST_THAW_H hours before the day, cm. */
+  cm: number;
+  /** Warmest during the day, °C (null without steps for the day). */
+  maxTemp: number | null;
+}
+
 /**
  * Første mildvær: on the day (`dayFrom`–`dayTo`) the temperature reaches 0 °C,
  * after at least FIRST_THAW_CM of new snow in the FIRST_THAW_H hours before
- * `dayStart`, and it hasn't been 0 °C since that snow fell. null otherwise.
+ * `dayStart`, and it hasn't been 0 °C since that snow fell. null when the
+ * steps don't cover the snow window.
  */
-export function firstThaw(steps: PrecipStep[], dayStart: number, dayFrom: number, dayTo: number): { cm: number; maxTemp: number } | null {
+export function firstThaw(steps: PrecipStep[], dayStart: number, dayFrom: number, dayTo: number): FirstThaw | null {
   const from = dayStart - FIRST_THAW_H * HOUR;
   if (coverage(steps, from, dayStart) < MIN_COVERAGE) return null;
   const cm = newSnowCm(steps, from, dayStart);
   const day = startingIn(steps, dayFrom, dayTo);
-  if (cm < FIRST_THAW_CM || !day.length) return null;
-  const maxTemp = Math.max(...day.map((s) => s.temp));
-  if (maxTemp < 0) return null;
+  const maxTemp = day.length ? Math.max(...day.map((s) => s.temp)) : null;
+  const out = (why: FirstThaw['why']): FirstThaw => ({ hit: why === 'hit', why, cm, maxTemp });
+  if (cm < FIRST_THAW_CM) return out('littleSnow');
+  if (maxTemp == null) return out('noDay');
+  if (maxTemp < 0) return out('cold');
   const snowEnd = Math.max(...steps.filter((s) => snowing(s) && inside(s, from, dayStart) > 0).map((s) => s.time + s.hours * HOUR));
-  if (startingIn(steps, snowEnd, dayStart).some((s) => s.temp >= 0)) return null; // it was mild already
-  return { cm, maxTemp };
+  if (startingIn(steps, snowEnd, dayStart).some((s) => s.temp >= 0)) return out('mildBefore');
+  return out('hit');
 }
 
 /** First fine day (Rule 7): this much new snow in the FIRST_FINE_H hours before the day … */
@@ -259,23 +272,36 @@ export const FIRST_FINE_H = 72;
 /** … and the day's mean cloud cover below this, % (our own). */
 export const FINE_CLOUD = 30;
 
+export interface FirstFine {
+  hit: boolean;
+  why: 'hit' | 'littleSnow' | 'snowing' | 'noCloud' | 'cloudy' | 'notFirst';
+  /** New snow in the FIRST_FINE_H hours before the day, cm. */
+  cm: number;
+  /** Mean cloud cover during the day, % (null without cloud data). */
+  cloud: number | null;
+}
+
 /**
  * Første fine dag: little cloud on the day (`dayFrom`–`dayTo`, mean below
  * FINE_CLOUD) after at least FIRST_FINE_CM of new snow in the FIRST_FINE_H
  * hours before `dayStart`, with no new snow on the day itself, and the day
- * before not fine already (when known). null otherwise or without cloud data.
+ * before not fine already (when known). null when the steps don't cover the snow window.
  */
-export function firstFineDay(steps: PrecipStep[], dayStart: number, dayFrom: number, dayTo: number): { cm: number; cloud: number } | null {
+export function firstFineDay(steps: PrecipStep[], dayStart: number, dayFrom: number, dayTo: number): FirstFine | null {
   const from = dayStart - FIRST_FINE_H * HOUR;
   if (coverage(steps, from, dayStart) < MIN_COVERAGE) return null;
   const cm = newSnowCm(steps, from, dayStart);
-  if (cm < FIRST_FINE_CM || newSnowCm(steps, dayFrom, dayTo) >= 1) return null;
   const clouds = (a: number, b: number) => startingIn(steps, a, b).flatMap((s) => (s.cloud == null ? [] : [s.cloud]));
   const today = clouds(dayFrom, dayTo);
-  if (!today.length || mean(today) >= FINE_CLOUD) return null;
+  const cloud = today.length ? mean(today) : null;
+  const out = (why: FirstFine['why']): FirstFine => ({ hit: why === 'hit', why, cm, cloud });
+  if (cm < FIRST_FINE_CM) return out('littleSnow');
+  if (newSnowCm(steps, dayFrom, dayTo) >= 1) return out('snowing');
+  if (cloud == null) return out('noCloud');
+  if (cloud >= FINE_CLOUD) return out('cloudy');
   const yesterday = clouds(dayFrom - 24 * HOUR, dayTo - 24 * HOUR);
-  if (yesterday.length && mean(yesterday) < FINE_CLOUD) return null; // not the first
-  return { cm, cloud: mean(today) };
+  if (yesterday.length && mean(yesterday) < FINE_CLOUD) return out('notFirst');
+  return out('hit');
 }
 
 export type Refreeze = 'good' | 'weak' | 'none';

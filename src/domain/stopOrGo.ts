@@ -53,8 +53,16 @@ export interface StopOrGoResult {
   area: StopOrGoArea;
   /** The steepness compared with the limit, degrees. */
   steepness: number | null;
-  /** Short reasons in Norwegian, most important first. */
+  /** Why the level used differs from the warning's, one per adjustment (shown with an arrow). */
+  adjustments: Adjustment[];
+  /** Other short reasons in Norwegian (runout, single steep spots, missing data), most important first. */
   reasons: string[];
+}
+
+export interface Adjustment {
+  /** down = one level lower, up = one higher, same = considered but no change. */
+  dir: 'down' | 'up' | 'same';
+  text: string;
 }
 
 /** Within this many degrees below the limit, say "caution": DEM slopes are good to a few degrees. */
@@ -93,20 +101,21 @@ export function usedLevel(level: number, inCore: boolean | null, signs: boolean)
 export function stopOrGo(i: StopOrGoInput): StopOrGoResult {
   const reasons: string[] = [];
   if (i.level < 1) {
-    return { status: 'none', level: i.level, used: 0, limit: null, area: 'track', steepness: null, reasons: ['Ingen snøskredvarsel for dagen.'] };
+    return { status: 'none', level: i.level, used: 0, limit: null, area: 'track', steepness: null, adjustments: [], reasons: ['Ingen snøskredvarsel for dagen.'] };
   }
   const used = usedLevel(i.level, i.inCore, i.signs);
   const limit = LIMIT[used];
   const area = AREA[used];
   const steepness = area === 'track' ? i.steepTrack : i.steepSlope;
 
-  if (i.inCore === false) reasons.push('Utenfor himmelretning/høyde i varselet: én faregrad lavere.');
-  if (i.inCore === null) reasons.push('Kjenner ikke himmelretning/høyde for punktet: bruker faregraden i varselet.');
-  if (i.signs) reasons.push('Faretegn i området siste 48 t: én faregrad høyere.');
+  const adjustments: Adjustment[] = [];
+  if (i.inCore === false) adjustments.push({ dir: 'down', text: 'Utenfor himmelretningene og høydene i varselet: én faregrad ned.' });
+  if (i.inCore === null) adjustments.push({ dir: 'same', text: 'Kjenner ikke himmelretning og høyde for punktet: bruker faregraden i varselet.' });
+  if (i.signs) adjustments.push({ dir: 'up', text: 'Faretegn i området siste 48 t: én faregrad opp.' });
 
   if (steepness === null) {
     reasons.unshift('Mangler terrengdata for punktet.');
-    return { status: 'none', level: i.level, used, limit, area, steepness, reasons };
+    return { status: 'none', level: i.level, used, limit, area, steepness, adjustments, reasons };
   }
 
   let status: StopOrGoStatus;
@@ -115,10 +124,8 @@ export function stopOrGo(i: StopOrGoInput): StopOrGoResult {
     if (status === 'caution') reasons.unshift(`Enkelte svært bratte punkt (≥ ${LOW_SPOT}°) kan løsne også ved faregrad 1.`);
   } else if (steepness >= limit) {
     status = 'stop';
-    reasons.unshift(`Brattest ${Math.round(steepness)}° – grensen er under ${limit}° for ${AREA_TEXT[area]}.`);
   } else if (steepness >= limit - MARGIN) {
     status = 'caution';
-    reasons.unshift(`Brattest ${Math.round(steepness)}° – like under grensen på ${limit}°.`);
   } else {
     status = 'go';
   }
@@ -126,5 +133,5 @@ export function stopOrGo(i: StopOrGoInput): StopOrGoResult {
     status = 'stop';
     reasons.unshift('Punktet ligger i utløpssone fra bratt terreng.');
   }
-  return { status, level: i.level, used, limit, area, steepness, reasons };
+  return { status, level: i.level, used, limit, area, steepness, adjustments, reasons };
 }

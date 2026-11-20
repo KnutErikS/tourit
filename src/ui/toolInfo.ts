@@ -1,5 +1,8 @@
 import { PATH_DEG, RED_AT } from '../domain/alptruth';
-import { LOADING_H, NEW_SNOW_CM, RAPID_24H_MM, RAPID_MM_H, RAPID_RUN_H, THAW_RAIN_MM } from '../domain/precip';
+import {
+  CRIT_CM, CRIT_COLD_C, CRIT_H, CRIT_SHOW, CRIT_WIND_MS, FINE_CLOUD, FIRST_FINE_CM, FIRST_FINE_H, FIRST_THAW_CM, FIRST_THAW_H,
+  HARD_FREEZE_C, LOADING_H, NEW_SNOW_CM, RAIN_H, RAIN_MIN_MM, RAIN_SNOW_SHARE, RAPID_24H_MM, RAPID_MM_H, RAPID_RUN_H, THAW_RAIN_MM,
+} from '../domain/precip';
 import { ALL_HEIGHTS_DCE, DANGER_POTENTIAL, GROUPS, LEVEL_FACTOR } from '../domain/risk';
 import { HEIGHT_MID_M, HEIGHT_NEAR_M, SIGNS_H } from '../domain/signs';
 import { AOF_MIN_DEG, ASPECT_TOL_DEG, MSA_PERCENTILE, MSA_RADIUS_M, SLOPE_MIN_DEG, SLOPE_RADIUS_M, STRIP_M, TRACK_M, WINDOW_M } from '../domain/slopeWindow';
@@ -15,7 +18,7 @@ import { $ } from '../util';
  * on the document opens the right text (cards are re-rendered often).
  */
 
-export type InfoTopic = 'stopOrGo' | 'alptruth' | 'routeRisk';
+export type InfoTopic = 'stopOrGo' | 'alptruth' | 'routeRisk' | 'infos';
 
 const num = (x: number) => String(x).replace('.', ',');
 const STRIP_WIDTH = num(2 * STRIP_M);
@@ -24,7 +27,32 @@ const GROUP_LIST = Object.values(GROUPS)
   .map((g) => `${g.label.charAt(0).toLowerCase()}${g.label.slice(1)} → ${g.rf}`)
   .join(', ');
 
+const neg = (x: number) => String(x).replace('-', '−');
+const range = (k: keyof typeof CRIT_CM) => `${CRIT_CM[k][0]}–${CRIT_CM[k][1]} cm`;
+
 const TOPICS: Record<InfoTopic, { title: string; label: string; body: string }> = {
+  infos: {
+    title: 'Slik virker facts',
+    label: 'Slik virker facts',
+    body: `
+<p>Korte varsler om vær og observasjoner som gjør skred mer sannsynlig. De vises bare når de slår til: øverst her og som merker på punktet. Under «Alle facts og hvorfor» ser du alle, med tallene bak, også de som ikke slo til.</p>
+
+<p class="kicker">Facts</p>
+<ul class="dlg-list">
+  <li><b>Kritisk nysnømengde:</b> nysnø siste ${CRIT_H} t mot kritisk mengde: ${range('favourable')} ved gunstige forhold, ${range('average')} ved middels og ${range('unfavourable')} ved ugunstige. Ugunstig er sterk vind under snøfallet (minst ${CRIT_WIND_MS} m/s i ca. 1400 moh.), kaldt snøfall (under ${neg(CRIT_COLD_C)} °C) og gammel snø eller skare under. Ingen av dem gir gunstige, én middels, to eller flere ugunstige. Appen regner mot den laveste verdien. Vises fra ${Math.round(CRIT_SHOW * 100)} %, rød fra 100 % (SLF, Alpenverein).</li>
+  <li><b>Regn på snø:</b> minst ${num(RAIN_MIN_MM)} mm regn (høyst ${Math.round(RAIN_SNOW_SHARE * 100)} % som snø) de ${RAIN_H} timene før eller etter, der seNorge viser snø (Varsom).</li>
+  <li><b>Første mildvær:</b> 0 °C mellom kl. 08 og 16 etter minst ${FIRST_THAW_CM} cm nysnø siste ${FIRST_THAW_H} t, og første gang siden snøfallet (Varsom, SLF).</li>
+  <li><b>Powder bluebird</b> (første fine dag): under ${FINE_CLOUD} % skydekke mellom kl. 08 og 16 etter minst ${FIRST_FINE_CM} cm nysnø siste ${FIRST_FINE_H} t, uten nysnø på dagen, og dagen før var ikke fin (SLF).</li>
+  <li><b>Nattefrost:</b> natta før dagen, fra solnedgang til soloppgang. Ingen: laveste over 0 °C, eller over −1 °C med minst 80 % skydekke. God: −2 °C eller kaldere med under 50 % skydekke, eller ${neg(HARD_FREEZE_C)} °C eller kaldere uansett skyer. Ellers svak. Vises bare når det er 0 °C i dag eller i går, og «god» bare når dagen blir mild.</li>
+  <li><b>Dårlig test</b> (ECT klasse 1–2): meldt i Regobs i regionen siste ${SIGNS_H} t, vektet etter høyde og himmelretning som i ALPTRUTh.</li>
+</ul>
+
+<p class="kicker">Svarene</p>
+<p><b>Treff</b>: den slår til. <b>Nei</b>: sjekket, og tallene viser hvorfor ikke. <b>Ukjent</b>: dataene mangler, for eksempel skydekke eller vær for natta. Viser seNorge barmark der du er, gjelder bare Regobs-testene.</p>
+
+<p class="kicker">Begrensninger</p>
+<p>For dager som har vært, er været fra Open-Meteo (ICON) midt i regionen, i ca. 1400 moh. Fra nå og framover er det MET sin prognose for punktet. Grensene for skydekke og nattefrost er våre egne startverdier, ikke testet mot ulykkesdata.</p>`,
+  },
   routeRisk: {
     title: 'Slik virker SLABS og Munter',
     label: 'Slik virker SLABS og Munter',

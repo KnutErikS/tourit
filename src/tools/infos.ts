@@ -1,6 +1,6 @@
 import type * as L from 'leaflet';
 import { regionAt } from '../domain/geo';
-import { infos, type Info } from '../domain/infos';
+import { hitsOf, infoRows, type Info, type InfoRow } from '../domain/infos';
 import { CRIT_SHOW, criticalNewSnow, firstFineDay, firstThaw, rainAround, refreeze, thaw } from '../domain/precip';
 import { signGroup } from '../domain/signs';
 import { daylight, sunDay } from '../domain/sun';
@@ -30,10 +30,11 @@ function nightBefore(date: string, ll: L.LatLng): [number, number] {
 }
 
 /**
- * The infos for one point on the chosen day (domain/infos.ts): weather at the
- * point (pointSteps), seNorge snow cover, and Regobs in the region.
+ * Every info for one point on the chosen day, hit or not, with the reasoning
+ * (domain/infos.ts): weather at the point (pointSteps), seNorge snow cover,
+ * and Regobs in the region.
  */
-export async function assessInfos(ll: L.LatLng, terrain: TerrainPoint | null | undefined, weather: PointWeather | null | undefined): Promise<Info[]> {
+export async function assessInfoRows(ll: L.LatLng, terrain: TerrainPoint | null | undefined, weather: PointWeather | null | undefined): Promise<InfoRow[]> {
   const date = state.date;
   const region = regionAt(state.regions, ll);
   const hours = region?.hours ?? [];
@@ -48,7 +49,7 @@ export async function assessInfos(ll: L.LatLng, terrain: TerrainPoint | null | u
   const hits = regionSigns(region, terrain);
   const [nightFrom, nightTo] = nightBefore(date, ll);
 
-  return infos({
+  return infoRows({
     cover: await snowCoverAt(ll, date),
     critical: criticalNewSnow(steps, end, hours, surf),
     criticalShow: CRIT_SHOW,
@@ -59,9 +60,13 @@ export async function assessInfos(ll: L.LatLng, terrain: TerrainPoint | null | u
     refreeze: refreeze(steps, nightFrom, nightTo),
     dayMild,
     meltFreeze: dayMild || (!!prevT && prevT.maxTemp >= 0),
-    glide: hits && signGroup(hits, ['glide']),
     poorTest: hits && signGroup(hits, ['poorTest']),
   });
+}
+
+/** Only the infos that hit, red flags first. */
+export async function assessInfos(ll: L.LatLng, terrain: TerrainPoint | null | undefined, weather: PointWeather | null | undefined): Promise<Info[]> {
+  return hitsOf(await assessInfoRows(ll, terrain, weather));
 }
 
 /* ---------- the tapped point's infos, for the chips in its line ---------- */

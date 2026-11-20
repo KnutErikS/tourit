@@ -24,10 +24,17 @@ function regionStyle(r: Region): L.PathOptions {
   };
 }
 
+/**
+ * Hover labels only with a mouse: on a touch screen a tap opens them and they stay
+ * stuck on the map. There, the coordinate chip shows the region's level instead.
+ */
+const HOVER = window.matchMedia('(hover: hover)');
+
 export function drawRegions(regions: Region[]): void {
   regionGroup.clearLayers();
   for (const r of regions) {
     r.poly = L.polygon(r.rings, regionStyle(r)).addTo(regionGroup);
+    if (!HOVER.matches) continue;
     r.poly.bindTooltip(
       () => `${esc(r.name)} · ${r.warn ? r.warn.level + ' ' + DNAME[r.warn.level] : 'ikke vurdert'}`,
       { sticky: true },

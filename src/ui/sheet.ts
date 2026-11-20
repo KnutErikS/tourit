@@ -3,34 +3,82 @@ import { $ } from '../util';
 /**
  * Phones: the side panel is a bottom sheet you can drag by its header.
  *
- *   half  – default, 55 % of the screen
+ *   peek  – just the header (title, status, tabs): the map gets almost the whole screen
+ *   half  – 55 % of the screen
  *   full  – fullscreen
- *   hide  – dragged/flicked down from half: hides the panel (burger brings it back)
+ *   hide  – flicked down from peek: hides the panel (burger brings it back)
  *
- * Tapping the grab bar toggles half ⇄ full. Buttons, inputs and tabs in the
- * header keep working; only the header's empty areas and the grab bar drag.
- * On larger screens nothing here is active.
+ * Dragging snaps to the nearest size; a flick goes one step up or down.
+ * Tapping the grab bar goes peek → half → full → half. Tapping a tab in peek
+ * opens to half. Buttons, inputs and tabs in the header keep working; only the
+ * header's empty areas and the grab bar drag. Peek or half is remembered
+ * between visits. On larger screens nothing here is active.
  */
 
-const PHONE = window.matchMedia('(max-width: 640px)');
-type Snap = 'half' | 'full';
+export const PHONE = window.matchMedia('(max-width: 640px)');
+type Snap = 'peek' | 'half' | 'full';
+const SNAP_KEY = 'tourit.sheet';
 let snap: Snap = 'half';
+let peekObserver: ResizeObserver | null = null;
+
+const LABEL: Record<Snap, string> = {
+  peek: 'Vis mer av panelet',
+  half: 'Vis panelet i fullskjerm',
+  full: 'Gjør panelet mindre',
+};
+const NEXT: Record<Snap, Snap> = { peek: 'half', half: 'full', full: 'half' };
+
+/** Height of the header alone: the peek size. */
+const headerHeight = () => $('panel').querySelector('header')!.getBoundingClientRect().height;
 
 function apply(s: Snap): void {
   snap = s;
   const p = $('panel');
-  p.style.height = '';
   p.classList.toggle('sheet-full', s === 'full');
+  p.classList.toggle('sheet-peek', s === 'peek');
+  // Peek: a pixel height (so it animates), kept in step with the header (search/date rows fold in and out).
+  peekObserver?.disconnect();
+  peekObserver = null;
+  if (s === 'peek' && PHONE.matches) {
+    const fit = () => (p.style.height = `${Math.ceil(headerHeight())}px`);
+    fit();
+    peekObserver = new ResizeObserver(fit);
+    peekObserver.observe(p.querySelector('header')!);
+  } else {
+    p.style.height = '';
+  }
   const g = $('grabber');
-  const label = s === 'full' ? 'Gjør panelet mindre' : 'Vis panelet i fullskjerm';
-  g.setAttribute('aria-expanded', String(s === 'full'));
-  g.setAttribute('aria-label', label);
-  g.title = label;
+  g.setAttribute('aria-expanded', String(s !== 'peek'));
+  g.setAttribute('aria-label', LABEL[s]);
+  g.title = LABEL[s];
+  if (s !== 'full') {
+    try {
+      localStorage.setItem(SNAP_KEY, s);
+    } catch {
+      /* not remembered */
+    }
+  }
 }
 
-/** Back to the default size (e.g. when the panel is hidden and shown again). */
+/** Fullscreen → half, so the map shows again (e.g. after a search). Peek and half stay. */
 export function resetSheet(): void {
+  if (snap === 'full') apply('half');
+}
+
+/** Back to half, without remembering it (the panel is being hidden; the burger reopens it at half). */
+export function halfSheet(): void {
+  const keep = snap;
   apply('half');
+  try {
+    localStorage.setItem(SNAP_KEY, keep === 'full' ? 'half' : keep);
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Peek → half, so the content shows (e.g. a tab was picked). */
+export function expandSheet(): void {
+  if (snap === 'peek') apply('half');
 }
 
 export function initSheet(onHide: () => void): void {
@@ -66,7 +114,11 @@ export function initSheet(onHide: () => void): void {
     if (dt > 0) velocity = 0.7 * velocity + 0.3 * ((e.clientY - lastY) / dt);
     lastY = e.clientY;
     lastT = e.timeStamp;
-    if (moved) p.style.height = `${Math.max(64, Math.min(window.innerHeight, startH - dy))}px`;
+    if (moved) {
+      // While dragging, the content shows under the header even if it started at peek.
+      p.classList.remove('sheet-peek');
+      p.style.height = `${Math.max(48, Math.min(window.innerHeight, startH - dy))}px`;
+    }
   });
 
   const end = (e: PointerEvent) => {
@@ -76,29 +128,35 @@ export function initSheet(onHide: () => void): void {
     if (header.hasPointerCapture(e.pointerId)) header.releasePointerCapture(e.pointerId);
 
     if (!moved) {
-      if (fromGrabber && e.type === 'pointerup') apply(snap === 'full' ? 'half' : 'full');
+      if (fromGrabber && e.type === 'pointerup') apply(NEXT[snap]);
       return;
     }
     const H = window.innerHeight;
     const h = p.getBoundingClientRect().height;
+    const peekH = headerHeight(), halfH = H * 0.55;
     let target: Snap | 'hide';
-    if (velocity < -0.5) target = 'full';
-    else if (velocity > 0.5) target = startSnap === 'full' ? 'half' : 'hide';
-    else target = h > H * 0.75 ? 'full' : h < H * 0.3 ? 'hide' : 'half';
+    if (velocity < -0.5) target = startSnap === 'peek' ? 'half' : 'full';
+    else if (velocity > 0.5) target = startSnap === 'full' ? 'half' : startSnap === 'half' ? 'peek' : 'hide';
+    else target = h > (halfH + H) / 2 ? 'full' : h > (peekH + halfH) / 2 ? 'half' : h > peekH * 0.6 ? 'peek' : 'hide';
 
     if (target === 'hide') {
-      apply('half');
-      onHide();
+      onHide(); // main.ts puts the sheet back to half, for when the burger brings it back
     } else apply(target);
   };
   header.addEventListener('pointerup', end);
   header.addEventListener('pointercancel', end);
 
-  // Keyboard: Enter/Space on the grab bar (a click with detail 0) toggles the size.
+  // Keyboard: Enter/Space on the grab bar (a click with detail 0) steps the size.
   grab.addEventListener('click', (e) => {
-    if (e.detail === 0) apply(snap === 'full' ? 'half' : 'full');
+    if (e.detail === 0) apply(NEXT[snap]);
   });
 
-  PHONE.addEventListener('change', () => apply('half'));
-  apply('half');
+  let start: Snap = 'half';
+  try {
+    if (localStorage.getItem(SNAP_KEY) === 'peek') start = 'peek';
+  } catch {
+    /* ignore */
+  }
+  PHONE.addEventListener('change', () => apply(start === 'peek' && PHONE.matches ? 'peek' : 'half'));
+  apply(start);
 }

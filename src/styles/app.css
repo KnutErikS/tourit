@@ -73,10 +73,15 @@ section.layer:first-of-type{border-top:0}
 .lhead label{display:flex;align-items:center;gap:8px;font-family:var(--f-display),sans-serif;font-size:18px;font-weight:600;letter-spacing:.02em;cursor:pointer;flex:1}
 .lhead input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent)}
 .zoomtag{font-family:var(--f-mono),monospace;font-size:10.5px;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:1px 5px;white-space:nowrap}
-.zoomtag.live{color:var(--fg);border-color:var(--accent)}
+/* "fra zoom 10": only while zoomed out too far for the layer. */
+.zoomtag.needzoom.live{display:none}
 .desc{font-size:12.5px;color:var(--muted);line-height:1.45;margin:0}
+/* Kartlag: each layer's explanation behind its ⓘ button (ui/layerInfo.ts). */
+section.layer:not(.show-desc) p.desc{display:none}
+.ldesc-btn{border-color:transparent;background:none;color:var(--muted)}
+.ldesc-btn[aria-expanded="true"]{background:var(--chip);border-color:var(--line);color:var(--fg)}
 .ctrl{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);flex-wrap:wrap}
-.lee-sw{display:inline-block;width:22px;height:14px;border-radius:3px;border:1px solid var(--line);background:repeating-linear-gradient(-45deg,rgba(11,18,32,.82) 0 2px,transparent 2px 6px),rgb(242,138,26)}
+.lee-sw{display:inline-block;width:22px;height:14px;border-radius:3px;border:1px solid var(--line);background:repeating-linear-gradient(-45deg,rgba(11,18,32,.6) 0 1px,transparent 1px 5px),rgb(242,138,26)}
 .ctrl select{font:inherit;padding:3px 6px;border:1px solid var(--line);border-radius:5px;background:var(--panel);color:var(--fg)}
 .ctrl input[type=range]{flex:1;accent-color:var(--accent);min-width:80px}
 .legend{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:12px}
@@ -200,10 +205,16 @@ details.ws > div{display:grid;gap:8px;padding-top:8px}
     height:55%;max-height:none;padding-bottom:env(safe-area-inset-bottom,0px);transition:height .22s cubic-bezier(.2,.8,.2,1)}
   #panel.sheet-full{height:calc(100% - env(safe-area-inset-top,0px) - 8px)}
   #panel.sheet-dragging{transition:none}
+  /* Peek: only the header shows (height set in ui/sheet.ts); the content is out of reach for focus and screen readers. */
+  #panel.sheet-peek .scroll{visibility:hidden}
+  #panel.sheet-peek header{border-bottom-color:transparent}
   #panel header{touch-action:none;padding-top:6px}
   #panel .scroll{flex:1;min-height:0}
   /* Top-left, so it doesn't cover the zoom buttons on the right. */
   #hint{bottom:auto;top:calc(10px + env(safe-area-inset-top,0px));right:auto;left:calc(10px + env(safe-area-inset-left,0px))}
+  /* No hint: the coordinate chip and the map legend move up into its place. */
+  body:not(.panel-hidden):has(#hint[hidden]) #coord{top:calc(10px + env(safe-area-inset-top,0px))}
+  body:has(#hint[hidden]) .map-legend{left:calc(10px + env(safe-area-inset-left,0px))}
 }
 /* ---------- Tegnforklaring over kartet (panelet skjult) ---------- */
 /* PC: level with the floating burger, centred in the space between it and the map buttons on the right. */
@@ -318,6 +329,27 @@ body:not(.panel-hidden) .map-legend{display:none}
 .locctl svg{width:17px;height:17px}
 .locctl a.on{color:#2a7de1}
 .locctl a.follow{background:#2a7de1!important;color:#fff}
+/* ---------- Touch: bigger map buttons and the "⋯" menu (ui/moreMenu.ts) ---------- */
+body.touch-ctl .leaflet-control-zoom{display:none}
+body.touch-ctl .leaflet-bar a{width:44px;height:44px;line-height:44px}
+body.touch-ctl .leaflet-bar svg{width:22px;height:22px}
+body.touch-ctl .ctl3dbar a.ctl3d{font-size:15px;line-height:44px}
+.morectl{position:relative}
+.morectl > a{display:grid!important;place-items:center;color:var(--fg)}
+.morectl > a svg{fill:currentColor}
+.morectl > a.on{background:var(--chip)!important}
+/* Saved areas waiting: a dot on the closed menu button. */
+.morectl:has(.offbadge:not([hidden])) > a::after{content:"";position:absolute;top:7px;right:7px;width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px var(--panel)}
+.more-menu{position:absolute;top:0;right:calc(100% + 8px);min-width:220px;padding:4px;display:grid;gap:2px;
+  background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow)}
+.more-menu[hidden]{display:none}
+.more-menu .leaflet-bar{border:0;box-shadow:none;background:none;display:grid;gap:2px}
+body.touch-ctl .more-menu .leaflet-bar a{display:flex!important;align-items:center;justify-content:flex-start;gap:12px;width:auto;height:44px;line-height:1.2;
+  padding:0 12px;border:0;border-radius:8px;background:none!important;color:var(--fg);font:500 15px var(--f-body),sans-serif;text-decoration:none;text-align:left;white-space:nowrap}
+body.touch-ctl .more-menu .leaflet-bar a:active,body.touch-ctl .more-menu .leaflet-bar a:focus-visible{background:var(--chip)!important}
+.more-menu .leaflet-bar a::after{content:attr(aria-label)}
+.more-menu .leaflet-bar a svg{flex:none}
+.more-menu .offbadge{position:static;margin-left:auto;order:2;box-shadow:none}
 .me{width:20px;height:20px;border-radius:50%;background:#2a7de1;border:3px solid #fff;box-sizing:border-box;
   box-shadow:0 0 0 1px rgba(0,0,0,.25),0 1px 5px rgba(0,0,0,.35);position:relative;cursor:pointer}
 .me::after{content:"";position:absolute;inset:-3px;border-radius:50%;border:2px solid #2a7de1;animation:mepulse 2s ease-out infinite}
@@ -370,8 +402,26 @@ body:not(.panel-hidden) .map-legend{display:none}
 #coord .c-acc:empty{display:none}
 body.panel-hidden #coord{left:calc(72px + env(safe-area-inset-left,0px))}
 #coord .c-close{border:0;background:none;color:var(--muted);font-size:18px;line-height:1;padding:2px 6px;cursor:pointer}
+/* The answer for the picked point (ui/pointChip.ts): danger level, Stop or Go, problem hit. Tap → the warning. */
+#coord .c-verdict{display:flex;align-items:center;gap:8px;min-width:0;border:0;background:none;color:var(--fg);font:inherit;font-size:13px;
+  padding:2px 10px 2px 0;margin:-1px 0;border-right:1px solid var(--line);cursor:pointer;text-align:left}
+#coord .c-verdict[hidden]{display:none}
+@media (hover:hover){#coord .c-verdict:hover .c-prob{text-decoration:underline}}
+#coord .c-verdict:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:8px}
+#coord .c-lvl{flex:none;display:grid;place-items:center;width:24px;height:24px;border-radius:6px;color:#16202b;font:700 15px var(--f-display),sans-serif}
+#coord .c-sog{flex:none;font:700 14px/1 var(--f-display),sans-serif;letter-spacing:.02em;padding:4px 10px;border-radius:99px;color:#fff;background:var(--d0)}
+#coord .c-sog.sog-go{background:var(--d1)}
+#coord .c-sog.sog-caution{background:var(--d2);color:#16202b}
+#coord .c-sog.sog-stop{background:var(--d4)}
+#coord .c-prob{min-width:0;max-width:280px;overflow:hidden;text-overflow:ellipsis}
+#coord .c-prob b{font-weight:600}
+#coord .c-more{flex:none;width:16px;height:16px;fill:none;stroke:var(--muted);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;margin-left:-4px}
+#coord.has-verdict .c-label{display:none}
 /* PC: the chip takes the bottom row; lift the zoom hint (and the compass above it) one row so they never overlap in narrow windows. */
 @media (min-width:641px){
+  /* Never wider than the space beside the panel (or burger): the problem text is what gets cut short. */
+  #coord.has-verdict{max-width:calc(100% - 436px - env(safe-area-inset-left,0px) - env(safe-area-inset-right,0px))}
+  body.panel-hidden #coord.has-verdict{max-width:calc(100% - 84px - env(safe-area-inset-left,0px) - env(safe-area-inset-right,0px))}
   #coord:not([hidden]) + #hint{bottom:calc(68px + env(safe-area-inset-bottom,0px))}
   body:has(#coord:not([hidden])) #compass{bottom:calc(112px + env(safe-area-inset-bottom,0px))}
 }
@@ -379,7 +429,7 @@ body.panel-hidden #coord{left:calc(72px + env(safe-area-inset-left,0px))}
 .pick-mgrs > span{color:var(--muted);font:600 10px var(--f-mono),monospace}
 @media (max-width:640px){
   /* Under the zoom hint (top-left), clear of the buttons on the right. */
-  #coord,body.panel-hidden #coord{top:calc(48px + env(safe-area-inset-top,0px));bottom:auto;left:calc(10px + env(safe-area-inset-left,0px));right:auto;margin-inline:0;max-width:calc(100% - 80px);gap:6px}
+  #coord,body.panel-hidden #coord{top:calc(48px + env(safe-area-inset-top,0px));bottom:auto;left:calc(10px + env(safe-area-inset-left,0px));right:auto;margin-inline:0;max-width:calc(100% - 76px - env(safe-area-inset-left,0px) - env(safe-area-inset-right,0px));box-sizing:border-box;gap:6px}
   #coord .c-label{display:none}
   /* Panel hidden: down by the floating burger, level with its centre, centred in the space to its right. */
   body.panel-hidden #coord{top:auto;bottom:calc(44px + env(safe-area-inset-bottom,0px));transform:translateY(50%);
@@ -387,6 +437,11 @@ body.panel-hidden #coord{left:calc(72px + env(safe-area-inset-left,0px))}
   /* Facts + full MGRS don't fit on one line on a phone: let the MGRS drop to a second line. */
   #coord.open{flex-wrap:wrap;row-gap:4px;border-radius:16px;padding-top:6px;padding-bottom:6px}
   #coord.open .c-copy{order:1}
+  /* The verdict gets its own row on top; the facts and MGRS go under it. */
+  #coord.has-verdict{flex-wrap:wrap;row-gap:4px;border-radius:16px;padding-top:6px;padding-bottom:5px}
+  #coord .c-verdict{flex-basis:100%;border-right:0;padding:0 0 5px;border-bottom:1px solid var(--line);font-size:14px}
+  #coord .c-verdict .c-more{margin-left:auto}
+  #coord .c-prob{max-width:none}
 }
 /* ---------- Stedsøk ---------- */
 .search{position:relative}
@@ -416,8 +471,6 @@ body.panel-hidden #coord{left:calc(72px + env(safe-area-inset-left,0px))}
   .brand small{display:none} /* sources are credited in the footer and the map attribution */
   #panel header{gap:8px;padding-bottom:8px}
   #panel:not(.show-search) #search-row,#panel:not(.show-date) #date-row{display:none}
-  /* Half-open sheet: slimmer layer rows; the descriptions come back when the sheet is fully open. */
-  #panel:not(.sheet-full) section.layer p.desc{display:none}
 }
 /* ---------- Kompass ---------- */
 #compass{position:absolute;z-index:999;right:calc(12px + env(safe-area-inset-right,0px));bottom:calc(72px + env(safe-area-inset-bottom,0px));

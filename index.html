@@ -63,7 +63,7 @@
     <section class="layer">
       <div class="lhead">
         <label><input type="checkbox" id="l-skred" checked> Skredfare i terrenget</label>
-        <span class="zoomtag" id="z-skred">terreng fra zoom 10</span>
+        <span class="zoomtag needzoom" id="z-skred">fra zoom 10</span>
       </div>
       <p class="desc">Regionene fargelegges etter faregrad. Zoomer du inn, viser laget bratte heng som treffer skredproblemenes himmelretninger og høydegrenser.</p>
       <div class="scale5" aria-label="Faregrad 1 til 5">
@@ -81,7 +81,7 @@
     <section class="layer">
       <div class="lhead">
         <label><input type="checkbox" id="l-bratt"> Bratthet</label>
-        <span class="zoomtag">NVE · fra zoom 5</span>
+        <span class="zoomtag">NVE</span>
       </div>
       <p class="desc">NVEs bratthetskart, samme lag som på varsom.no.</p>
       <div class="ctrl"><span>Gjennomsiktighet</span><input type="range" id="o-bratt" min="0.2" max="1" step="0.05" value="0.5" aria-label="Opasitet bratthet"></div>
@@ -94,7 +94,7 @@
     <section class="layer">
       <div class="lhead">
         <label><input type="checkbox" id="l-snow"> Snø (seNorge)</label>
-        <span class="zoomtag">NVE · 1 km rute</span>
+        <span class="zoomtag">NVE</span>
       </div>
       <p class="desc">NVEs modellerte snøkart for valgt dato, samme som på senorge.no. Beregnet fra værdata, så det viser mønsteret i en region, ikke enkeltheng. Finnes også noen dager fram (prognose).</p>
       <div class="ctrl">
@@ -108,7 +108,7 @@
     <section class="layer">
       <div class="lhead">
         <label><input type="checkbox" id="l-asp"> Himmelretning</label>
-        <span class="zoomtag" id="z-asp">fra zoom 11</span>
+        <span class="zoomtag needzoom" id="z-asp">fra zoom 11</span>
       </div>
       <p class="desc">Hvilken retning hellingen vender, beregnet fra Kartverkets terrengmodell.</p>
       <div class="ctrl">
@@ -148,7 +148,7 @@
 <aside id="route" aria-label="Tegn rute" hidden></aside>
 <button type="button" id="compass" class="compass"></button>
 <div id="coord" class="coord" aria-live="polite" hidden></div>
-<div id="hint" aria-live="polite">zoom 5</div>
+<div id="hint" aria-live="polite" hidden></div>
 <!-- Legends for the layers that are on, over the map while the panel is hidden. -->
 <div id="map-legend" class="map-legend" aria-label="Tegnforklaring" hidden></div>
 <!-- Shown when a new version of the app has taken over (ui/update.ts). -->

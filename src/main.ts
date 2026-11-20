@@ -49,9 +49,10 @@ import { flyTo3D, focusObs3D, init3D, is3DOpen, resetNorth3D, setPick3D, syncSno
 import { initCompass } from './ui/compass';
 import { clearCoord, coordSource, initCoords, setCoordInfo, showCoord } from './ui/coords';
 import { pointFacts } from './ui/point';
+import { refreshPointChip } from './ui/pointChip';
 import { initHeaderTools, setHeaderTool } from './ui/headerTools';
 import { initSearch } from './ui/search';
-import { initSheet, resetSheet } from './ui/sheet';
+import { expandSheet, halfSheet, initSheet, PHONE, resetSheet } from './ui/sheet';
 import { initLocate, showPositionCoord } from './ui/locate';
 import { initOffline } from './ui/offlinePage';
 import { reportDemError, setStatus } from './ui/status';
@@ -59,6 +60,8 @@ import { renderSummary } from './ui/summary';
 import { renderWeather } from './ui/weather';
 import { initSun } from './ui/sun';
 import { initShare } from './ui/share';
+import { initMoreMenu } from './ui/moreMenu';
+import { initLayerInfo } from './ui/layerInfo';
 import { initAbout } from './ui/about';
 import { initToolInfo } from './ui/toolInfo';
 import { initTools, renderTools, setToolsActive } from './ui/tools';
@@ -79,6 +82,7 @@ function renderPanels(): void {
   renderSummary(() => setTab('warn'));
   renderWeather();
   renderTools();
+  refreshPointChip();
 }
 
 function openObservation(regId: number): void {
@@ -381,14 +385,24 @@ function syncMapLegend(): void {
 
 /* ---------- zoom hint ---------- */
 
+/**
+ * Only when a layer that is on can't show yet: "Zoom inn for å se terrengtreff".
+ * Otherwise the box is hidden. The "fra zoom 10" tags in the panel likewise
+ * only show while the map is zoomed out too far for their layer.
+ */
 function onZoom(): void {
   const z = map.getZoom();
-  const skredOn = $<HTMLInputElement>('l-skred').checked;
-  $('hint').textContent = `zoom ${z}` + (z < SKRED_MIN_ZOOM && skredOn ? ' · zoom inn for terrengtreff' : '');
+  const on = (id: string) => $<HTMLInputElement>(id).checked;
+  const msg =
+    on('l-skred') && z < SKRED_MIN_ZOOM ? 'Zoom inn for å se terrengtreff' : on('l-asp') && z < ASPECT_MIN_ZOOM ? 'Zoom inn for å se himmelretning' : '';
+  const hint = $('hint');
+  hint.textContent = msg;
+  hint.hidden = !msg;
   $('z-skred').classList.toggle('live', z >= SKRED_MIN_ZOOM);
   $('z-asp').classList.toggle('live', z >= ASPECT_MIN_ZOOM);
   restyleRegions();
 }
+for (const id of ['l-skred', 'l-asp']) $(id).addEventListener('change', onZoom);
 map.on('zoomend', onZoom);
 
 /* ---------- date controls ---------- */
@@ -420,14 +434,15 @@ for (const k of TABS) $(`tab-btn-${k}`).addEventListener('click', () => setTab(k
  * Panel open → the burger sits first in the panel header (#burger-in).
  * Panel hidden → a floating burger (#burger): top-left on PC, bottom-left on phones.
  */
-const PANEL_HIDDEN_KEY = 'tourit.panelHidden';
+/** Remembered apart for phones and larger screens: hiding the sheet on the phone shouldn't hide the panel on PC. */
+const panelHiddenKey = () => (PHONE.matches ? 'tourit.panelHidden.phone' : 'tourit.panelHidden');
 function setPanelHidden(hidden: boolean): void {
   $('panel').hidden = hidden;
   $('burger').hidden = !hidden;
-  if (hidden) resetSheet(); // reopen at the normal size
+  if (hidden) halfSheet(); // the burger reopens it at half
   document.body.classList.toggle('panel-hidden', hidden);
   try {
-    localStorage.setItem(PANEL_HIDDEN_KEY, hidden ? '1' : '0');
+    localStorage.setItem(panelHiddenKey(), hidden ? '1' : '0');
   } catch {
     /* storage unavailable: just don't remember */
   }
@@ -437,14 +452,21 @@ function setPanelHidden(hidden: boolean): void {
 $('burger').addEventListener('click', () => setPanelHidden(false));
 $('burger-in').addEventListener('click', () => setPanelHidden(true));
 initSheet(() => setPanelHidden(true));
-try {
-  if (localStorage.getItem(PANEL_HIDDEN_KEY) === '1') setPanelHidden(true);
-} catch {
-  /* ignore */
+function restorePanelHidden(): void {
+  let hidden = false;
+  try {
+    hidden = localStorage.getItem(panelHiddenKey()) === '1';
+  } catch {
+    /* ignore */
+  }
+  if (hidden !== $('panel').hidden) setPanelHidden(hidden);
 }
+restorePanelHidden();
+PHONE.addEventListener('change', restorePanelHidden);
 
 function expandPanel(): void {
   if ($('panel').hidden) setPanelHidden(false);
+  expandSheet();
 }
 
 /* ---------- picking a point ---------- */
@@ -550,7 +572,7 @@ initRoute();
 initLocate(pickFromPosition);
 init3D(pickPoint);
 initCompass(resetNorth3D, '.leaflet-top.leaflet-right > .leaflet-control');
-initCoords();
+initCoords(() => setTab('warn'));
 
 /* Place search: fly there and select the place like a map tap. */
 const SEARCH_ZOOM = 13;
@@ -564,6 +586,8 @@ function panelInsets(): { left: number; bottom: number } {
 
 initHeaderTools();
 initShare();
+initMoreMenu(); // after every map button: it gathers some of them into a menu
+initLayerInfo();
 initAbout();
 initToolInfo();
 initTools();

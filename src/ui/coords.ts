@@ -27,12 +27,15 @@ export function showCoord(src: CoordSource, lat: number, lng: number, accuracy?:
     clearCoord();
     return;
   }
-  if (src === 'pick' || src !== source) setOpen(false);
+  const fresh = src === 'pick' || src !== source;
+  if (fresh) setOpen(false);
   source = src;
   current = mgrs;
   el.querySelector('.c-label')!.textContent = src === 'position' ? 'Min posisjon' : 'Valgt punkt';
   el.querySelector('.c-mgrs')!.textContent = mgrs;
   el.querySelector('.c-acc')!.textContent = accuracy != null ? `± ${Math.round(accuracy)} m` : '';
+  // The verdict (ui/pointChip.ts) is only for a picked point, and a new point starts without one.
+  if (fresh) setCoordVerdict('');
   setCoordInfo(info);
   el.hidden = false;
 }
@@ -40,6 +43,17 @@ export function showCoord(src: CoordSource, lat: number, lng: number, accuracy?:
 /** Replace the terrain facts (e.g. once the terrain at the picked point has loaded). */
 export function setCoordInfo(html: string): void {
   $('coord').querySelector('.c-info')!.innerHTML = html;
+}
+
+/**
+ * The answer for the picked point (danger level, problem hit, Stop or Go) as trusted HTML;
+ * '' hides it. Tapping it opens the warning.
+ */
+export function setCoordVerdict(html: string): void {
+  const v = $('coord').querySelector<HTMLElement>('.c-verdict')!;
+  v.innerHTML = html;
+  v.hidden = !html;
+  $('coord').classList.toggle('has-verdict', !!html);
 }
 
 function setOpen(open: boolean): void {
@@ -106,9 +120,11 @@ async function copy(): Promise<void> {
   }, 1500);
 }
 
-export function initCoords(): void {
+/** `onVerdict`: tap on the verdict (opens the warning for the point). */
+export function initCoords(onVerdict: () => void): void {
   const el = $('coord');
   el.innerHTML = `
+    <button type="button" class="c-verdict" title="Åpne skredvarselet for punktet" hidden></button>
     <span class="c-label"></span>
     <span class="c-info"></span>
     <button type="button" class="c-copy" aria-label="Kopier MGRS" title="Vis og kopier MGRS">
@@ -118,4 +134,5 @@ export function initCoords(): void {
     <button type="button" class="c-close" aria-label="Skjul koordinat" title="Skjul">×</button>`;
   el.querySelector('.c-copy')!.addEventListener('click', () => void copy());
   el.querySelector('.c-close')!.addEventListener('click', () => clearCoord());
+  el.querySelector('.c-verdict')!.addEventListener('click', onVerdict);
 }

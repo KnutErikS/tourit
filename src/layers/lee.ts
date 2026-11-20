@@ -43,15 +43,20 @@ export const LEE_RGB = [11, 18, 32] as const;
 
 /**
  * Diagonal stripes over lee cells, in world pixels so they line up across tiles.
- * Strong loading gets denser stripes.
+ * One pixel wide, so the colour below still reads; strong loading gets denser stripes.
  */
 export function onHatch(coords: { x: number; y: number }, o: number, strong: boolean): boolean {
   const gx = coords.x * 256 + (o & 255), gy = coords.y * 256 + (o >> 8);
-  return (gx + gy) % (strong ? 6 : 9) < 2;
+  return (gx + gy) % (strong ? 5 : 8) < 1;
 }
 
-/** Paint one hatch pixel over whatever is in `px` at byte offset j. */
-export function paintHatch(px: Uint8ClampedArray, j: number): void {
-  px[j] = LEE_RGB[0]; px[j + 1] = LEE_RGB[1]; px[j + 2] = LEE_RGB[2];
-  px[j + 3] = 210;
+/**
+ * Paint one hatch pixel over whatever is in `px` at byte offset j, semi-transparent
+ * (`strength` 0–1), so the danger or aspect colour shows through the stripe.
+ */
+export function paintHatch(px: Uint8ClampedArray, j: number, strength = 0.6): void {
+  const aS = strength, aD = px[j + 3] / 255;
+  const aO = aS + aD * (1 - aS);
+  for (let k = 0; k < 3; k++) px[j + k] = Math.round((LEE_RGB[k] * aS + px[j + k] * aD * (1 - aS)) / aO);
+  px[j + 3] = Math.round(aO * 255);
 }

@@ -24,7 +24,7 @@ html,body{height:var(--app-h,100%)}
 /* Top edge for everything over the map. Home Screen app: iOS fades the map under the status bar,
    so controls and legends start a few px below the fade instead of inside it. */
 :root{--safe-top:env(safe-area-inset-top,0px)}
-@media (display-mode:standalone){:root{--safe-top:calc(env(safe-area-inset-top,0px) + 6px)}}
+@media (display-mode:standalone){:root{--safe-top:calc(env(safe-area-inset-top,0px) + 10px)}}
 body{position:relative}
 body{background:var(--bg);color:var(--fg);font-family:var(--f-body),sans-serif;font-size:14px;overflow:hidden}
 /* The basemap tiles are partly transparent and designed for a light backdrop,

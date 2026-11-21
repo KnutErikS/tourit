@@ -21,6 +21,10 @@ body{margin:0}[hidden]{display:none!important}
    too short (ui/viewport.ts). body is the containing block, so the absolutely positioned map,
    panel and controls follow it rather than the short viewport. */
 html,body{height:var(--app-h,100%)}
+/* Top edge for everything over the map. Home Screen app: iOS fades the map under the status bar,
+   so controls and legends start a few px below the fade instead of inside it. */
+:root{--safe-top:env(safe-area-inset-top,0px)}
+@media (display-mode:standalone){:root{--safe-top:calc(env(safe-area-inset-top,0px) + 6px)}}
 body{position:relative}
 body{background:var(--bg);color:var(--fg);font-family:var(--f-body),sans-serif;font-size:14px;overflow:hidden}
 /* The basemap tiles are partly transparent and designed for a light backdrop,
@@ -29,8 +33,9 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body),sans-serif;f
 .leaflet-container{font-family:var(--f-body),sans-serif;background:#e9edf1}
 .leaflet-control-attribution{font-size:10px}
 /* Keep the Leaflet controls clear of the notch / status bar / home indicator (viewport-fit=cover). */
-.leaflet-top{top:env(safe-area-inset-top,0px)}
-.leaflet-bottom{bottom:env(safe-area-inset-bottom,0px)}
+.leaflet-top{top:var(--safe-top)}
+/* The attribution line sits at the very bottom, behind the home indicator (nothing to tap there). */
+.leaflet-bottom{bottom:0}
 .leaflet-left{left:env(safe-area-inset-left,0px)}
 .leaflet-right{right:env(safe-area-inset-right,0px)}
 /* Map controls (Leaflet + MapLibre in 3D) follow the light/dark theme like the panel. */
@@ -46,8 +51,8 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body),sans-serif;f
 #map3d .maplibregl-ctrl button:not(:disabled):hover{background-color:var(--chip)}
 #map3d .maplibregl-ctrl button .maplibregl-ctrl-icon{filter:var(--icon-filter)}
 
-#panel{position:absolute;z-index:1000;top:calc(12px + env(safe-area-inset-top,0px));left:calc(12px + env(safe-area-inset-left,0px));
-  width:400px;max-height:calc(100% - 24px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));
+#panel{position:absolute;z-index:1000;top:calc(12px + var(--safe-top));left:calc(12px + env(safe-area-inset-left,0px));
+  width:400px;max-height:calc(100% - 24px - var(--safe-top) - env(safe-area-inset-bottom,0px));
   background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);
   display:flex;flex-direction:column;overflow:hidden}
 #panel header{padding:14px 16px 10px;border-bottom:1px solid var(--line);display:grid;gap:10px}
@@ -204,7 +209,7 @@ details.ws > div{display:grid;gap:8px;padding-top:8px}
   /* Bottom sheet (see ui/sheet.ts): 55 % by default, fullscreen when dragged up. */
   #panel{left:env(safe-area-inset-left,0px);right:env(safe-area-inset-right,0px);top:auto;bottom:0;width:auto;border-radius:12px 12px 0 0;
     height:55%;max-height:none;padding-bottom:env(safe-area-inset-bottom,0px);transition:height .22s cubic-bezier(.2,.8,.2,1)}
-  #panel.sheet-full{height:calc(100% - env(safe-area-inset-top,0px) - 8px)}
+  #panel.sheet-full{height:calc(100% - var(--safe-top) - 8px)}
   #panel.sheet-dragging{transition:none}
   /* Peek: just a strip with the grab bar (height set in ui/sheet.ts); everything else is out of reach for focus and screen readers. */
   #panel.sheet-peek .scroll,#panel.sheet-peek header > :not(#grabber){visibility:hidden}
@@ -212,14 +217,14 @@ details.ws > div{display:grid;gap:8px;padding-top:8px}
   #panel header{touch-action:none;padding-top:6px}
   #panel .scroll{flex:1;min-height:0}
   /* Top-left, so it doesn't cover the zoom buttons on the right. */
-  #hint{bottom:auto;top:calc(10px + env(safe-area-inset-top,0px));right:auto;left:calc(10px + env(safe-area-inset-left,0px))}
+  #hint{bottom:auto;top:calc(10px + var(--safe-top));right:auto;left:calc(10px + env(safe-area-inset-left,0px))}
   /* No hint: the coordinate chip and the map legend move up into its place. */
-  body:not(.panel-hidden):has(#hint[hidden]) #coord{top:calc(10px + env(safe-area-inset-top,0px))}
+  body:not(.panel-hidden):has(#hint[hidden]) #coord{top:calc(10px + var(--safe-top))}
   body:has(#hint[hidden]) .map-legend{left:calc(10px + env(safe-area-inset-left,0px))}
 }
 /* ---------- Tegnforklaring over kartet (panelet skjult) ---------- */
 /* PC: level with the floating burger, centred in the space between it and the map buttons on the right. */
-.map-legend{position:absolute;z-index:999;top:calc(12px + env(safe-area-inset-top,0px));
+.map-legend{position:absolute;z-index:999;top:calc(12px + var(--safe-top));
   left:calc(72px + env(safe-area-inset-left,0px));right:calc(60px + env(safe-area-inset-right,0px));width:fit-content;margin-inline:auto;
   max-width:420px;min-height:48px;box-sizing:border-box;align-content:center;display:grid;gap:8px;padding:8px 10px;background:var(--panel);color:var(--fg);
   border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow)}
@@ -228,7 +233,7 @@ body:not(.panel-hidden) .map-legend{display:none}
 .map-legend img,.map-legend .sw{width:14px;height:14px}
 .map-legend .ml-rose{line-height:0}
 /* Phones: level with the zoom hint, centred in the space between it and the map buttons on the right. */
-@media (max-width:640px){.map-legend{top:calc(10px + env(safe-area-inset-top,0px));left:calc(96px + env(safe-area-inset-left,0px));right:calc(58px + env(safe-area-inset-right,0px));max-width:none;min-height:30px;padding:6px 8px;gap:6px}
+@media (max-width:640px){.map-legend{top:calc(10px + var(--safe-top));left:calc(96px + env(safe-area-inset-left,0px));right:calc(58px + env(safe-area-inset-right,0px));max-width:none;min-height:30px;padding:6px 8px;gap:6px}
   .map-legend .legend{gap:3px 8px;font-size:11px}}
 /* ---------- Lagrede områder ---------- */
 .btn:disabled{opacity:.5;cursor:default}
@@ -237,8 +242,8 @@ body:not(.panel-hidden) .map-legend{display:none}
 .offctl svg{width:17px;height:17px}
 .offbadge{position:absolute;top:-6px;right:-7px;min-width:15px;height:15px;padding:0 3px;border-radius:99px;background:var(--accent);color:var(--accent-ink);
   font:600 10px/15px var(--f-mono),monospace;text-align:center;box-shadow:0 0 0 2px var(--panel)}
-#offline,#route{position:absolute;z-index:1001;top:calc(12px + env(safe-area-inset-top,0px));right:calc(58px + env(safe-area-inset-right,0px));
-  width:360px;max-height:calc(100% - 24px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));
+#offline,#route{position:absolute;z-index:1001;top:calc(12px + var(--safe-top));right:calc(58px + env(safe-area-inset-right,0px));
+  width:360px;max-height:calc(100% - 24px - var(--safe-top) - env(safe-area-inset-bottom,0px));
   background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden}
 .off-head{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line)}
 .off-head h2{margin:0;font-family:var(--f-display),sans-serif;font-size:21px;font-weight:700;line-height:1}
@@ -369,7 +374,7 @@ body.touch-ctl .more-menu .leaflet-bar a:active,body.touch-ctl .more-menu .leafl
 .burger-in{width:36px;height:36px;border-radius:8px;background:var(--chip)}
 .burger-in svg{width:20px;height:20px}
 /* Floating, while the panel is hidden: top-left on PC … */
-#burger{position:absolute;z-index:1001;top:calc(12px + env(safe-area-inset-top,0px));left:calc(12px + env(safe-area-inset-left,0px));
+#burger{position:absolute;z-index:1001;top:calc(12px + var(--safe-top));left:calc(12px + env(safe-area-inset-left,0px));
   width:48px;height:48px;border-radius:12px;background:var(--panel);box-shadow:var(--shadow)}
 #burger svg{width:24px;height:24px}
 /* … and bottom-left on phones, within reach of the thumb. */
@@ -430,7 +435,7 @@ body.panel-hidden #coord{left:calc(72px + env(safe-area-inset-left,0px))}
 .pick-mgrs > span{color:var(--muted);font:600 10px var(--f-mono),monospace}
 @media (max-width:640px){
   /* Under the zoom hint (top-left), clear of the buttons on the right. */
-  #coord,body.panel-hidden #coord{top:calc(48px + env(safe-area-inset-top,0px));bottom:auto;left:calc(10px + env(safe-area-inset-left,0px));right:auto;margin-inline:0;max-width:calc(100% - 76px - env(safe-area-inset-left,0px) - env(safe-area-inset-right,0px));box-sizing:border-box;gap:6px}
+  #coord,body.panel-hidden #coord{top:calc(48px + var(--safe-top));bottom:auto;left:calc(10px + env(safe-area-inset-left,0px));right:auto;margin-inline:0;max-width:calc(100% - 76px - env(safe-area-inset-left,0px) - env(safe-area-inset-right,0px));box-sizing:border-box;gap:6px}
   #coord .c-label{display:none}
   /* Panel hidden: down by the floating burger, level with its centre, centred in the space to its right. */
   body.panel-hidden #coord{top:auto;bottom:calc(44px + env(safe-area-inset-bottom,0px));transform:translateY(50%);
@@ -494,13 +499,13 @@ body.panel-hidden #coord{left:calc(72px + env(safe-area-inset-left,0px))}
 #compass .n{font:700 7px var(--f-mono),monospace;fill:#fff}
 /* Mobile: right edge, just above the bottom-sheet panel (max 55 % high). */
 /* Phones: right under the 3D button. compass.ts sets top/right from the button's position; this is the fallback. */
-@media (max-width:640px){#compass{width:44px;height:44px;bottom:auto;top:calc(270px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px))}#compass svg{width:40px;height:40px}}
+@media (max-width:640px){#compass{width:44px;height:44px;bottom:auto;top:calc(270px + var(--safe-top));right:calc(10px + env(safe-area-inset-right,0px))}#compass svg{width:40px;height:40px}}
 /* ---------- 3D ---------- */
 #map3d{position:absolute;inset:0;z-index:1;background:#e9edf1}
 body.is3d #hint{display:none}
 .ctl3dbar a.ctl3d{font:700 13px/30px var(--f-display),sans-serif;letter-spacing:.03em;color:var(--fg)}
 #map3d .maplibregl-ctrl button.ctl3d{font:700 13px var(--f-display),sans-serif;letter-spacing:.03em;color:var(--fg)}
-#map3d .maplibregl-ctrl-top-right{top:calc(env(safe-area-inset-top,0px))}
+#map3d .maplibregl-ctrl-top-right{top:calc(var(--safe-top))}
 .maplibregl-popup-content{background:var(--panel);color:var(--fg);border-radius:12px;padding:10px 12px;box-shadow:0 3px 14px rgba(0,0,0,.4);font-family:var(--f-body),sans-serif;min-width:240px}
 .maplibregl-popup-content .thumbs img{width:120px;height:90px}
 .maplibregl-popup-anchor-bottom .maplibregl-popup-tip,.maplibregl-popup-anchor-bottom-left .maplibregl-popup-tip,.maplibregl-popup-anchor-bottom-right .maplibregl-popup-tip{border-top-color:var(--panel)}
@@ -531,7 +536,7 @@ dialog.dlg a{color:var(--accent);font-weight:600}
 .dlg-actions .btn{padding:8px 16px}
 
 /* ---------- Ny versjon (ui/update.ts) ---------- */
-.update{position:absolute;z-index:1003;left:50%;transform:translateX(-50%);top:calc(12px + env(safe-area-inset-top,0px));
+.update{position:absolute;z-index:1003;left:50%;transform:translateX(-50%);top:calc(12px + var(--safe-top));
   display:flex;align-items:stretch;max-width:calc(100vw - 32px);border-radius:999px;background:var(--accent);color:var(--accent-ink);box-shadow:var(--shadow);overflow:hidden}
 .update[hidden]{display:none}
 .update button{border:0;background:none;color:inherit;font:inherit;font-weight:600;cursor:pointer}

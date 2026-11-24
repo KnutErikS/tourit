@@ -1,6 +1,6 @@
 # tourit – Skredterreng Norge
 
-Avalanche terrain map for Norway. A static web app (no backend, no API keys) built on open data from NVE/Varsom, Regobs, Kartverket, MET Norway (yr) and Open-Meteo. UI in Norwegian.
+Avalanche terrain map for Norway. A static web app (no backend, no API keys) built on open data from NVE/Varsom, Regobs, Kartverket, MET Norway (yr), Open-Meteo and Statens vegvesen. UI in Norwegian.
 
 ## Features
 
@@ -9,6 +9,7 @@ Avalanche terrain map for Norway. A static web app (no backend, no API keys) bui
 - **Snø (seNorge)** – NVE's modelled snow maps for the chosen date (also a few days ahead): new snow over the last 1 or 3 days, or snow depth. 1 km grid, so it shows the pattern across a region, not single slopes.
 - **Himmelretning** – slope aspect, computed in the browser from Kartverket's terrain model (zoom 11+).
 - **Observasjoner** – Regobs snow observations for the chosen day and the two days before, with photos.
+- **Webkamera** – Statens vegvesen's ~900 road webcams (many on mountain passes) from zoom 7, one marker per site with a button per direction; latest image on tap. Plus a few hand-picked mountain cameras (romsdal.com's 17 in Romsdal, Turtagrø, Juvasshytta) in `src/domain/extraWebcams.ts`. Off by default; the camera list is only fetched while the layer is on.
 - **Skredvarsel tab** – the full warning for a region, with avalanche problems, advice and weather.
 - **Tap the map** – elevation, slope and aspect at that point, and whether each avalanche problem applies there.
 - **Verktøy tab** – checks for the tapped point, or your position when nothing is tapped (tap the pin again to remove it):
@@ -111,7 +112,7 @@ Off until you set it up. To see visits and which features are used:
 1. Make a free account at [goatcounter.com](https://www.goatcounter.com) (free for non-commercial use). The code you pick becomes `https://<code>.goatcounter.com`, where the dashboard lives.
 2. Put the code in `GOATCOUNTER_CODE` at the top of `vite.config.ts` and push. The build then allows that host in the CSP and the About dialog gets a "Personvern" note.
 
-What is sent (`src/analytics/`): one page view per visit (a page load, or coming back after 30 min in the background) with the path, page title, screen width and the origin of an outside referrer; plus feature events, each at most once per visit (`EVENTS` in `analytics/count.ts`: tabs opened, layers shown, point picked, 3D, route drawing, GPX import/export, saved areas, search, share, own position, tomorrow/demo date, opened as a Home-screen app, opened a shared link with a point; and `fail-*` when NVE, Regobs, MET, Open-Meteo or Kartverket's elevation failed or was so slow that a stored copy was shown. Since nothing is counted offline, those point at the service, not the user's signal). Never the `#hash` (map view, picked point), coordinates, routes or IDs. No cookies or device storage. Not counted: the dev server, localhost, automated browsers, offline use.
+What is sent (`src/analytics/`): one page view per visit (a page load, or coming back after 30 min in the background) with the path, page title, screen width and the origin of an outside referrer; plus feature events, each at most once per visit (`EVENTS` in `analytics/count.ts`: tabs opened, layers shown, point picked, 3D, route drawing, GPX import/export, saved areas, search, share, own position, tomorrow/demo date, opened as a Home-screen app, opened a shared link with a point; and `fail-*` when NVE, Regobs, MET, Open-Meteo, Kartverket's elevation or Vegvesen's webcams failed or was so slow that a stored copy was shown. Since nothing is counted offline, those point at the service, not the user's signal). Never the `#hash` (map view, picked point), coordinates, routes or IDs. No cookies or device storage. Not counted: the dev server, localhost, automated browsers, offline use.
 
 ## Code map
 
@@ -163,4 +164,4 @@ The aspect and avalanche-terrain layers share the same drawing functions in 2D (
 
 ## Data
 
-Avalanche warnings and steepness © NVE / varsom.no · Snow maps © NVE / seNorge (NLOD) · Terrain model and basemap © Kartverket · 3D terrain: AWS Terrain Tiles (© Kartverket) · Observations © Regobs and the observers · Place names © Kartverket (Sentralt stedsnavnregister) · MGRS via [proj4js/mgrs](https://github.com/proj4js/mgrs). `docs/` holds the original single-file prototype and the prompts it came from.
+Avalanche warnings and steepness © NVE / varsom.no · Snow maps © NVE / seNorge (NLOD) · Terrain model and basemap © Kartverket · 3D terrain: AWS Terrain Tiles (© Kartverket) · Observations © Regobs and the observers · Webcams © Statens vegvesen (NLOD, open WFS `datex_3_1:CctvSimple_v2`) · Other webcams © romsdal.com, Turtagrø hotell, Galdhøpiggen Sommerskisenter · Place names © Kartverket (Sentralt stedsnavnregister) · MGRS via [proj4js/mgrs](https://github.com/proj4js/mgrs). `docs/` holds the original single-file prototype and the prompts it came from.

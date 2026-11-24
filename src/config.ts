@@ -12,6 +12,11 @@ export const STEDSNAVN_API = 'https://ws.geonorge.no/stedsnavn/v1';
 export const MET_API = 'https://api.met.no/weatherapi';
 /** Open-Meteo: cloud cover per height and freezing level (ICON model). Free for non-commercial use, CC BY 4.0. */
 export const OPEN_METEO_API = 'https://api.open-meteo.com/v1';
+/**
+ * Statens vegvesen's open map services (GeoServer). The DATEX 3.1 workspace has
+ * the road webcams as a WFS layer; no registration or key. NLOD licence: credit Statens vegvesen.
+ */
+export const VEGVESEN_WFS = 'https://ogckart-sn1.atlas.vegvesen.no/datex_3_1/wfs';
 export const DTM_URL = 'https://hoydedata.no/arcgis/rest/services/DTM/ImageServer/exportImage';
 export const BRATT_URL = 'https://gis3.nve.no/arcgis/rest/services/wmts/Bratthet_2024/MapServer';
 export const BRATT_TILE_URL = `${BRATT_URL}/tile/{z}/{y}/{x}`;
@@ -74,6 +79,8 @@ export const ASP_RGB: RGB[] = [
 /** Zoom levels where the computed terrain layers start. */
 export const SKRED_MIN_ZOOM = 10;
 export const ASPECT_MIN_ZOOM = 11;
+/** Webcams show from this zoom (all of Norway at once is just clutter). */
+export const WEBCAM_MIN_ZOOM = 7;
 
 /** A day from last season with plenty of warnings, used by the demo button. */
 export const DEMO = { date: '2026-03-14', center: [69.55, 20.1] as [number, number], zoom: 10 };

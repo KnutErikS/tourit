@@ -12,7 +12,7 @@ import { $, isoDate } from './util';
  *
  * URL hash: `#zoom/lat/lng/layers/date/@lat,lng`, e.g. `#12/61.63601/8.31234/sbo/2026-03-14/@61.64012,8.30051`.
  * Layers are one letter each (s = skredfare, b = bratthet, a = himmelretning,
- * o = observasjoner, n = snø (seNorge), `-` = none); the date is left out when it is today.
+ * o = observasjoner, n = snø (seNorge), c = webkamera, `-` = none); the date is left out when it is today.
  * `@lat,lng` is the picked point, only in shared links: opening one selects that point.
  * Everything after lat/lng is optional. A hash wins over the stored view.
  */
@@ -20,7 +20,7 @@ import { $, isoDate } from './util';
 const KEY = 'tourit.view';
 
 /** Layer checkboxes and their letter in the hash. */
-const LAYERS = { s: 'l-skred', b: 'l-bratt', a: 'l-asp', o: 'l-obs', n: 'l-snow' } as const;
+const LAYERS = { s: 'l-skred', b: 'l-bratt', a: 'l-asp', o: 'l-obs', n: 'l-snow', c: 'l-cam' } as const;
 type LayerCode = keyof typeof LAYERS;
 const CODES = Object.keys(LAYERS) as LayerCode[];
 
@@ -77,7 +77,7 @@ export function parseHash(hash = location.hash): View | null {
   if (!validPos(zoom, lat, lng)) return null;
   const v: View = { zoom, lat, lng, point };
   const layers = parts[3];
-  if (layers !== undefined && /^(-|[sbaon]*)$/.test(layers)) {
+  if (layers !== undefined && /^(-|[sbaonc]*)$/.test(layers)) {
     v.layers = layers === '-' ? '' : layers;
     // With layers given, a missing date means "today" (the sharer was on today).
     v.date = DATE_RE.test(parts[4] ?? '') ? parts[4] : 'today';

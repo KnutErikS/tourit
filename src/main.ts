@@ -25,11 +25,12 @@ import './ui/viewport';
 import * as L from 'leaflet';
 import { fetchRegions, fetchWarnings } from './api/nve';
 import { fetchObservations } from './api/regobs';
+import { fetchWebcams } from './api/vegvesen';
 import { fetchPointWeather } from './api/met';
 import { fetchAirProfile, fetchWindHistory } from './api/openMeteo';
 import { FETCH_H, windLoading, windowEnd } from './domain/wind';
 import { withProfile } from './domain/weather';
-import { ASP_RGB, ASPECT_MIN_ZOOM, DEMO, DIRS, DNAME, SKRED_MIN_ZOOM } from './config';
+import { ASP_RGB, ASPECT_MIN_ZOOM, DEMO, DIRS, DNAME, SKRED_MIN_ZOOM, WEBCAM_MIN_ZOOM } from './config';
 import { images, obsKind } from './domain/observations';
 import { regionAt } from './domain/geo';
 import { createAspectLayer } from './layers/aspect';
@@ -39,6 +40,9 @@ import { drawRegions, regionGroup, restyleRegions } from './layers/regions';
 import { renderSteepnessLegend, steepnessLayer } from './layers/steepness';
 import { renderRunoutLegend, setRunout } from './layers/runout';
 import { isSnowKind, renderSnowLegend, setSnow, snowLayer, type SnowKind } from './layers/snow';
+import { drawWebcams, webcamLayer } from './layers/webcams';
+import { siteOk, type WebcamSite } from './domain/webcams';
+import { EXTRA_WEBCAMS } from './domain/extraWebcams';
 import { map } from './map';
 import { state } from './state';
 import { terrainAt } from './terrain/dem';
@@ -233,6 +237,46 @@ const obsFail = (e: unknown) => {
       : `Fikk ikke hentet observasjoner fra Regobs (${(e as Error)?.message || 'nettverksfeil'}).`;
 };
 
+/**
+ * Webcams: only fetched while the layer is on (most visits don't need ~400 kB
+ * of camera list), and again when it is turned on after WEBCAM_MAX_AGE, since
+ * cameras go in and out of service.
+ */
+const WEBCAM_MAX_AGE = 30 * 60_000;
+let webcamsAt = 0;
+let webcamsLoading = false;
+async function loadWebcams(): Promise<void> {
+  if (webcamsLoading || Date.now() - webcamsAt < WEBCAM_MAX_AGE) return;
+  webcamsLoading = true;
+  const el = $('cam-status');
+  el.hidden = false;
+  el.textContent = 'Henter webkamera…';
+  const summary = (sites: WebcamSite[]) => {
+    const cams = sites.reduce((n, s) => n + s.views.length, 0);
+    const down = sites.filter((s) => !siteOk(s)).length;
+    return `${cams} kamera på ${sites.length} steder${down ? ` · ${down} steder ute av drift` : ''}`;
+  };
+  // The hand-picked cameras need no fetch: show them straight away.
+  drawWebcams(EXTRA_WEBCAMS);
+  try {
+    const { data: vegvesen, savedAt } = await fetchWebcams();
+    if (savedAt !== null) count('fail-vegvesen');
+    else webcamsAt = Date.now();
+    const sites = [...vegvesen, ...EXTRA_WEBCAMS];
+    drawWebcams(sites);
+    el.textContent = storedNote(savedAt) + summary(sites);
+  } catch (e) {
+    count('fail-vegvesen');
+    el.textContent =
+      (e instanceof NotStoredError
+        ? 'Uten nett, og Vegvesens webkamera er ikke lagret på enheten ennå. '
+        : `Fikk ikke hentet webkamera fra Vegvesen (${(e as Error)?.message || 'nettverksfeil'}). `) + `Viser ${summary(EXTRA_WEBCAMS)}.`;
+  } finally {
+    webcamsLoading = false;
+  }
+}
+webcamLayer.on('add', () => void loadWebcams());
+
 /* ---------- dates ---------- */
 
 /** NVE publishes the next day's warning around 16:00. */
@@ -333,7 +377,7 @@ function applySnow(): void {
 applySnow();
 
 /** Layers counted when shown (the avalanche layer is on by default, so it tells nothing). */
-const LAYER_EVENTS: Record<string, EventName> = { 'l-bratt': 'layer-bratt', 'l-snow': 'layer-snow', 'l-asp': 'layer-asp', 'l-obs': 'layer-obs' };
+const LAYER_EVENTS: Record<string, EventName> = { 'l-bratt': 'layer-bratt', 'l-snow': 'layer-snow', 'l-asp': 'layer-asp', 'l-obs': 'layer-obs', 'l-cam': 'layer-cam' };
 function bindToggle(id: string, ...layers: L.Layer[]): void {
   const box = $<HTMLInputElement>(id);
   const event = LAYER_EVENTS[id];
@@ -361,6 +405,7 @@ bindToggle('l-bratt', steepnessLayer);
 bindToggle('l-snow', snowLayer);
 bindToggle('l-asp', aspectLayer);
 bindToggle('l-obs', obsGroup);
+bindToggle('l-cam', webcamLayer);
 for (const id of ['l-bratt', 'l-snow', 'l-asp']) $(id).addEventListener('change', syncMapLegend);
 
 steepOpacityInput.addEventListener('input', () => steepnessLayer.setOpacity(+steepOpacityInput.value));
@@ -421,15 +466,22 @@ function onZoom(): void {
   const z = map.getZoom();
   const on = (id: string) => $<HTMLInputElement>(id).checked;
   const msg =
-    on('l-skred') && z < SKRED_MIN_ZOOM ? 'Zoom inn for å se terrengtreff' : on('l-asp') && z < ASPECT_MIN_ZOOM ? 'Zoom inn for å se himmelretning' : '';
+    on('l-skred') && z < SKRED_MIN_ZOOM
+      ? 'Zoom inn for å se terrengtreff'
+      : on('l-asp') && z < ASPECT_MIN_ZOOM
+        ? 'Zoom inn for å se himmelretning'
+        : on('l-cam') && z < WEBCAM_MIN_ZOOM
+          ? 'Zoom inn for å se webkamera'
+          : '';
   const hint = $('hint');
   hint.textContent = msg;
   hint.hidden = !msg;
   $('z-skred').classList.toggle('live', z >= SKRED_MIN_ZOOM);
   $('z-asp').classList.toggle('live', z >= ASPECT_MIN_ZOOM);
+  $('z-cam').classList.toggle('live', z >= WEBCAM_MIN_ZOOM);
   restyleRegions();
 }
-for (const id of ['l-skred', 'l-asp']) $(id).addEventListener('change', onZoom);
+for (const id of ['l-skred', 'l-asp', 'l-cam']) $(id).addEventListener('change', onZoom);
 map.on('zoomend', onZoom);
 
 /* ---------- date controls ---------- */

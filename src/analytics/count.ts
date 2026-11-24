@@ -24,6 +24,7 @@ export const EVENTS = {
   'layer-snow': 'Lag: Snø (seNorge)',
   'layer-asp': 'Lag: Himmelretning',
   'layer-obs': 'Lag: Observasjoner',
+  'layer-cam': 'Lag: Webkamera',
   'point-pick': 'Valgt punkt i kartet',
   'alptruth-tick': 'ALPTRUTh: egen avkrysning',
   '3d-open': '3D-kart åpnet',
@@ -45,6 +46,7 @@ export const EVENTS = {
   'fail-met': 'Feil: MET (punktvær)',
   'fail-openmeteo': 'Feil: Open-Meteo',
   'fail-dem': 'Feil: Kartverket høydedata',
+  'fail-vegvesen': 'Feil: Vegvesen (webkamera)',
 } as const;
 export type EventName = keyof typeof EVENTS;
 

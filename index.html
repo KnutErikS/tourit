@@ -129,10 +129,21 @@
       <div class="desc" id="obs-status">Henter observasjoner…</div>
     </section>
 
+    <section class="layer">
+      <div class="lhead">
+        <label><input type="checkbox" id="l-cam"> Webkamera</label>
+        <span class="zoomtag needzoom" id="z-cam">fra zoom 7</span>
+        <span class="zoomtag">Vegvesen</span>
+      </div>
+      <p class="desc">Statens vegvesens webkamera langs veiene, mange av dem på fjelloverganger. Trykk på et kamera for siste bilde; der det står flere kamera, velger du retning. Bildet kan være gammelt hvis kameraet har hatt feil, så sjekk tidspunktet i bildet.</p>
+      <div class="obs-legend cam-legend"><span><i></i>Webkamera</span><span><i class="off"></i>Ute av drift</span></div>
+      <div class="desc" id="cam-status" hidden></div>
+    </section>
+
 
     <section class="summary" id="summary"><p class="empty">Trykk i kartet for å se varselet for et sted.</p></section>
 
-    <p class="foot">Data: Snøskredvarsler fra <a href="https://www.varsom.no/snoskred/varsling/" target="_blank" rel="noopener">varsom.no</a> (NVE), bratthet fra NVE, terrengmodell fra Kartverket (hoydedata.no). Terrengtreff er en automatisk tolkning av varselet og erstatter ikke egen vurdering i felt. <button type="button" class="linkbtn" id="about-foot">Ansvar, kontakt og versjon</button></p>
+    <p class="foot">Data: Snøskredvarsler fra <a href="https://www.varsom.no/snoskred/varsling/" target="_blank" rel="noopener">varsom.no</a> (NVE), bratthet fra NVE, terrengmodell fra Kartverket (hoydedata.no), webkamera fra Statens vegvesen. Terrengtreff er en automatisk tolkning av varselet og erstatter ikke egen vurdering i felt. <button type="button" class="linkbtn" id="about-foot">Ansvar, kontakt og versjon</button></p>
   </div>
   <div class="scroll" id="tab-warn" role="tabpanel" hidden>
     <div id="detail" style="padding-top:10px"><p class="empty">Trykk på et sted i kartet. Du får varselet for regionen stedet ligger i, og ser om akkurat det punktet er utsatt for skredproblemene.</p></div>

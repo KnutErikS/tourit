@@ -660,3 +660,21 @@ dialog.dlg .dlg-list{margin:0 0 10px;padding-left:18px;display:grid;gap:6px}
 .ichip-warn{border-color:var(--d4);background:var(--d4);color:#fff}
 .ichip-ok{border-color:var(--d1);background:color-mix(in srgb,var(--d1) 14%,transparent)}
 .share-ico{width:18px;height:18px;vertical-align:-3px;fill:none;stroke:var(--accent);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* Webcams (Vegvesen): camera markers + popup. */
+.cm{width:22px;height:22px;border-radius:6px;background:#1f4f86;border:2px solid #fff;box-shadow:0 0 0 1px rgba(11,18,32,.7),0 1px 4px rgba(0,0,0,.35);display:grid;place-items:center;box-sizing:border-box}
+.cm svg{width:14px;height:14px;fill:none;stroke:#fff;stroke-width:2;stroke-linejoin:round}
+.cm.off{background:#8a96a3;opacity:.8}
+.obs-legend.cam-legend i{border-radius:3px;background:#1f4f86}
+.obs-legend.cam-legend i.off{background:#8a96a3}
+.cam-pop{display:grid;gap:7px}
+.cam-h{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.cam-road{font-family:var(--f-mono),monospace;font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:0 4px}
+.cam-dirs{display:flex;gap:6px;flex-wrap:wrap}
+.cam-dir{font:inherit;font-size:12px;padding:3px 8px;border:1px solid var(--line);border-radius:999px;background:var(--chip);color:var(--fg);cursor:pointer}
+.cam-dir[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.cam-img{display:block;line-height:0;border-radius:6px;overflow:hidden;border:1px solid var(--line)}
+.cam-img[hidden]{display:none}
+.cam-img img{width:100%;aspect-ratio:4/3;object-fit:cover;background:var(--chip)}
+.cam-msg{margin:0;font-size:12.5px;color:var(--muted)}
+.cam-note{margin:0;font-size:11px;color:var(--muted);line-height:1.35}

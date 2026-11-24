@@ -34,7 +34,15 @@ const HOSTS = {
   openMeteo: 'https://api.open-meteo.com', // cloud heights + freezing level, recent wind
   nveKart: 'https://kart.nve.no', // seNorge snow maps (WMS)
   openMeteoHistory: 'https://historical-forecast-api.open-meteo.com', // wind before older warning dates
+  vegvesenWfs: 'https://ogckart-sn1.atlas.vegvesen.no', // webcam list (WFS)
 };
+
+/**
+ * Webcam images: only shown as <img>, never fetched by code, so img-src only.
+ * Vegvesen's, plus the hand-picked ones in src/domain/extraWebcams.ts.
+ */
+const CAM_IMAGE_HOSTS = ['https://kamera.atlas.vegvesen.no', 'https://api.romsdal.com', 'https://turtagro.no', 'https://gpss.no'];
+const CAM_IMAGES = CAM_IMAGE_HOSTS.join(' ');
 
 function csp(): Plugin {
   let dev = false;
@@ -54,7 +62,7 @@ function csp(): Plugin {
         "script-src 'self' 'wasm-unsafe-eval'",
         // Leaflet and the app set inline style attributes; CSS can't run code.
         "style-src 'self' 'unsafe-inline'",
-        `img-src 'self' data: blob: ${HOSTS.kartverket} ${HOSTS.npolar} ${HOSTS.nveGis} ${HOSTS.nveKart} ${HOSTS.regobs}`,
+        `img-src 'self' data: blob: ${HOSTS.kartverket} ${HOSTS.npolar} ${HOSTS.nveGis} ${HOSTS.nveKart} ${HOSTS.regobs} ${CAM_IMAGES}`,
         `connect-src ${connect.join(' ')}`,
         "font-src 'self'",
         "worker-src 'self' blob:",

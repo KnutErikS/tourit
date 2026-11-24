@@ -2,6 +2,7 @@ import * as L from 'leaflet';
 import { map } from '../map';
 import { saveView, shareUrl } from '../viewState';
 import { legacyCopy } from './coords';
+import { count } from '../analytics/count';
 
 /**
  * "Del kartvisning": shares a link to the current view (position, zoom, layers,
@@ -53,6 +54,7 @@ const ShareControl = L.Control.extend({
     const btn = bar.querySelector('a')!;
     btn.addEventListener('click', (e) => {
       e.preventDefault();
+      count('share');
       void share(btn);
     });
     return bar;

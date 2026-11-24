@@ -71,6 +71,7 @@ import { initInfos } from './tools/infos';
 import { initRoute, isDrawing, refreshRouteRisk } from './ui/routePage';
 import { $, fmtDate, fmtTime, isoDate } from './util';
 import { restoreView, saveView, trackView } from './viewState';
+import { count, initCounting, type EventName } from './analytics/count';
 
 /* ---------- layers ---------- */
 
@@ -314,9 +315,15 @@ function applySnow(): void {
 }
 applySnow();
 
+/** Layers counted when shown (the avalanche layer is on by default, so it tells nothing). */
+const LAYER_EVENTS: Record<string, EventName> = { 'l-bratt': 'layer-bratt', 'l-snow': 'layer-snow', 'l-asp': 'layer-asp', 'l-obs': 'layer-obs' };
 function bindToggle(id: string, ...layers: L.Layer[]): void {
   const box = $<HTMLInputElement>(id);
-  const apply = () => layers.forEach((l) => (box.checked ? l.addTo(map) : map.removeLayer(l)));
+  const event = LAYER_EVENTS[id];
+  const apply = () => {
+    layers.forEach((l) => (box.checked ? l.addTo(map) : map.removeLayer(l)));
+    if (box.checked && event) count(event); // also when restored from the last visit: "visits that showed it"
+  };
   box.addEventListener('change', apply);
   apply();
 }
@@ -328,6 +335,7 @@ bindToggle('l-bratt', steepnessLayer);
   const apply = () => {
     setRunout(box.checked);
     $('runout-legend').hidden = !box.checked;
+    if (box.checked) count('layer-runout');
   };
   box.addEventListener('change', apply);
   apply();
@@ -411,8 +419,12 @@ map.on('zoomend', onZoom);
 
 dateEl.addEventListener('change', () => dateEl.value && go(dateEl.value));
 $('today').addEventListener('click', () => go(todayIso()));
-$('tomorrow').addEventListener('click', () => go(tomorrowIso()));
+$('tomorrow').addEventListener('click', () => {
+  count('date-tomorrow');
+  go(tomorrowIso());
+});
 $('demo').addEventListener('click', () => {
+  count('date-demo');
   go(DEMO.date);
   map.flyTo(DEMO.center, DEMO.zoom);
 });
@@ -429,7 +441,11 @@ function setTab(t: Tab): void {
   setToolsActive(t === 'tools'); // the tools only work things out while their tab is open
   expandPanel();
 }
-for (const k of TABS) $(`tab-btn-${k}`).addEventListener('click', () => setTab(k));
+for (const k of TABS)
+  $(`tab-btn-${k}`).addEventListener('click', () => {
+    if (k !== 'layers') count(`tab-${k}`);
+    setTab(k);
+  });
 
 /*
  * Burger: hides/shows the whole side panel (remembered between visits).
@@ -563,11 +579,14 @@ async function loadWeather(p: Picked): Promise<void> {
   if (state.picked === p) renderPanels();
 }
 map.on('click', (e: L.LeafletMouseEvent) => {
-  if (!isDrawing()) void pickPoint(e.latlng); // while drawing a route, taps add route points
+  if (isDrawing()) return; // while drawing a route, taps add route points
+  count('point-pick');
+  void pickPoint(e.latlng);
 });
 
 /* ---------- start ---------- */
 
+initCounting();
 registerServiceWorker();
 initOffline();
 initRoute();
@@ -596,6 +615,7 @@ initTools();
 initInfos(renderPanels); // the point's info chips appear once worked out
 initSun(renderPanels); // the sun card redraws once the terrain horizon is worked out
 initSearch((place) => {
+  count('search');
   const ll = L.latLng(place.lat, place.lng);
   const z = Math.max(map.getZoom(), SEARCH_ZOOM);
   resetSheet(); // phones: back to half height so the map is visible

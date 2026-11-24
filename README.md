@@ -104,13 +104,22 @@ Every push to `main` type-checks, runs the tests, builds and publishes to GitHub
 
 Position and saved areas need **https** (or localhost).
 
+### Usage counting (GoatCounter)
+
+Off until you set it up. To see visits and which features are used:
+
+1. Make a free account at [goatcounter.com](https://www.goatcounter.com) (free for non-commercial use). The code you pick becomes `https://<code>.goatcounter.com`, where the dashboard lives.
+2. Put the code in `GOATCOUNTER_CODE` at the top of `vite.config.ts` and push. The build then allows that host in the CSP and the About dialog gets a "Personvern" note.
+
+What is sent (`src/analytics/`): one page view per visit (a page load, or coming back after 30 min in the background) with the path, page title, screen width and the origin of an outside referrer; plus feature events, each at most once per visit (`EVENTS` in `analytics/count.ts`: tabs opened, layers shown, point picked, 3D, route drawing, GPX import/export, saved areas, search, share, own position, tomorrow/demo date, opened as a Home-screen app). Never the `#hash` (map view, picked point), coordinates, routes or IDs. No cookies or device storage. Not counted: the dev server, localhost, automated browsers, offline use.
+
 ## Code map
 
 ```
 index.html              Markup for the panel and map buttons, icon/manifest links
 public/sw.js            Service worker: serves saved tiles from Cache Storage, else network
 public/manifest.webmanifest, public/icons/   App name + icons (source: docs/app-icon-source.svg)
-vite.config.ts          Build config + Content Security Policy
+vite.config.ts          Build config + Content Security Policy + GoatCounter code
 src/
   main.ts               Entry: wires layers, controls, data loading, point picking, panel
   config.ts             API URLs, colours, zoom limits
@@ -126,6 +135,7 @@ src/
   layers/               2D layers: avalanche terrain, aspect, steepness, seNorge snow, regions, observations
   three/view3d.ts       3D view (MapLibre, loaded on demand)
   offline/              Saved areas: tile lists, download/delete, metadata
+  analytics/            Anonymous usage counting (GoatCounter): hit.ts builds the request (tested), count.ts sends it
   ui/                   Panel content, search, MGRS chip, saved-areas page, position, compass, bottom sheet, icons
   styles/app.css        Styling (panel follows light/dark; the map stays light)
 ```
@@ -146,7 +156,7 @@ The aspect and avalanche-terrain layers share the same drawing functions in 2D (
 
 ## Security
 
-- **CSP** is set via `<meta>` in `vite.config.ts` (Pages can't set headers): only the app's scripts and the data hosts in `HOSTS`. Add new hosts there.
+- **CSP** is set via `<meta>` in `vite.config.ts` (Pages can't set headers): only the app's scripts, the data hosts in `HOSTS` and, when set, the GoatCounter host. Add new hosts there.
 - **API data is untrusted:** use `esc()` for text and `safeUrl()` (https only) for URLs before putting them in HTML.
 - **Shared origin:** all Pages sites on one account share `<user>.github.io` (storage, cache, service workers). Only host trusted sites there, or use a custom domain.
 - **Dependabot:** `mv docs/dependabot.yml .github/dependabot.yml` and enable alerts in repo settings.

@@ -3,6 +3,15 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { defineConfig, type Plugin } from 'vite';
+import { endpointFor } from './src/analytics/hit';
+
+/**
+ * GoatCounter account code: the "<code>" in https://<code>.goatcounter.com.
+ * Empty = no counting: nothing is sent and the CSP doesn't allow the host.
+ * See src/analytics/count.ts for what is counted.
+ */
+const GOATCOUNTER_CODE = 'skredproblemet';
+const GOATCOUNTER_HOST = endpointFor(GOATCOUNTER_CODE) && new URL(endpointFor(GOATCOUNTER_CODE)).origin;
 
 /**
  * Content Security Policy, injected as a <meta> tag (GitHub Pages can't set
@@ -36,6 +45,7 @@ function csp(): Plugin {
     },
     transformIndexHtml(html) {
       const connect = ["'self'", ...Object.values(HOSTS)];
+      if (GOATCOUNTER_HOST) connect.push(GOATCOUNTER_HOST); // visit counting (sendBeacon)
       // Vite's dev server uses a websocket for hot reload.
       if (dev) connect.push('ws://localhost:*', 'ws://127.0.0.1:*');
       const policy = [
@@ -160,7 +170,7 @@ export default defineConfig({
   // Relative asset paths, so the built site works on any host or sub-path
   // (GitHub Pages project sites, Netlify, a plain folder on a web server).
   base: './',
-  define: { __BUILD__: JSON.stringify(buildId()) },
+  define: { __BUILD__: JSON.stringify(buildId()), __GOATCOUNTER__: JSON.stringify(GOATCOUNTER_CODE) },
   plugins: [csp(), shareTags(), swPrecache()],
   server: { port: 5173, open: true },
   build: { target: 'es2022', sourcemap: true },

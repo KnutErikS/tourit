@@ -2,6 +2,7 @@ import * as L from 'leaflet';
 import { map } from '../map';
 import { clearCoord, coordSource, showCoord } from './coords';
 import { setStatus } from './status';
+import { count } from '../analytics/count';
 
 /**
  * "Min posisjon": a button that shows your position as a blue dot with an
@@ -133,7 +134,10 @@ function stop(): void {
 }
 
 function onButton(): void {
-  if (watchId === null) return start();
+  if (watchId === null) {
+    count('locate');
+    return start();
+  }
   if (!following) {
     following = true;
     if (marker) map.setView(marker.getLatLng(), Math.max(map.getZoom(), FOLLOW_ZOOM));

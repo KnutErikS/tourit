@@ -16,6 +16,7 @@ import { $, esc, fmtDate, isoDate } from '../util';
 import { currentPosition, onPositionChange } from './locate';
 import { pointLine } from './point';
 import { infoButton } from './toolInfo';
+import { count } from '../analytics/count';
 
 /**
  * The "Verktøy" tab: Stop or Go and ALPTRUTh for one point. The tapped point
@@ -247,6 +248,7 @@ export function setToolsActive(on: boolean): void {
 async function onClue(key: ClueKey): Promise<void> {
   const t = shown, clue = shownAlp?.clues.find((c) => c.key === key);
   if (!t || !clue) return;
+  count('alptruth-tick');
   const next = !clue.on;
   setTick(state.date, t.ll, key, next === (clue.auto ?? false) ? undefined : next);
   const my = ++clueToken, run = token;

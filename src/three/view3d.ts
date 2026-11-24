@@ -17,6 +17,7 @@ import { state } from '../state';
 import { setCompassBearing } from '../ui/compass';
 import { setStatus } from '../ui/status';
 import { $ } from '../util';
+import { count } from '../analytics/count';
 
 /**
  * 3D view (needs network). A MapLibre GL map shown on top of the Leaflet map,
@@ -340,6 +341,7 @@ async function create(): Promise<ML.Map> {
 }
 
 export async function open3D(): Promise<void> {
+  count('3d-open');
   container().hidden = false;
   document.body.classList.add('is3d');
   try {

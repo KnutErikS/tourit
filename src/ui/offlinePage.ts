@@ -7,6 +7,7 @@ import { type AreaSpec, boundsOf, estimate } from '../offline/tiles';
 import { state } from '../state';
 import { $, esc } from '../util';
 import { confirmIosSave, iosBrowser } from './iosHint';
+import { count } from '../analytics/count';
 
 /**
  * "Lagrede områder": a save button and a download icon on the map. The icon
@@ -208,6 +209,7 @@ function startSave(): void {
   const spec = readForm();
   const { tiles } = estimate(spec);
   if (tiles > MAX_TILES || job) return;
+  count('area-save');
   const area: SavedArea = {
     ...spec,
     id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),

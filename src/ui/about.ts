@@ -1,3 +1,4 @@
+import { COUNTING } from '../analytics/count';
 import { CONTACT_URL } from '../config';
 import { $ } from '../util';
 
@@ -27,6 +28,7 @@ export function openAbout(): void {
 export function initAbout(): void {
   const dlg = $<HTMLDialogElement>('about');
   $('about-build').textContent = BUILD;
+  $('about-counting').hidden = !COUNTING;
   $<HTMLAnchorElement>('about-contact').href = contactUrl();
   $('about-btn').addEventListener('click', openAbout);
   $('about-foot').addEventListener('click', openAbout);

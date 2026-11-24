@@ -12,6 +12,7 @@ import { type ProfilePoint, type ProfileStats, TooManyTiles, cumulative, profile
 import type { LatLngTuple } from '../types';
 import { $, esc, fmtDate } from '../util';
 import { infoButton, setInfoExtra } from './toolInfo';
+import { count } from '../analytics/count';
 
 /**
  * "Tegn rute": draw a line with several points on the map and see its length,
@@ -662,6 +663,7 @@ async function importGpx(input: HTMLInputElement): Promise<void> {
   try {
     if (file.size > 20e6) throw new Error('Filen er for stor (over 20 MB).');
     const gpx = parseGpx(await file.text());
+    count('gpx-import');
     const prev = points.slice();
     load(gpx.points, null, gpx.name || file.name.replace(/\.gpx$/i, ''));
     if (prev.length) undo = [prev];
@@ -676,6 +678,7 @@ async function importGpx(input: HTMLInputElement): Promise<void> {
 /* ---------- open / close ---------- */
 
 export function openRoute(): void {
+  count('route-open');
   window.dispatchEvent(new CustomEvent('tourit:page', { detail: 'route' }));
   confirmDelete = null;
   page().hidden = false;
@@ -791,7 +794,10 @@ export function initRoute(): void {
   });
   const nameInput = $<HTMLInputElement>('rt-name');
   const fileInput = $<HTMLInputElement>('rt-file');
-  $('rt-gpx').addEventListener('click', () => downloadGpx(nameInput.value.trim() || defaultName(), points, profile));
+  $('rt-gpx').addEventListener('click', () => {
+    count('gpx-export');
+    downloadGpx(nameInput.value.trim() || defaultName(), points, profile);
+  });
   $('rt-import').addEventListener('click', () => fileInput.click());
   fileInput.addEventListener('change', () => void importGpx(fileInput));
   $('rt-save').addEventListener('click', saveRoute);

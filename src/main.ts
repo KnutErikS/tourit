@@ -73,6 +73,9 @@ import { $, fmtDate, fmtTime, isoDate } from './util';
 import { restoreView, saveView, trackView } from './viewState';
 import { count, initCounting, type EventName } from './analytics/count';
 
+// First, so the visit is counted before the events that the restored layers send below.
+initCounting();
+
 /* ---------- layers ---------- */
 
 const avalancheLayer = createAvalancheTerrainLayer(reportDemError);
@@ -117,7 +120,10 @@ async function loadWarnings(date: string): Promise<void> {
   setStatus(`Henter snøskredvarsler for ${fmtDate(date)}…`, 'busy');
   const { data: byId, savedAt } = await fetchWarnings(date);
   if (state.date !== date) return; // user picked another date meanwhile
-  if (savedAt !== null) showingStored = true;
+  if (savedAt !== null) {
+    showingStored = true;
+    count('fail-nve');
+  }
   state.regions.forEach((r) => (r.warn = byId.get(r.id) ?? null));
   restyleRegions();
   avalancheLayer.redraw();
@@ -156,7 +162,10 @@ async function loadWind(date: string): Promise<void> {
   });
   const { data, savedAt } = await fetchWindHistory(points, start, end, date);
   if (state.date !== date || state.regions !== regions) return;
-  if (savedAt !== null) showingStored = true;
+  if (savedAt !== null) {
+    showingStored = true;
+    count('fail-openmeteo');
+  }
   regions.forEach((r, i) => {
     const ok = data.length === regions.length;
     r.wind = ok ? windLoading(data[i], end) : null;
@@ -164,7 +173,10 @@ async function loadWind(date: string): Promise<void> {
   });
   redrawLee();
 }
-const windFail = () => state.regions.forEach((r) => ((r.wind = null), (r.hours = null)));
+const windFail = () => {
+  count('fail-openmeteo');
+  state.regions.forEach((r) => ((r.wind = null), (r.hours = null)));
+};
 
 function redrawLee(): void {
   aspectLayer.redraw();
@@ -178,7 +190,10 @@ async function loadObservations(date: string): Promise<void> {
   el.textContent = 'Henter observasjoner…';
   const { data: obs, savedAt } = await fetchObservations(date);
   if (state.date !== date) return;
-  if (savedAt !== null) showingStored = true;
+  if (savedAt !== null) {
+    showingStored = true;
+    count('fail-regobs');
+  }
   state.obs = obs;
   state.obsDate = date;
   drawObservations(obs);
@@ -199,6 +214,7 @@ async function storedDates(): Promise<string> {
 
 const warnFail = async (e: unknown) => {
   showingStored = true;
+  count('fail-nve');
   if (e instanceof NotStoredError && e.kind === 'warnings') {
     const other = await storedDates();
     setStatus(`Uten nett, og varselet for ${fmtDate(e.key)} er ikke lagret på enheten.${other ? ` Lagret: ${other.replace(/\.$/, '')}.` : ''}`, 'err');
@@ -210,6 +226,7 @@ const warnFail = async (e: unknown) => {
 };
 const obsFail = (e: unknown) => {
   showingStored = true;
+  count('fail-regobs');
   $('obs-status').textContent =
     e instanceof NotStoredError
       ? 'Uten nett, og observasjonene for denne dagen er ikke lagret på enheten.'
@@ -565,13 +582,19 @@ function pickFromPosition(ll: L.LatLng): void {
  * that answers. Cheap to repeat: both API modules cache in memory.
  */
 async function loadWeather(p: Picked): Promise<void> {
-  const air = fetchAirProfile(p.ll.lat, p.ll.lng).catch(() => null); // optional extra
+  const air = fetchAirProfile(p.ll.lat, p.ll.lng).catch(() => {
+    count('fail-openmeteo');
+    return null; // optional extra
+  });
   try {
     const got = await fetchPointWeather(p.ll.lat, p.ll.lng, p.terrain?.elev);
+    if (got.savedAt !== null) count('fail-met');
     const prof = await air;
+    if (prof && prof.savedAt !== null) count('fail-openmeteo');
     p.weather = prof ? { data: withProfile(got.data, prof.data, 'Open-Meteo (ICON)'), savedAt: got.savedAt ?? prof.savedAt } : got;
     if (p.weather.savedAt !== null) showingStored = true;
   } catch (e) {
+    count('fail-met');
     if (p.weather) return; // keep what we had
     p.weather = null;
     p.weatherErr = e instanceof NotStoredError ? 'uten nett, og ikke lagret for dette punktet' : (e as Error)?.message || 'nettverksfeil';
@@ -586,7 +609,6 @@ map.on('click', (e: L.LeafletMouseEvent) => {
 
 /* ---------- start ---------- */
 
-initCounting();
 registerServiceWorker();
 initOffline();
 initRoute();
@@ -635,6 +657,7 @@ initSearch((place) => {
  * in view beside the panel (PC) or above the bottom sheet (phone).
  */
 function openSharedPoint([lat, lng]: [number, number]): void {
+  count('shared-link'); // the event only: the point stays on the device
   const ll = L.latLng(lat, lng);
   setTab('warn');
   const z = map.getZoom(), inset = panelInsets();

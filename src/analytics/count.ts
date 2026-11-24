@@ -37,6 +37,14 @@ export const EVENTS = {
   'date-tomorrow': 'Varsel for i morgen',
   'date-demo': 'Vis 14. mars 2026',
   standalone: 'Åpnet som app (Hjem-skjerm)',
+  'shared-link': 'Åpnet delt lenke med punkt',
+  // A source failed, or was so slow that a stored copy was shown. Only counted
+  // online (see enabled()), so these mean the service, not the user's signal.
+  'fail-nve': 'Feil: NVE (varsel/regioner)',
+  'fail-regobs': 'Feil: Regobs',
+  'fail-met': 'Feil: MET (punktvær)',
+  'fail-openmeteo': 'Feil: Open-Meteo',
+  'fail-dem': 'Feil: Kartverket høydedata',
 } as const;
 export type EventName = keyof typeof EVENTS;
 
@@ -64,7 +72,6 @@ function send(url: string): void {
 const rnd = () => Math.random().toString(36).slice(2, 10);
 
 function countVisit(withReferrer: boolean): void {
-  sentThisVisit = new Set();
   if (!enabled()) return;
   send(
     hitUrl(
@@ -94,7 +101,10 @@ export function initCounting(): void {
   countVisit(true);
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') return void (hiddenAt = Date.now());
-    if (hiddenAt !== null && Date.now() - hiddenAt > VISIT_GAP_MS) countVisit(false);
+    if (hiddenAt !== null && Date.now() - hiddenAt > VISIT_GAP_MS) {
+      sentThisVisit = new Set(); // a new visit: its events count again
+      countVisit(false);
+    }
     hiddenAt = null;
   });
 }

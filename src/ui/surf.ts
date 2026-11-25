@@ -53,13 +53,13 @@ function locateOnce(): void {
     here = pos.ll;
     return;
   }
-  if (here || locating) return;
+  // After a failure, ask again only when "Nærmest deg" is picked again (not on every redraw).
+  if (here || locating || locateError) return;
   if (!('geolocation' in navigator)) {
     locateError = 'Denne nettleseren kan ikke vise posisjon, så listen står langs kysten.';
     return;
   }
   locating = true;
-  locateError = '';
   navigator.geolocation.getCurrentPosition(
     (p) => {
       locating = false;
@@ -331,6 +331,7 @@ export function initSurf(h: SurfHooks): void {
       const v = (t as HTMLSelectElement).value;
       sort = v === 'coast' || v === 'near' ? v : 'best';
       if (sort !== 'best') count(`surf-sort-${sort}`);
+      if (sort === 'near') locateError = '';
       renderSurf();
     }
   });

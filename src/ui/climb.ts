@@ -59,13 +59,13 @@ function locateOnce(): void {
     here = pos.ll;
     return;
   }
-  if (here || locating) return;
+  // After a failure, ask again only when "Nærmest deg" is picked again (not on every redraw).
+  if (here || locating || locateError) return;
   if (!('geolocation' in navigator)) {
     locateError = 'Denne nettleseren kan ikke vise posisjon, så listen følger kartet.';
     return;
   }
   locating = true;
-  locateError = '';
   navigator.geolocation.getCurrentPosition(
     (p) => {
       locating = false;
@@ -400,7 +400,10 @@ export function initClimb(h: ClimbHooks): void {
     if (t.id === 'climb-sort') {
       const v = (t as HTMLSelectElement).value;
       sort = v === 'name' || v === 'near' ? v : 'best';
-      if (sort === 'near') count('climb-sort-near');
+      if (sort === 'near') {
+        count('climb-sort-near');
+        locateError = '';
+      }
       renderClimb();
     }
   });

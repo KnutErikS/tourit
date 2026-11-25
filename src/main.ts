@@ -360,10 +360,11 @@ async function loadCrags(): Promise<void> {
     show(`${storedNote(savedAt)}${data.length} klatrefelt`);
   } catch (e) {
     count('fail-overpass');
+    // Nothing stored also ends up here when online but the server's crag list is missing.
     const text =
-      e instanceof NotStoredError
+      e instanceof NotStoredError && !navigator.onLine
         ? 'Uten nett, og klatrefeltene er ikke lagret på enheten ennå.'
-        : `Fikk ikke hentet klatrefelt fra OpenStreetMap (${(e as Error)?.message || 'nettverksfeil'}). Prøv igjen om litt.`;
+        : `Fikk ikke hentet klatrefeltene (${(e as Error)?.message || 'nettverksfeil'}). Prøv igjen senere.`;
     setClimbStatus(text);
     show(text);
   } finally {

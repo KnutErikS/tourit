@@ -33,10 +33,17 @@ const HOSTS = {
   met: 'https://api.met.no', // point weather forecast (yr's data)
   openMeteo: 'https://api.open-meteo.com', // cloud heights + freezing level, recent wind, wind at surf spots
   openMeteoMarine: 'https://marine-api.open-meteo.com', // waves and swell at surf spots
-  overpass: 'https://overpass-api.de', // climbing crags from OpenStreetMap
   nveKart: 'https://kart.nve.no', // seNorge snow maps (WMS)
   openMeteoHistory: 'https://historical-forecast-api.open-meteo.com', // wind before older warning dates
   vegvesenWfs: 'https://ogckart-sn1.atlas.vegvesen.no', // webcam list (WFS)
+};
+
+/**
+ * Only the dev server talks to these (production uses the prebuilt crags snapshot,
+ * src/api/crags.ts), so they stay out of the live site's CSP.
+ */
+const DEV_HOSTS = {
+  overpass: 'https://overpass-api.de', // climbing crags from OpenStreetMap, without a snapshot
 };
 
 /**
@@ -57,7 +64,7 @@ function csp(): Plugin {
       const connect = ["'self'", ...Object.values(HOSTS)];
       if (GOATCOUNTER_HOST) connect.push(GOATCOUNTER_HOST); // visit counting (sendBeacon)
       // Vite's dev server uses a websocket for hot reload.
-      if (dev) connect.push('ws://localhost:*', 'ws://127.0.0.1:*');
+      if (dev) connect.push('ws://localhost:*', 'ws://127.0.0.1:*', ...Object.values(DEV_HOSTS));
       const policy = [
         "default-src 'self'",
         // 'wasm-unsafe-eval' lets the lerc DEM decoder compile its WebAssembly.
@@ -158,22 +165,26 @@ function swPrecache(): Plugin {
 }
 
 /**
- * Build number shown in the app ("Om Skredterreng"), so a bug report says which
- * version it is about. On GitHub Actions: the workflow run number + commit;
- * locally: the commit, marked "dev". Plus the build date.
+ * Version shown in the app ("Om Skredterreng"), so a bug report says which
+ * version it is about: the commit and its date, marked "dev" outside CI.
+ *
+ * Only from the commit, never the CI run number or today's date: it is
+ * compiled into the main bundle, so anything that changes per build gives
+ * every build new file hashes and a new service-worker version. The weekly
+ * scheduled deploy (fresh crags snapshot, same code) would then make every
+ * installed app download itself again and show "Ny versjon".
  */
 function buildId(): string {
-  const run = process.env.GITHUB_RUN_NUMBER;
-  let sha = (process.env.GITHUB_SHA ?? '').slice(0, 7);
-  if (!sha) {
+  const git = (args: string) => {
     try {
-      sha = execSync('git rev-parse --short=7 HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
+      return execSync(`git ${args}`, { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
     } catch {
-      sha = 'ukjent';
+      return '';
     }
-  }
-  const date = new Date().toISOString().slice(0, 10);
-  return `${run ? `bygg ${run}` : 'dev'} · ${sha} · ${date}`;
+  };
+  const sha = (process.env.GITHUB_SHA ?? '').slice(0, 7) || git('rev-parse --short=7 HEAD') || 'ukjent';
+  const date = git('log -1 --format=%cs'); // commit date, YYYY-MM-DD
+  return [process.env.CI ? '' : 'dev', sha, date].filter(Boolean).join(' · ');
 }
 
 export default defineConfig({

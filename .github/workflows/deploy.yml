@@ -33,11 +33,14 @@ jobs:
       # A failing check stops the deploy: the site stays on the last good build.
       - run: npm run typecheck
       - run: npm test
-      # All Norwegian crags from OpenStreetMap, prebuilt so the app needn't wait on Overpass.
-      # If Overpass is down, keep the snapshot that is live now; if that fails too, deploy
-      # without it (the app then queries Overpass itself).
+      # All Norwegian crags from OpenStreetMap, prebuilt: the app never runs the nationwide
+      # Overpass query itself (src/api/crags.ts). If Overpass is down, keep the snapshot that
+      # is live now. If that fails too:
+      # - weekly run: stop here, so the live site (with its crags) stays as it is;
+      # - push: deploy the code anyway; the Klatring tab then says the list is missing
+      #   (devices that have it stored keep theirs) until the next run gets one.
       - name: Snapshot climbing crags
-        continue-on-error: true
+        continue-on-error: ${{ github.event_name != 'schedule' }}
         run: npm run crags -- --fallback https://knuteriks.github.io/tourit/data/crags.json
       - run: npm run build
       - uses: actions/upload-pages-artifact@v5

@@ -9,8 +9,10 @@
  *                         [--overpass <interpreter url>]   (default: overpass-api.de, then kumi.systems)
  *
  * When Overpass fails, --fallback downloads the snapshot that is live now, so a
- * busy Overpass doesn't drop the file from the next deploy. Exits 1 when there
- * is no good snapshot; the app then queries Overpass itself.
+ * busy Overpass doesn't drop the file from the next deploy (its `generated` stays
+ * the time the data left OpenStreetMap). Exits 1 when there is no good snapshot:
+ * the weekly run then deploys nothing, a push deploys without it. The app never
+ * queries Overpass itself in production (src/api/crags.ts).
  */
 import fs from 'node:fs';
 import path from 'node:path';

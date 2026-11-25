@@ -19,8 +19,9 @@ export const OPEN_METEO_API = 'https://api.open-meteo.com/v1';
  */
 export const OPEN_METEO_MARINE_API = 'https://marine-api.open-meteo.com/v1';
 /**
- * OpenStreetMap's Overpass API (FOSSGIS server): the climbing crags in Norway,
- * fetched about once a week per device. Data © OpenStreetMap contributors, ODbL.
+ * OpenStreetMap's Overpass API (FOSSGIS server): the climbing crags in Norway.
+ * Queried by the weekly build (scripts/crags.ts) and, without a snapshot, by the
+ * dev server; never by the app in production (api/crags.ts). Data © OpenStreetMap contributors, ODbL.
  */
 export const OVERPASS_API = 'https://overpass-api.de/api/interpreter';
 /**

@@ -8,18 +8,21 @@ import { storedCopy, withStored, type Fetched } from '../offline/dataCache';
  *     slowly); when it is older than REFRESH_MS a new one is fetched in the
  *     background and handed to `onUpdate`;
  *  2. the prebuilt snapshot on our own host (data/crags.json, made weekly by
- *     scripts/crags.ts in the deploy workflow): one small file, no waiting on
- *     Overpass;
- *  3. the live Overpass query, only when the snapshot is missing (dev, or the
- *     build couldn't reach Overpass) or older than SNAPSHOT_MAX_AGE.
+ *     scripts/crags.ts in the deploy workflow), whatever its age: an old list
+ *     of crags is still a good list.
  *
- * Overpass: POST as a form (a "simple" request: no CORS preflight). It answers
- * every request with Access-Control-Allow-Origin: *.
+ * The app never runs the nationwide Overpass query itself in production: it
+ * takes 20–120 s on a shared, donated server, and every visitor running it
+ * (each time the snapshot is missing or old) is the kind of load Overpass's
+ * usage policy asks clients not to make. Only the dev server, which has no
+ * snapshot unless `npm run crags` was run, falls back to Overpass.
+ *
+ * Overpass (dev): POST as a form (a "simple" request: no CORS preflight). It
+ * answers every request with Access-Control-Allow-Origin: *.
  */
 
 /** A stored copy is used as is for a week (the snapshot is also rebuilt weekly). */
 const REFRESH_MS = 7 * 86_400_000;
-const SNAPSHOT_MAX_AGE = 21 * 86_400_000;
 const SNAPSHOT_URL = 'data/crags.json';
 const KEY = 'norway';
 
@@ -48,13 +51,9 @@ async function fromOverpass(): Promise<Crag[]> {
 
 async function load(): Promise<Crag[]> {
   const snap = await fromSnapshot();
-  if (snap && Date.now() - snap.generated < SNAPSHOT_MAX_AGE) return snap.crags;
-  try {
-    return await fromOverpass();
-  } catch (e) {
-    if (snap) return snap.crags; // old, but better than nothing
-    throw e;
-  }
+  if (snap) return snap.crags;
+  if (import.meta.env.DEV) return fromOverpass();
+  throw new Error(navigator.onLine ? 'klatrefeltlisten mangler på serveren' : 'uten nett');
 }
 
 /** Fingerprint to tell whether a refresh changed anything worth redrawing. */

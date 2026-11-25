@@ -371,6 +371,18 @@ async function loadCrags(): Promise<void> {
   }
 }
 
+/**
+ * Fetch the crags in the background once the start-up data is in, whatever sport is
+ * chosen, so Klatring opens with the list ready. Only the crags: their weather depends
+ * on the map view and waits until climbing is chosen (renderClimb). Cheap after the
+ * first time: the stored copy, refreshed at most weekly (api/crags.ts).
+ */
+function preloadCrags(): void {
+  const go = () => void loadCrags();
+  if ('requestIdleCallback' in window) requestIdleCallback(go, { timeout: 5_000 });
+  else setTimeout(go, 1_000);
+}
+
 /** The Klatring tab lists the crags in view: follow the map (after it settles). */
 let climbTimer: ReturnType<typeof setTimeout> | null = null;
 map.on('moveend', () => {
@@ -938,4 +950,5 @@ fetchRegions()
     loadWind(state.date).catch(windFail);
     return loadWarnings(state.date);
   })
-  .catch(warnFail);
+  .catch(warnFail)
+  .finally(preloadCrags);

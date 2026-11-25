@@ -266,7 +266,9 @@ const filtered = () => crags.filter((c) => matchesStyle(c, filter));
 
 export function renderClimb(): void {
   const el = document.getElementById('climb');
-  if (!el) return;
+  // Not shown while another sport is chosen (the crags may be preloaded then): nothing to
+  // draw and no weather to fetch. Choosing climbing redraws (main.ts).
+  if (!el || state.sport !== 'climb') return;
   const when = shown();
   const all = filtered();
   if (sort === 'near') locateOnce();

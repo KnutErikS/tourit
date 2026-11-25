@@ -17,7 +17,8 @@ import { storedCopy, withStored, type Fetched } from '../offline/dataCache';
  * every request with Access-Control-Allow-Origin: *.
  */
 
-const REFRESH_MS = 86_400_000;
+/** A stored copy is used as is for a week (the snapshot is also rebuilt weekly). */
+const REFRESH_MS = 7 * 86_400_000;
 const SNAPSHOT_MAX_AGE = 21 * 86_400_000;
 const SNAPSHOT_URL = 'data/crags.json';
 const KEY = 'norway';

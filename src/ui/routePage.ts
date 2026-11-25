@@ -6,7 +6,7 @@ import { parseGpx } from '../route/gpx';
 import { GROUPS, type Group, type Munter } from '../domain/risk';
 import { type RiskSample, type TerrainSample, scoreRoute, summarize, terrainAlong } from '../route/risk';
 import { ZONES, type Zone, type ZoneSection, zoneSections } from '../route/runout';
-import { type Draft, type SavedRoute, listRoutes, putRoute, readDraft, removeRoute, writeDraft } from '../route/store';
+import { type Draft, type SavedRoute, listRoutes, putRoute, readDraft, readShown, removeRoute, writeDraft, writeShown } from '../route/store';
 import { state } from '../state';
 import { type ProfilePoint, type ProfileStats, TooManyTiles, cumulative, profileOf, statsOf } from '../terrain/elevation';
 import type { LatLngTuple } from '../types';
@@ -22,6 +22,10 @@ import { count } from '../analytics/count';
  * While the page is open the map is in drawing mode: a tap adds a point, a
  * point can be dragged, tapping a point removes it and tapping the line adds
  * a point there. Closing the page keeps the route on the map (read-only).
+ *
+ * Saved routes can also be shown on the map next to the open one ("Vis på
+ * kartet"), each in its own colour, so several tours can be compared at once.
+ * Only the open route gets the terrain and risk checks.
  */
 
 const ICON_ROUTE =
@@ -106,6 +110,58 @@ const zoneLines = Object.fromEntries(
 ) as Record<Zone, L.Polyline>;
 const drawZones = (s: ZoneSection[]) => ZONES.forEach((z) => zoneLines[z].setLatLngs(s.filter((x) => x.zone === z).map((x) => x.lls)));
 const vertices = L.layerGroup().addTo(group);
+
+/* ---------- other saved routes shown on the map ---------- */
+
+/** Saved routes shown alongside the open one, under it. */
+map.createPane('routes-shown').style.zIndex = '445';
+const shownGroup = L.layerGroup().addTo(map);
+let shown = new Set<string>(readShown());
+let shownKey = '';
+/** Colours for shown routes: clear of the open route's magenta, the zones' red and blues and SLABS/Munter's orange. */
+const SHOWN_COLORS = ['#6a1b9a', '#2e7d32', '#5d4037', '#455a64', '#9e9d24', '#00695c'];
+/**
+ * A route's colour follows the order routes were saved in (oldest first), so
+ * it doesn't change when others are shown or hidden, and the first six differ.
+ */
+function shownColor(id: string, routes: SavedRoute[] = listRoutes()): string {
+  const i = routes.length - 1 - routes.findIndex((r) => r.id === id);
+  return SHOWN_COLORS[i % SHOWN_COLORS.length];
+}
+const endIcon = (color: string, start: boolean) =>
+  L.divIcon({ className: '', html: `<div class="rt-v rt-o${start ? ' start' : ''}" style="--c:${color}"></div>`, iconSize: [12, 12], iconAnchor: [6, 6] });
+
+/** Draw the shown saved routes (not the open one, which is drawn in full). Redrawn only when something changed. */
+function drawShown(routes: SavedRoute[]): void {
+  const list = routes.filter((r) => shown.has(r.id) && r.id !== editId && r.points.length > 1);
+  const key = list.map((r) => `${r.id}@${r.updatedAt}`).join('|');
+  if (key === shownKey) return;
+  shownKey = key;
+  shownGroup.clearLayers();
+  for (const r of list) {
+    const color = shownColor(r.id, routes);
+    const lls = r.points.map(([a, b]) => L.latLng(a, b));
+    L.polyline(lls, { pane: 'routes-shown', color: '#fff', weight: 6, opacity: 0.8, interactive: false }).addTo(shownGroup);
+    // Taps go on to the map (a route point while drawing, a picked point otherwise); hover shows the name.
+    L.polyline(lls, { pane: 'routes-shown', color, weight: 3.5, opacity: 0.95 })
+      .bindTooltip(esc(r.name), { sticky: true, direction: 'top', className: 'rt-tip' })
+      .addTo(shownGroup);
+    L.marker(lls[0], { pane: 'routes-shown', icon: endIcon(color, true), interactive: false, keyboard: false }).addTo(shownGroup);
+    L.marker(lls[lls.length - 1], { pane: 'routes-shown', icon: endIcon(color, false), interactive: false, keyboard: false }).addTo(shownGroup);
+  }
+}
+
+function setShown(ids: Iterable<string>): void {
+  shown = new Set(ids);
+  writeShown([...shown]);
+}
+
+/** Fit the map to the open route and every shown one. */
+function fitAll(routes: SavedRoute[]): void {
+  const lls: LatLngTuple[] = routes.filter((r) => shown.has(r.id)).flatMap((r) => r.points);
+  lls.push(...points.map((p) => [p.lat, p.lng] as LatLngTuple));
+  if (lls.length) map.fitBounds(L.latLngBounds(lls), { padding: [40, 40] });
+}
 const cursor = L.circleMarker([0, 0], { pane: 'route', radius: 6, color: '#fff', weight: 2, fillColor: LINE, fillOpacity: 1, interactive: false });
 
 export const isDrawing = () => drawing;
@@ -480,14 +536,18 @@ function riskStrip(): string {
   </svg>`;
 }
 
-function routeHTML(r: SavedRoute): string {
+function routeHTML(r: SavedRoute, _i: number, routes: SavedRoute[]): string {
   const climb = r.ascent !== null ? ` · ↑ ${fmtM(r.ascent)}` : '';
   const del = confirmDelete === r.id;
-  return `<article class="off-area${r.id === editId ? ' rt-active' : ''}" data-id="${esc(r.id)}">
-    <div class="off-title"><b>${esc(r.name)}</b>${r.id === editId ? '<span class="off-ok">Åpen</span>' : ''}</div>
+  const open = r.id === editId, on = shown.has(r.id);
+  // The swatch is the route's colour on the map: the open route's own, or its colour as a shown route.
+  const swatch = open || on ? `<i class="rt-sw" style="background:${open ? LINE : shownColor(r.id, routes)}" aria-hidden="true"></i>` : '';
+  return `<article class="off-area${open ? ' rt-active' : ''}" data-id="${esc(r.id)}">
+    <div class="off-title"><b>${swatch}${esc(r.name)}</b>${open ? '<span class="off-ok">Åpen</span>' : ''}</div>
     <div class="off-sub">${esc(fmtLen(Number(r.length) || 0))}${esc(climb)} · ${esc(fmtDay(r.createdAt))}</div>
     <div class="off-actions">
-      <button class="btn" data-act="open">Vis i kartet</button>
+      <button class="btn" data-act="open"${open ? ' disabled' : ''}>Åpne</button>
+      <button class="btn" data-act="show" aria-pressed="${on}" title="Vis ruta på kartet sammen med de andre">${on ? 'Vises på kartet' : 'Vis på kartet'}</button>
       <button class="btn" data-act="gpx">GPX</button>
       <button class="btn${del ? ' danger' : ''}" data-act="delete">${del ? 'Bekreft sletting' : 'Slett'}</button>
     </div>
@@ -497,6 +557,7 @@ function routeHTML(r: SavedRoute): string {
 function render(): void {
   drawRiskGlow(); // on the map, whether the route page is open or not
   const routes = listRoutes();
+  drawShown(routes);
   if (badge) {
     badge.textContent = routes.length ? String(routes.length) : '';
     badge.hidden = !routes.length;
@@ -513,6 +574,11 @@ function render(): void {
   $<HTMLButtonElement>('rt-gpx').disabled = points.length < 2;
   $('rt-save').textContent = editId ? 'Lagre endringer' : 'Lagre rute';
   $('rt-new').hidden = !editId && !points.length;
+  const nShown = routes.filter((r) => shown.has(r.id)).length;
+  const bar = $('rt-list-bar');
+  bar.hidden = routes.length < 2;
+  $('rt-show-all').textContent = nShown === routes.length ? 'Skjul alle' : 'Vis alle';
+  $<HTMLButtonElement>('rt-fit').disabled = !nShown;
   $('rt-list').innerHTML = routes.length
     ? routes.map(routeHTML).join('')
     : '<p class="empty">Ingen lagrede ruter ennå. Tegn en rute og trykk «Lagre rute».</p>';
@@ -710,6 +776,18 @@ async function onListClick(e: Event): Promise<void> {
       load(r.points, r.id, r.name);
       map.fitBounds(L.latLngBounds(r.points), { padding: [40, 40] });
       break;
+    case 'show': {
+      const next = new Set(shown);
+      if (next.has(r.id)) next.delete(r.id);
+      else {
+        next.add(r.id);
+        count('route-show');
+        // Bring it into view if it's off the screen.
+        if (!map.getBounds().intersects(L.latLngBounds(r.points))) map.fitBounds(L.latLngBounds(r.points), { padding: [40, 40] });
+      }
+      setShown(next);
+      break;
+    }
     case 'gpx': {
       const pts = r.points.map(([a, b]) => L.latLng(a, b));
       void profileOf(pts).then((p) => downloadGpx(r.name, pts, p), () => downloadGpx(r.name, pts, []));
@@ -731,6 +809,7 @@ async function onListClick(e: Event): Promise<void> {
         editId = null;
         saveDraft();
       }
+      if (shown.has(r.id)) setShown([...shown].filter((id) => id !== r.id));
       break;
   }
   render();
@@ -777,6 +856,10 @@ export function initRoute(): void {
         <div class="off-actions"><button class="btn primary" id="rt-save">Lagre rute</button></div>
       </section>
       <h3 class="rt-h">Lagrede ruter</h3>
+      <div class="off-actions rt-list-bar" id="rt-list-bar" hidden>
+        <button class="btn" id="rt-show-all">Vis alle</button>
+        <button class="btn" id="rt-fit">Zoom til rutene</button>
+      </div>
       <div class="off-list" id="rt-list"></div>
       <p class="foot">Høyder fra Kartverkets terrengmodell. Stigning regnes langs linja, så den blir mer nøyaktig jo tettere punktene følger terrenget.</p>
     </div>`;
@@ -804,6 +887,17 @@ export function initRoute(): void {
   nameInput.addEventListener('input', saveDraft);
   nameInput.addEventListener('keydown', (e) => e.key === 'Enter' && saveRoute());
   $('rt-list').addEventListener('click', (e) => void onListClick(e));
+  $('rt-show-all').addEventListener('click', () => {
+    const routes = listRoutes();
+    const all = routes.every((r) => shown.has(r.id));
+    setShown(all ? [] : routes.map((r) => r.id));
+    if (!all) {
+      count('route-show');
+      fitAll(routes);
+    }
+    render();
+  });
+  $('rt-fit').addEventListener('click', () => fitAll(listRoutes()));
   const result = $('rt-result');
   result.addEventListener('pointermove', onProfileMove);
   result.addEventListener('pointerdown', onProfileMove);
@@ -834,5 +928,8 @@ export function initRoute(): void {
   // Bring back the route from the last visit (shown read-only until the tool is opened).
   const d = readDraft();
   if (d) load(d.points, d.id && listRoutes().some((r) => r.id === d.id) ? d.id : null, d.name);
+  // Forget shown routes that have since been deleted.
+  const ids = new Set(listRoutes().map((r) => r.id));
+  if ([...shown].some((id) => !ids.has(id))) setShown([...shown].filter((id) => ids.has(id)));
   render();
 }

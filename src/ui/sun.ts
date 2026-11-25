@@ -36,8 +36,10 @@ export function initSun(ready: () => void): void {
 
 /** The horizon for the picked point, or undefined while it is worked out (then `ready` is called). */
 function pickedHorizon(p: Picked): HorizonState {
-  const key = `${p.ll.lat.toFixed(4)},${p.ll.lng.toFixed(4)}`;
+  const key = `${p.noTerrain ? 'flat:' : ''}${p.ll.lat.toFixed(4)},${p.ll.lng.toFixed(4)}`;
   if (hz?.key === key) return hz;
+  // Picked while surfing: no elevation tiles fetched, the sun is shown without terrain shadow.
+  if (p.noTerrain) return (hz = { key, h: null, err: 'ikke regnet ut i surfemodus' });
   const mine: HorizonState = { key, h: undefined };
   hz = mine;
   horizonFor(p.ll, p.terrain?.elev).then(
@@ -111,6 +113,15 @@ export function sunKeys(): SunKey[] {
       : { icon: 'nosun', html: `<b>Ingen sol</b> på ${face} i dag` });
   }
   return out;
+}
+
+/** One line for surfing: when the sun is up and when it is light enough (no terrain or slopes). */
+export function daylightKey(): SunKey | null {
+  const i = sunInfo();
+  if (!i) return null;
+  const { dl } = i;
+  if (dl.polarNight) return { icon: 'nosun', html: `<b>Mørketid</b>${dl.light.length ? ` – lyst ${i.list(dl.light)}` : ''}` };
+  return { icon: 'sun', html: `<b>Sola oppe ${i.list(dl.sun)}</b> · lyst ${i.list(dl.light)}` };
 }
 
 /** The "Sol og dagslys" details: sunrise/sunset, daylight and when the sun reaches 30° slopes of each aspect. */

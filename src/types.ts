@@ -122,8 +122,10 @@ export interface TerrainPoint {
 
 export interface Picked {
   ll: L.LatLng;
-  /** undefined = still loading, null = no data */
+  /** undefined = still loading, null = no data (or not looked up: see noTerrain) */
   terrain: TerrainPoint | null | undefined;
+  /** Picked with surf chosen: terrain isn't looked up (mostly on water). Switching to ski picks it again. */
+  noTerrain?: boolean;
   /** Weather forecast for the point: undefined = not loaded yet, null = failed (see weatherErr). */
   weather?: Fetched<PointWeather> | null;
   weatherErr?: string;

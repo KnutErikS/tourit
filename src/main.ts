@@ -100,10 +100,13 @@ function layerOn(id: string): boolean {
 /* ---------- rendering ---------- */
 
 function renderPanels(): void {
-  renderDetail(openObservation);
-  renderSummary(() => setTab('warn'));
+  // The warning, its summary and the tools are ski only (and would fetch the point's weather history).
+  if (state.sport === 'ski') {
+    renderDetail(openObservation);
+    renderSummary(() => setTab('warn'));
+    renderTools();
+  }
   renderWeather();
-  renderTools();
   refreshPointChip();
 }
 
@@ -624,6 +627,10 @@ function expandPanel(): void {
 function onSport(s: Sport): void {
   toggles.forEach((apply) => apply());
   syncSurfLayer();
+  // A point picked while surfing has no terrain: look it up now. Otherwise redraw for the sport.
+  if (s === 'ski' && state.picked?.noTerrain) void pickPoint(state.picked.ll);
+  else renderPanels();
+  if (state.picked && coordSource() === 'pick') setCoordInfo(pointFacts());
   syncMapLegend();
   onZoom();
   if (s === 'surf') {
@@ -663,21 +670,25 @@ async function pickPoint(ll: L.LatLng): Promise<void> {
   } else {
     pickMarker.setLatLng(ll);
   }
-  const mine: Picked = { ll, terrain: undefined };
+  // Surf: no terrain lookup, the point is mostly on water.
+  const surf = state.sport === 'surf';
+  const mine: Picked = surf ? { ll, terrain: null, noTerrain: true } : { ll, terrain: undefined };
   state.picked = mine;
   state.selected = regionAt(state.regions, ll);
   showCoord('pick', ll.lat, ll.lng, undefined, pointFacts());
   setPick3D(ll);
   restyleRegions();
   renderPanels();
-  try {
-    mine.terrain = await terrainAt(ll);
-  } catch {
-    mine.terrain = null;
+  if (!surf) {
+    try {
+      mine.terrain = await terrainAt(ll);
+    } catch {
+      mine.terrain = null;
+    }
+    if (state.picked !== mine) return;
+    renderPanels();
+    if (coordSource() === 'pick') setCoordInfo(pointFacts());
   }
-  if (state.picked !== mine) return;
-  renderPanels();
-  if (coordSource() === 'pick') setCoordInfo(pointFacts());
   void loadWeather(mine);
 }
 

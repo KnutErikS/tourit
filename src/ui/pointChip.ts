@@ -10,7 +10,8 @@ import { coordSource, setCoordVerdict } from './coords';
 /**
  * The answer for the picked point, on the map chip: the region's danger level,
  * whether the point is in one of the avalanche problems, and Stop or Go.
- * Tapping it opens the warning (coords.ts wires the tap).
+ * Tapping it opens the warning (coords.ts wires the tap). Ski only: with surf
+ * chosen the chip shows just the point and its MGRS.
  *
  * Worked out again whenever the panels are (point, day or data changed);
  * several calls in a row become one run.
@@ -60,11 +61,12 @@ async function run(): Promise<void> {
   const my = ++token;
   const p = state.picked;
   if (!p || coordSource() !== 'pick') return;
+  if (state.sport !== 'ski') return setCoordVerdict('');
   const prev = last?.for === p ? last.res : null;
   setCoordVerdict(html(prev));
   if (p.terrain === undefined) return; // pickPoint calls again once the terrain is in
   const res = await assessStopOrGo(p.ll, p.terrain).catch(() => null);
-  if (my !== token || state.picked !== p || coordSource() !== 'pick') return;
+  if (my !== token || state.picked !== p || coordSource() !== 'pick' || state.sport !== 'ski') return;
   if (res) last = { for: p, res };
   setCoordVerdict(html(res));
 }

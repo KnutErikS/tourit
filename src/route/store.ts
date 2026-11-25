@@ -72,3 +72,24 @@ export function writeDraft(d: Draft | null): void {
     /* storage unavailable */
   }
 }
+
+/** Saved routes shown on the map alongside the open one (ids, in the order they were shown). */
+const SHOWN_KEY = 'tourit.shownRoutes.v1';
+
+export function readShown(): string[] {
+  try {
+    const v = JSON.parse(localStorage.getItem(SHOWN_KEY) || '[]');
+    return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+export function writeShown(ids: string[]): void {
+  try {
+    if (ids.length) localStorage.setItem(SHOWN_KEY, JSON.stringify(ids));
+    else localStorage.removeItem(SHOWN_KEY);
+  } catch {
+    /* storage unavailable: shown until the page reloads */
+  }
+}

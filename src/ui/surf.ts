@@ -1,3 +1,4 @@
+import * as L from 'leaflet';
 import type { SpotForecast } from '../api/surf';
 import { DIRS } from '../config';
 import {
@@ -6,6 +7,7 @@ import {
 import { KIND_NAME, SURF_SPOTS, type SurfSpot } from '../domain/surfSpots';
 import { closeSurfPopup, drawSurfMarkers } from '../layers/surf';
 import { state } from '../state';
+import { currentPosition, onPositionChange } from './locate';
 import { $, esc, isoDate } from '../util';
 
 /**
@@ -31,7 +33,54 @@ let hooks: SurfHooks | null = null;
 let forecasts = new Map<string, SurfHour[]>();
 let statusText = 'Henter bølgevarsel…';
 let openId: string | null = null;
-let sort: 'best' | 'coast' = 'best';
+type Sort = 'best' | 'near' | 'coast';
+let sort: Sort = 'best';
+
+/* ---------- your position (for "Nærmest deg") ---------- */
+
+/** Where distances are measured from: the map's position dot when on, else a one-off fix. */
+let here: L.LatLng | null = null;
+/** `here` when the list was last drawn, so moving a few metres doesn't redraw it. */
+let drawnFrom: L.LatLng | null = null;
+let locating = false;
+let locateError = '';
+const REDRAW_M = 500;
+
+function locateOnce(): void {
+  const pos = currentPosition();
+  if (pos) {
+    here = pos.ll;
+    return;
+  }
+  if (here || locating) return;
+  if (!('geolocation' in navigator)) {
+    locateError = 'Denne nettleseren kan ikke vise posisjon, så listen står langs kysten.';
+    return;
+  }
+  locating = true;
+  locateError = '';
+  navigator.geolocation.getCurrentPosition(
+    (p) => {
+      locating = false;
+      here = L.latLng(p.coords.latitude, p.coords.longitude);
+      renderSurf();
+    },
+    (e) => {
+      locating = false;
+      locateError = e.code === e.PERMISSION_DENIED
+        ? 'Appen har ikke tilgang til posisjonen din, så listen står langs kysten.'
+        : 'Fant ikke posisjonen din, så listen står langs kysten.';
+      renderSurf();
+    },
+    { enableHighAccuracy: false, maximumAge: 300_000, timeout: 20_000 },
+  );
+}
+
+const distanceTo = (spot: SurfSpot) => (here ? here.distanceTo([spot.lat, spot.lng]) : null);
+const km = (m: number) => {
+  const k = m / 1000;
+  return `${k < 10 ? k.toFixed(1).replace('.', ',') : Math.round(k)} km`;
+};
 
 /* ---------- formatting ---------- */
 
@@ -144,12 +193,12 @@ function detail(spot: SurfSpot, at: ReturnType<typeof ratingAt>): string {
     </div>`;
 }
 
-function spotHtml(spot: SurfSpot, at: ReturnType<typeof ratingAt>): string {
+function spotHtml(spot: SurfSpot, at: ReturnType<typeof ratingAt>, dist: number | null): string {
   const open = spot.id === openId;
   return `<article class="sp${open ? ' open' : ''}" data-id="${esc(spot.id)}">
     <button type="button" class="sp-h" aria-expanded="${open}" aria-controls="sp-d-${esc(spot.id)}">
       ${badge(at?.rating ?? null)}
-      <span class="sp-name"><b>${esc(spot.name)}</b><small>${esc(spot.area)} · ${esc(KIND_NAME[spot.kind])}</small></span>
+      <span class="sp-name"><b>${esc(spot.name)}</b><small>${esc(spot.area)} · ${esc(KIND_NAME[spot.kind])}${dist != null ? ` · ${km(dist)}` : ''}</small></span>
       ${nowCell(at)}
     </button>
     ${dayCells(spot)}
@@ -171,20 +220,27 @@ export function renderSurf(): void {
   const el = document.getElementById('surf');
   if (!el) return;
   const when = shown();
-  const items = SURF_SPOTS.map((spot) => ({ spot, at: when ? ratingAt(spot, when.t) : null }));
+  if (sort === 'near') locateOnce();
+  drawnFrom = here;
+  const items = SURF_SPOTS.map((spot) => ({ spot, at: when ? ratingAt(spot, when.t) : null, dist: distanceTo(spot) }));
   const list = sort === 'best'
     ? [...items].sort((a, b) => (b.at?.rating.score ?? -1) - (a.at?.rating.score ?? -1) || (b.at?.rating.size ?? 0) - (a.at?.rating.size ?? 0))
-    : items;
+    : sort === 'near' && here
+      ? [...items].sort((a, b) => a.dist! - b.dist!)
+      : items;
+  const nearNote = sort !== 'near' ? '' : locating ? 'Finner posisjonen din…' : locateError;
   el.innerHTML = `
     <div class="surf-top">
       <p class="kicker">Surfespotter · ${when ? esc(when.label) : 'velg i dag eller senere'}</p>
       <label class="ctrl"><span>Sorter</span><select id="surf-sort">
         <option value="best"${sort === 'best' ? ' selected' : ''}>Beste først</option>
+        <option value="near"${sort === 'near' ? ' selected' : ''}>Nærmest deg</option>
         <option value="coast"${sort === 'coast' ? ' selected' : ''}>Langs kysten</option>
       </select></label>
     </div>
     <p class="desc surf-status">${esc(when ? statusText : 'Bølgevarselet gjelder bare fram i tid. Velg i dag eller en senere dag.')}</p>
-    <div class="splist">${list.map(({ spot, at }) => spotHtml(spot, at)).join('')}</div>
+    ${nearNote ? `<p class="desc surf-status">${esc(nearNote)}</p>` : ''}
+    <div class="splist">${list.map(({ spot, at, dist }) => spotHtml(spot, at, dist)).join('')}</div>
     ${ABOUT}
     <p class="wx-src">Bølger og vind: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> (DWD, ECMWF, MET Norge). Spotdata: <a href="https://www.surf-forecast.com/countries/Norway/breaks" target="_blank" rel="noopener">surf-forecast.com</a>.</p>`;
   drawSurfMarkers(items.map(({ spot, at }) => ({ spot, rating: at?.rating ?? null })), openId, popupFor);
@@ -267,9 +323,16 @@ export function initSurf(h: SurfHooks): void {
   el.addEventListener('change', (e) => {
     const t = e.target as HTMLElement;
     if (t.id === 'surf-sort') {
-      sort = (t as HTMLSelectElement).value === 'coast' ? 'coast' : 'best';
+      const v = (t as HTMLSelectElement).value;
+      sort = v === 'coast' || v === 'near' ? v : 'best';
       renderSurf();
     }
+  });
+  // Follow the map's position dot, but redraw only once you've moved a bit.
+  onPositionChange((pos) => {
+    if (!pos) return;
+    here = pos.ll;
+    if (!drawnFrom || drawnFrom.distanceTo(here) > REDRAW_M) renderSurf();
   });
   el.addEventListener('click', (e) => {
     const t = e.target as HTMLElement;

@@ -13,6 +13,7 @@ export function pointFacts(): string {
   if (!picked) return '';
   const t = picked.terrain;
   const pos = `${picked.ll.lat.toFixed(4)}° N, ${picked.ll.lng.toFixed(4)}° Ø`;
+  if (picked.noTerrain) return `<b>${pos}</b>`;
   if (t === undefined) return `<b>${pos}</b><span>henter terreng…</span>`;
   if (!t) return `<b>${pos}</b><span>ingen høydedata her</span>`;
   return `<b>${Math.round(t.elev)} moh.</b><b>${t.slope.toFixed(0)}°</b><b>${DIRS[t.sector]}-vendt</b>`;

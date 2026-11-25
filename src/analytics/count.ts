@@ -31,6 +31,7 @@ export const EVENTS = {
   'alptruth-tick': 'ALPTRUTh: egen avkrysning',
   '3d-open': '3D-kart åpnet',
   'route-open': 'Tegn rute åpnet',
+  'route-show': 'Lagret rute vist på kartet',
   'gpx-import': 'GPX importert',
   'gpx-export': 'GPX lastet ned',
   'area-save': 'Område lagret for bruk uten nett',

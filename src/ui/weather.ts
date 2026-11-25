@@ -5,7 +5,9 @@ import {
 } from '../domain/weather';
 import { state } from '../state';
 import { $, esc, fmtTime, isoDate } from '../util';
-import { sunDetails, sunKeys, sunNote, type SunKey } from './sun';
+import { angDiff, nearestSpot, runs, windClass, windRel, WIND_CLASS_NAME, WIND_NAME, type WindClass } from '../domain/surf';
+import { SURF_SPOTS } from '../domain/surfSpots';
+import { daylightKey, sunDetails, sunKeys, sunNote, type SunKey } from './sun';
 
 /** Daytime on a touring day, local time. */
 const DAY_FROM_H = 6, DAY_TO_H = 18;
@@ -252,6 +254,63 @@ function heightProfile(a: AirSummary, alt: number, cloudSpan: string): string {
     + `<figcaption class="hp-cap">${cap}</figcaption></figure>`;
 }
 
+/* ---------- wind for surfing ---------- */
+
+/**
+ * Surf: the wind hour by hour (direction, speed, gusts), and, when the point is
+ * at a surf spot (within 5 km), whether each hour blows offshore or onshore
+ * there, plus a key line with the clean and blown-out stretches of the day.
+ */
+function surfWind(w: PointWeather, from: number, to: number): { keys: KeyLine[]; card: string } {
+  const p = state.picked!;
+  const spot = nearestSpot(SURF_SPOTS, { lat: p.ll.lat, lng: p.ll.lng });
+  const steps = spread(w.steps, from, to, 1);
+  if (!steps.length) return { keys: [], card: '' };
+  const classOf = (x: WeatherStep) => (spot ? windClass(windRel(x.wind, x.windFrom, spot.offshoreFrom)) : null);
+
+  // Key lines: strength and direction, then when it is clean at the spot.
+  const keys: KeyLine[] = [];
+  const lo = Math.min(...steps.map((x) => x.wind)), hi = Math.max(...steps.map((x) => x.wind));
+  const gusts = steps.map((x) => x.gust).filter((g): g is number => g != null);
+  const first = steps[0].windFrom, last = steps[steps.length - 1].windFrom;
+  const dir = angDiff(first, last) >= 45 ? `fra ${dirName(first)}, dreier til ${dirName(last)}` : `fra ${dirName(first)}`;
+  const speed = Math.round(lo) === Math.round(hi) ? `${Math.round(hi)} m/s` : `${Math.round(lo)}–${Math.round(hi)} m/s`;
+  keys.push({ icon: 'wind', html: `<b>Vind ${dir}, ${speed}</b>${gusts.length ? ` · kast opptil ${Math.round(Math.max(...gusts))}` : ''}` });
+  if (spot) {
+    // Steps are hourly for the first days, then 6-hourly: join across whichever gap there is.
+    const gap = steps.length > 1 ? Math.max(...steps.slice(1).map((x, i) => x.time - steps[i].time)) : HOUR;
+    const parts = runs(steps.map((x) => ({ time: x.time, v: classOf(x)! })), gap);
+    const name = (c: WindClass) => (c === 'clean' ? 'Fralands' : cap(WIND_CLASS_NAME[c]));
+    const html = parts.length === 1
+      ? `<b>${name(parts[0].v)} hele perioden</b> på ${esc(spot.name)}`
+      : parts.map((r) => `<b>${name(r.v).toLowerCase()}</b> ${hh(r.from)}${r.to > r.from ? `–${hh(r.to)}` : ''}`).join(' · ').replace(/^<b>./, (m) => m.toUpperCase()) + ` <span class="nw">(${esc(spot.name)})</span>`;
+    keys.push({ icon: 'wind', html });
+  }
+
+  // Hour by hour: bar for the mean wind, lighter bar out to the gusts.
+  const top = Math.max(10, ...steps.map((x) => x.gust ?? x.wind));
+  const rows = steps.map((x) => {
+    const c = classOf(x);
+    const rel = spot ? windRel(x.wind, x.windFrom, spot.offshoreFrom) : null;
+    const pct = (v: number) => Math.min(100, (v / top) * 100).toFixed(0);
+    return `<div class="wnd-row"><span class="wnd-t">${hh(x.time)}</span>`
+      + `<span class="wnd-d">${arrow(x.windFrom)}${dirName(x.windFrom)}</span>`
+      + `<span class="wnd-bar"><i class="wnd-g" style="width:${pct(x.gust ?? x.wind)}%"></i><i class="wnd-w${c ? ` wnd-${c}` : ''}" style="width:${pct(x.wind)}%"></i></span>`
+      + `<span class="wnd-v"><b>${Math.round(x.wind)}</b>${x.gust != null ? `<small>(${Math.round(x.gust)})</small>` : ''}</span>`
+      + (rel && c ? `<span class="wnd-rel wnd-${c}">${WIND_NAME[rel]}</span>` : '')
+      + '</div>';
+  });
+  const note = spot
+    ? `m/s, vindkast i parentes. Fralands på ${esc(spot.name)} er vind fra ${dirName(spot.offshoreFrom)}.`
+    : 'm/s, vindkast i parentes. Trykk på en surfespot (eller «Vær her» i Surf-fanen) for å se om vinden er fralands der.';
+  const card = `<section class="wnd${spot ? ' wnd-spot' : ''}" aria-label="Vind time for time">
+      <p class="kicker">Vind time for time${spot ? ` · ${esc(spot.name)}` : ''}</p>
+      <div class="wnd-rows">${rows.join('')}</div>
+      <p class="wx-src">${note}</p>
+    </section>`;
+  return { keys, card };
+}
+
 /* ---------- folding sections, kept open across redraws ---------- */
 
 const openSections = new Set<string>();
@@ -279,6 +338,9 @@ interface WeatherParts {
   top: string;
   keys: KeyLine[];
   hours: string;
+  /** Surf only: key lines and the hour-by-hour wind card. */
+  windKeys: KeyLine[];
+  wind: string;
   clouds: string;
   sources: string;
   /** "dagtid 6–18" */
@@ -288,7 +350,7 @@ interface WeatherParts {
 /** The weather part: a message, or summary, key lines, hours and the cloud section. */
 function weatherParts(): WeatherParts {
   const p = state.picked!;
-  const msg = (t: string, sources = ''): WeatherParts => ({ top: `<p class="rsub">${t}</p>`, keys: [], hours: '', clouds: '', sources, when: '' });
+  const msg = (t: string, sources = ''): WeatherParts => ({ top: `<p class="rsub">${t}</p>`, keys: [], hours: '', windKeys: [], wind: '', clouds: '', sources, when: '' });
   if (p.weather === undefined) return msg('Henter værvarsel…');
   if (p.weather === null) return msg(`Fikk ikke hentet værvarsel (${esc(p.weatherErr ?? 'nettverksfeil')}).`);
 
@@ -307,10 +369,13 @@ function weatherParts(): WeatherParts {
   const skyAll = skyOver(w.steps, win.from, win.to) ?? { cloud: s.cloudAvg, fog: s.fogMax };
   // Only the picture: where the cloud and the freezing level are, relative to the point.
   const clouds = a && alt != null ? heightProfile(a, alt, inCloudSpan(w.steps, win.from, win.to, alt)) : '';
+  const sw = state.sport === 'surf' ? surfWind(w, win.from, win.to) : { keys: [], card: '' };
   return {
     top: `${hero(s, skyAll, night)}${s.partial ? '<p class="wx-when">Varselet slutter før perioden er over.</p>' : ''}`,
     keys: keyLines(s, a),
     hours: hours(w, win.from, win.to),
+    windKeys: sw.keys,
+    wind: sw.card,
     clouds, sources, when: win.label,
   };
 }
@@ -318,7 +383,10 @@ function weatherParts(): WeatherParts {
 /** "1180 moh. · 34° · NØ" and "tirs. 24. nov. · dagtid 6–18". */
 function headLine(when: string): string {
   const p = state.picked!, t = p.terrain;
-  const where = t === undefined ? 'henter terreng…'
+  // Surf: name the spot when the point is at one.
+  const spot = state.sport === 'surf' ? nearestSpot(SURF_SPOTS, { lat: p.ll.lat, lng: p.ll.lng }) : null;
+  const where = spot ? `${esc(spot.name)} · ${esc(spot.area)}`
+    : t === undefined ? 'henter terreng…'
     : !t ? `${p.ll.lat.toFixed(4)}° N, ${p.ll.lng.toFixed(4)}° Ø`
     : `${Math.round(t.elev)} moh. · ${t.slope.toFixed(0)}° · ${DIRS[t.sector]}`;
   return `<div class="wx-headline"><span class="wx-where">${where}</span><span>${esc(shortDate(state.date))}${when ? ` · ${esc(when)}` : ''}</span></div>`;
@@ -342,6 +410,21 @@ export function renderWeather(): void {
     return;
   }
   const wx = weatherParts();
+  if (state.sport === 'surf') {
+    // Surf: wind first; no cloud heights, freezing level or sun on slopes.
+    const day = daylightKey();
+    el.innerHTML = `<div class="wxv">
+      ${headLine(wx.when)}
+      ${wx.top}
+      ${keyBox([...wx.windKeys, ...(day ? [day] : [])])}
+      ${wx.wind}
+      ${wx.hours}
+      <div class="wx-secs">
+        ${section('src', 'Kilder og metode', `<p class="wx-src">${wx.sources ? `${wx.sources} ` : ''}Sol og dagslys er beregnet på enheten (klarvær, uten skygge fra terrenget). Dagslys er borgerlig tussmørke.</p>`)}
+      </div>
+    </div>`;
+    return;
+  }
   const sources = `<p class="wx-src">${wx.sources ? `${wx.sources} ` : ''}${sunNote()}</p>`;
   // Weather first, then the sun lines, which work out even without a forecast.
   el.innerHTML = `<div class="wxv">

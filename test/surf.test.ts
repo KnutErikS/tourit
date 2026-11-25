@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  angDiff, bestOfDay, breakerHeight, hourAt, rateHour, scoreName, swellFactor, toSurfHours, windRel, type SurfHour,
+  angDiff, bestOfDay, breakerHeight, hourAt, kmBetween, nearestSpot, rateHour, runs, scoreName, swellFactor, toSurfHours, windClass, windRel, type SurfHour,
 } from '../src/domain/surf.ts';
 import { SURF_SPOTS, type SurfSpot } from '../src/domain/surfSpots.ts';
 
@@ -101,4 +101,24 @@ test('spot list: unique ids, positions in Norway, directions in range', () => {
     assert.ok(s.lat > 57.9 && s.lat < 71.5 && s.lng > 4.5 && s.lng < 31.5, s.id);
     assert.ok(s.swellFrom >= 0 && s.swellFrom < 360 && s.offshoreFrom >= 0 && s.offshoreFrom < 360, s.id);
   }
+});
+
+test('windClass groups the wind relations', () => {
+  assert.equal(windClass('glassy'), 'clean');
+  assert.equal(windClass('cross-off'), 'clean');
+  assert.equal(windClass('cross'), 'side');
+  assert.equal(windClass('cross-on'), 'onshore');
+});
+
+test('runs joins neighbouring hours with the same value', () => {
+  const H = 3_600_000;
+  const r = runs([0, 1, 2, 3, 5].map((h, i) => ({ time: h * H, v: i < 2 ? 'a' : 'b' })));
+  assert.deepEqual(r, [{ v: 'a', from: 0, to: H }, { v: 'b', from: 2 * H, to: 3 * H }, { v: 'b', from: 5 * H, to: 5 * H }]);
+});
+
+test('nearestSpot finds a spot within 5 km, else none', () => {
+  const hoddevik = SURF_SPOTS.find((s) => s.id === 'hoddevik')!;
+  assert.equal(nearestSpot(SURF_SPOTS, { lat: hoddevik.lat + 0.01, lng: hoddevik.lng })?.id, 'hoddevik');
+  assert.equal(nearestSpot(SURF_SPOTS, { lat: 61.5, lng: 8.5 }), null);
+  assert.ok(Math.abs(kmBetween({ lat: 60, lng: 10 }, { lat: 61, lng: 10 }) - 111.2) < 0.2);
 });

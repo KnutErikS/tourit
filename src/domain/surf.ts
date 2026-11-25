@@ -269,3 +269,41 @@ export function toSurfHours(marine: OmLocation, wind: OmLocation | null): SurfHo
   });
   return out;
 }
+
+/* ---------- wind through the day, for the Vær tab ---------- */
+
+/** Wind sorted for a surfer: clean (offshore, light cross-offshore or calm), sideways, or blowing in. */
+export type WindClass = 'clean' | 'side' | 'onshore';
+export function windClass(rel: WindRel): WindClass {
+  if (rel === 'glassy' || rel === 'offshore' || rel === 'cross-off') return 'clean';
+  return rel === 'cross' ? 'side' : 'onshore';
+}
+export const WIND_CLASS_NAME: Record<WindClass, string> = { clean: 'fralands eller stille', side: 'sideveis', onshore: 'pålands' };
+
+/** Consecutive hours with the same value, as [first, last] times; `step` is the spacing of the hours (ms). */
+export function runs<T>(items: { time: number; v: T }[], step = 3_600_000): { v: T; from: number; to: number }[] {
+  const out: { v: T; from: number; to: number }[] = [];
+  for (const it of items) {
+    const last = out[out.length - 1];
+    if (last && last.v === it.v && it.time - last.to <= step) last.to = it.time;
+    else out.push({ v: it.v, from: it.time, to: it.time });
+  }
+  return out;
+}
+
+/** Distance in km between two points (equirectangular: fine over a few km). */
+export function kmBetween(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  const x = ((b.lng - a.lng) * Math.PI) / 180 * Math.cos((((a.lat + b.lat) / 2) * Math.PI) / 180);
+  const y = ((b.lat - a.lat) * Math.PI) / 180;
+  return Math.hypot(x, y) * 6371;
+}
+
+/** The nearest spot within `maxKm`, or null. */
+export function nearestSpot<S extends { lat: number; lng: number }>(spots: S[], at: { lat: number; lng: number }, maxKm = 5): S | null {
+  let best: S | null = null, bestKm = maxKm;
+  for (const s of spots) {
+    const km = kmBetween(s, at);
+    if (km <= bestKm) (best = s), (bestKm = km);
+  }
+  return best;
+}

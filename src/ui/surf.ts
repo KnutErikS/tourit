@@ -9,6 +9,7 @@ import { closeSurfPopup, drawSurfMarkers } from '../layers/surf';
 import { state } from '../state';
 import { currentPosition, onPositionChange } from './locate';
 import { $, esc, isoDate } from '../util';
+import { count, countSpot } from '../analytics/count';
 
 /**
  * The Surf tab: every spot with its rating for the time shown (now, or 12:00 on
@@ -252,6 +253,9 @@ const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /** What a tap on a spot in the map shows: the rating, waves and wind for the time shown, and the next days. */
 function popupFor(spot: SurfSpot): HTMLElement {
+  // Leaflet builds the popup each time it opens, so this is a tap on the marker.
+  count('surf-marker');
+  countSpot(spot);
   const el = document.createElement('div');
   el.className = 'sp-pop';
   const when = shown();
@@ -290,6 +294,7 @@ function popupFor(spot: SurfSpot): HTMLElement {
     hooks?.onDetails(spot.id);
   });
   el.querySelector('[data-act="wx"]')!.addEventListener('click', () => {
+    count('surf-weather');
     closeSurfPopup();
     hooks?.onWeather(spot);
   });
@@ -325,6 +330,7 @@ export function initSurf(h: SurfHooks): void {
     if (t.id === 'surf-sort') {
       const v = (t as HTMLSelectElement).value;
       sort = v === 'coast' || v === 'near' ? v : 'best';
+      if (sort !== 'best') count(`surf-sort-${sort}`);
       renderSurf();
     }
   });
@@ -341,15 +347,26 @@ export function initSurf(h: SurfHooks): void {
     if (!spot) return;
     const day = t.closest<HTMLElement>('.sp-day');
     if (day?.dataset.date) {
+      count('surf-day');
       openId = spot.id;
       hooks?.onDate(day.dataset.date);
       return;
     }
     const act = t.closest<HTMLElement>('[data-act]')?.dataset.act;
-    if (act === 'map') return hooks?.onShowOnMap(spot);
-    if (act === 'wx') return hooks?.onWeather(spot);
+    if (act === 'map') {
+      count('surf-show-map');
+      return hooks?.onShowOnMap(spot);
+    }
+    if (act === 'wx') {
+      count('surf-weather');
+      return hooks?.onWeather(spot);
+    }
     if (t.closest('.sp-h')) {
       openId = openId === spot.id ? null : spot.id;
+      if (openId) {
+        count('surf-list');
+        countSpot(spot);
+      }
       renderSurf();
       if (openId) document.querySelector(`#surf .sp[data-id="${CSS.escape(openId)}"]`)?.scrollIntoView({ block: 'nearest' });
     }

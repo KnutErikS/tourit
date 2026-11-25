@@ -21,6 +21,13 @@ export const EVENTS = {
   'tab-tools': 'Fane: Verktøy',
   'tab-surf': 'Fane: Surf',
   'sport-surf': 'Sport: Surf valgt',
+  'surf-marker': 'Surf: spot trykket i kartet',
+  'surf-list': 'Surf: spot åpnet i lista',
+  'surf-show-map': 'Surf: Vis i kartet',
+  'surf-weather': 'Surf: Vær her',
+  'surf-day': 'Surf: annen dag valgt',
+  'surf-sort-near': 'Surf: sortert etter nærmest',
+  'surf-sort-coast': 'Surf: sortert etter kyst',
   'layer-bratt': 'Lag: Bratthet',
   'layer-runout': 'Lag: Utløp',
   'layer-snow': 'Lag: Snø (seNorge)',
@@ -59,7 +66,8 @@ const VISIT_GAP_MS = 30 * 60_000;
 const ENDPOINT = endpointFor(__GOATCOUNTER__);
 const LOCAL_HOST = /^(localhost|127\.0\.0\.1|\[::1\]|.*\.localhost|.*\.test)$/;
 
-let sentThisVisit = new Set<EventName>();
+/** Event paths sent this visit (EventName, or `surf-spot/<id>`). */
+let sentThisVisit = new Set<string>();
 let hiddenAt: number | null = null;
 
 function enabled(): boolean {
@@ -90,12 +98,25 @@ function countVisit(withReferrer: boolean): void {
   if (matchMedia('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone) count('standalone');
 }
 
+function event(path: string, title: string): void {
+  if (sentThisVisit.has(path)) return;
+  sentThisVisit.add(path);
+  if (!enabled()) return;
+  send(hitUrl(ENDPOINT, { path, title, event: true }, location.origin, rnd()));
+}
+
 /** A feature was used: counted once per visit. */
 export function count(name: EventName): void {
-  if (sentThisVisit.has(name)) return;
-  sentThisVisit.add(name);
-  if (!enabled()) return;
-  send(hitUrl(ENDPOINT, { path: name, title: EVENTS[name], event: true }, location.origin, rnd()));
+  event(name, EVENTS[name]);
+}
+
+/**
+ * A surf spot was looked at (marker tapped, or opened in the list): one row per
+ * spot in the dashboard, once per visit. Spots are fixed public places from
+ * domain/surfSpots.ts, so this says which spots are popular, not where anyone is.
+ */
+export function countSpot(spot: { id: string; name: string }): void {
+  event(`surf-spot/${spot.id}`, `Spot: ${spot.name}`);
 }
 
 /** True when this build counts visits (the About dialog says so then). */

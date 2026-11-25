@@ -44,3 +44,6 @@ export async function getJson<T>(url: string, init?: RequestInit): Promise<T> {
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json() as Promise<T>;
 }
+
+/** "Uten nett · lagret tor. 19. nov. kl. 17:02 · " when data came from the device (`savedAt`), else ''. */
+export const storedNote = (savedAt: number | null): string => (savedAt === null ? '' : `Uten nett · lagret ${fmtTime(new Date(savedAt).toISOString())} · `);

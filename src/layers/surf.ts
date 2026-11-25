@@ -1,7 +1,7 @@
 import * as L from 'leaflet';
 import type { SurfRating } from '../domain/surf';
 import type { SurfSpot } from '../domain/surfSpots';
-import { map } from '../map';
+import { placePopupClearOfPanel } from './popupPlacement';
 
 /**
  * Surf spots as round badges coloured by the rating for the time shown in the
@@ -36,7 +36,7 @@ export function drawSurfMarkers(items: SurfMarker[], selected: string | null, po
     if (!known) {
       const marker = L.marker([spot.lat, spot.lng], { icon: icon(html), title, alt: spot.name, bubblingMouseEvents: false, zIndexOffset: sel ? 500 : 0 });
       // Before bindPopup, so it runs before the popup opens and pans the map.
-      marker.on('click', () => clearOfPanel(marker));
+      marker.on('click', () => placePopupClearOfPanel(marker));
       // Built on every open, so it shows the time and data of that moment.
       marker.bindPopup(() => popup(spot), { maxWidth: 300, autoPanPadding: [16, 16] });
       marker.addTo(surfLayer);
@@ -50,31 +50,6 @@ export function drawSurfMarkers(items: SurfMarker[], selected: string | null, po
   }
 }
 
-/**
- * Pan the popup clear of the panel (the side panel on PC covers the map's left
- * side, the bottom sheet on phones its lower part) and of the map buttons.
- */
-/** Width of the column of map buttons on the right, px. */
-const RIGHT_BUTTONS = 64;
-
-function clearOfPanel(marker: L.Marker): void {
-  const popup = marker.getPopup();
-  const panel = document.getElementById('panel');
-  if (!popup) return;
-  let left = 0, bottom = 0;
-  if (panel && !panel.hidden) {
-    const box = map.getContainer().getBoundingClientRect(), r = panel.getBoundingClientRect();
-    if (r.width < box.width * 0.9) left = Math.max(0, r.right - box.left);
-    else bottom = Math.max(0, box.bottom - r.top);
-  }
-  popup.options.autoPanPaddingTopLeft = L.point(left + 16, 16);
-  // Narrow enough to fit beside the map buttons on a phone (24 px is the popup's own margin).
-  popup.options.maxWidth = Math.max(240, Math.min(300, map.getSize().x - left - RIGHT_BUTTONS - 16 - 24));
-  // The map buttons run down the right edge.
-  popup.options.autoPanPaddingBottomRight = L.point(RIGHT_BUTTONS, bottom + 16);
-}
-
-/** Close the popup of a spot, if it is open (its content is then out of date). */
 export function closeSurfPopup(): void {
   for (const { marker } of markers.values()) marker.closePopup();
 }

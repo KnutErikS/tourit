@@ -58,7 +58,7 @@ export const EVENTS = {
   'fail-dem': 'Feil: Kartverket høydedata',
   'fail-vegvesen': 'Feil: Vegvesen (webkamera)',
   'fail-marine': 'Feil: Open-Meteo Marine (bølger)',
-  'fail-overpass': 'Feil: OpenStreetMap Overpass (klatrefelt)',
+  'fail-overpass': 'Feil: klatrefeltlisten (data/crags.json)', // key kept for the dashboard's history; production no longer calls Overpass
   'tab-climb': 'Fane: Klatring',
   'sport-climb': 'Sport: Klatring valgt',
   'climb-marker': 'Klatring: felt trykket i kartet',

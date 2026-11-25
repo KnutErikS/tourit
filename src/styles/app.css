@@ -684,18 +684,18 @@ dialog.dlg .dlg-list{margin:0 0 10px;padding-left:18px;display:grid;gap:6px}
 .cam-note{margin:0;font-size:11px;color:var(--muted);line-height:1.35}
 
 /* Sport: elements marked data-sport only show for their sport (ui/sport.ts). */
-body[data-sport="surf"] [data-sport="ski"],body[data-sport="ski"] [data-sport="surf"]{display:none!important}
-.sport{flex:none;display:inline-grid;grid-auto-flow:column;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+body[data-sport="ski"] [data-sport]:not([data-sport~="ski"]),body[data-sport="surf"] [data-sport]:not([data-sport~="surf"]),body[data-sport="climb"] [data-sport]:not([data-sport~="climb"]){display:none!important}
+.sport{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);border-radius:7px;overflow:hidden}
 .sport button{border:0;background:var(--panel);color:var(--muted);padding:4px 10px;font-family:var(--f-display),sans-serif;font-size:14px;font-weight:600;letter-spacing:.03em}
 .sport button+button{border-left:1px solid var(--line)}
 .sport button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
 .sport button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
-@media (max-width:640px){.sport button{padding:8px 12px;font-size:15px}}
+@media (max-width:640px){.sport button{padding:6px 8px;font-size:15px}}
 /* The tab row: only the current sport's tabs take a column. */
 .tabs{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:auto}
 /* The header's one column never grows past the panel: the source credits shrink (ellipsis) to make room for the sport switch. */
 #panel header{grid-template-columns:minmax(0,1fr)}
-#tab-layers section.layer:is(#sec-skred,#sec-surf){border-top:0}
+#tab-layers section.layer:is(#sec-skred,#sec-surf,#sec-climb){border-top:0}
 
 /* Surf: rating colours, 0 (flat) to 5, -1 = no data. */
 .sc-1{--sc:transparent;--sc-ink:var(--muted)}
@@ -768,3 +768,16 @@ span.sp-day{display:block;text-align:center}
 .wnd-rel.wnd-side{background:color-mix(in srgb,#d9a21b 20%,transparent);color:#8a6200}
 .wnd-rel.wnd-onshore{background:color-mix(in srgb,#d9532b 18%,transparent);color:#b23b17}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .wnd-rel.wnd-clean{color:#7fd6a2}:root:not([data-theme="light"]) .wnd-rel.wnd-side{color:#f0c860}:root:not([data-theme="light"]) .wnd-rel.wnd-onshore{color:#f59a7c}}
+
+/* Climbing: crag markers (rounded squares, so they don't read as surf spots) */
+.cg-hit{display:grid;place-items:center}
+.cg{width:20px;height:20px;border-radius:5px;background:var(--sc);color:var(--sc-ink);border:2px solid #fff;box-shadow:0 0 0 1px rgba(11,18,32,.7),0 1px 4px rgba(0,0,0,.35);display:grid;place-items:center;box-sizing:border-box;font:600 11px var(--f-body),sans-serif;cursor:pointer}
+.cg.sc-1{background:#8a96a3;width:16px;height:16px;border-radius:4px}
+.cg.sel{box-shadow:0 0 0 2px #0b1220,0 0 0 5px rgba(255,255,255,.85),0 2px 6px rgba(0,0,0,.4)}
+/* Klatring tab: sport / trad filter */
+.cg-filter{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.cg-filter button{border:0;background:var(--panel);color:var(--muted);padding:5px 8px;font-family:var(--f-display),sans-serif;font-size:14px;font-weight:600;letter-spacing:.03em}
+.cg-filter button+button{border-left:1px solid var(--line)}
+.cg-filter button[aria-checked="true"]{background:var(--chip);color:var(--fg);box-shadow:inset 0 -2px 0 var(--accent)}
+.cg-filter small{font-family:var(--f-mono),monospace;font-size:10.5px;font-weight:400;color:var(--muted)}
+.sp-actions a.btn{text-decoration:none;display:inline-flex;align-items:center}

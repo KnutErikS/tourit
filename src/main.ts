@@ -27,6 +27,7 @@ import { fetchRegions, fetchWarnings } from './api/nve';
 import { fetchObservations } from './api/regobs';
 import { fetchWebcams } from './api/vegvesen';
 import { fetchSurf } from './api/surf';
+import { fetchCrags } from './api/crags';
 import { fetchPointWeather } from './api/met';
 import { fetchAirProfile, fetchWindHistory } from './api/openMeteo';
 import { FETCH_H, windLoading, windowEnd } from './domain/wind';
@@ -43,6 +44,7 @@ import { renderRunoutLegend, setRunout } from './layers/runout';
 import { isSnowKind, renderSnowLegend, setSnow, snowLayer, type SnowKind } from './layers/snow';
 import { drawWebcams, webcamLayer } from './layers/webcams';
 import { surfLayer } from './layers/surf';
+import { climbLayer } from './layers/climb';
 import { SURF_SPOTS } from './domain/surfSpots';
 import { siteOk, type WebcamSite } from './domain/webcams';
 import { EXTRA_WEBCAMS } from './domain/extraWebcams';
@@ -75,6 +77,7 @@ import { initAbout } from './ui/about';
 import { initToolInfo } from './ui/toolInfo';
 import { initTools, renderTools, setToolsActive } from './ui/tools';
 import { initSurf, openSpot, renderSurf, setSurfData, setSurfStatus } from './ui/surf';
+import { cragCount, initClimb, openCrag, renderClimb, setClimbStatus, setCrags } from './ui/climb';
 import { initSport } from './ui/sport';
 import { initInfos } from './tools/infos';
 import { initRoute, isDrawing, refreshRouteRisk } from './ui/routePage';
@@ -90,11 +93,15 @@ initCounting();
 const avalancheLayer = createAvalancheTerrainLayer(reportDemError);
 const aspectLayer = createAspectLayer(reportDemError);
 
-/** The sport each layer toggle belongs to; toggles not listed (webcams) show for both. */
-const LAYER_SPORT: Record<string, Sport> = { 'l-skred': 'ski', 'l-bratt': 'ski', 'l-snow': 'ski', 'l-asp': 'ski', 'l-obs': 'ski' };
+/** The sports each layer toggle belongs to; toggles not listed (webcams) show for all. */
+const LAYER_SPORT: Record<string, Sport[]> = {
+  'l-skred': ['ski'], 'l-snow': ['ski'], 'l-obs': ['ski'],
+  // Steepness and aspect help climbers too (which way a wall faces).
+  'l-bratt': ['ski', 'climb'], 'l-asp': ['ski', 'climb'],
+};
 /** A layer is on the map when its box is ticked and it belongs to the sport shown. */
 function layerOn(id: string): boolean {
-  return $<HTMLInputElement>(id).checked && (LAYER_SPORT[id] ?? state.sport) === state.sport;
+  return $<HTMLInputElement>(id).checked && (LAYER_SPORT[id] ?? [state.sport]).includes(state.sport);
 }
 
 /* ---------- rendering ---------- */
@@ -327,6 +334,51 @@ async function loadSurf(): Promise<void> {
   }
 }
 
+/**
+ * Climbing crags from OpenStreetMap: fetched when climbing is chosen (kept on the
+ * device for a week, api/crags.ts). Their weather is fetched by the Klatring tab
+ * for the crags in view.
+ */
+let cragsLoading = false;
+async function loadCrags(): Promise<void> {
+  if (cragsLoading || cragCount()) return;
+  cragsLoading = true;
+  const el = $('climb-layer-status');
+  const show = (text: string) => {
+    el.hidden = false;
+    el.textContent = text;
+  };
+  show('Henter klatrefelt fra OpenStreetMap…');
+  setClimbStatus('Henter klatrefelt fra OpenStreetMap…');
+  try {
+    const { data, savedAt } = await fetchCrags((fresh) => {
+      setCrags(fresh, '');
+      show(`${fresh.length} klatrefelt`);
+    });
+    if (savedAt !== null) count('fail-overpass');
+    setCrags(data, storedNote(savedAt));
+    show(`${storedNote(savedAt)}${data.length} klatrefelt`);
+  } catch (e) {
+    count('fail-overpass');
+    const text =
+      e instanceof NotStoredError
+        ? 'Uten nett, og klatrefeltene er ikke lagret på enheten ennå.'
+        : `Fikk ikke hentet klatrefelt fra OpenStreetMap (${(e as Error)?.message || 'nettverksfeil'}). Prøv igjen om litt.`;
+    setClimbStatus(text);
+    show(text);
+  } finally {
+    cragsLoading = false;
+  }
+}
+
+/** The Klatring tab lists the crags in view: follow the map (after it settles). */
+let climbTimer: ReturnType<typeof setTimeout> | null = null;
+map.on('moveend', () => {
+  if (state.sport !== 'climb') return;
+  if (climbTimer) clearTimeout(climbTimer);
+  climbTimer = setTimeout(renderClimb, 250);
+});
+
 /* ---------- dates ---------- */
 
 /** NVE publishes the next day's warning around 16:00. */
@@ -371,6 +423,7 @@ function go(date: string): void {
   loadWind(date).catch(windFail);
   applySnow();
   renderSurf(); // the Surf tab and its markers follow the date
+  if (state.sport === 'climb') renderClimb();
   // Weather follows the date shown, and gets refreshed along with the warning.
   if (state.picked && state.picked.terrain !== undefined) void loadWeather(state.picked);
 }
@@ -389,6 +442,7 @@ function syncClock(): boolean {
 function onForeground(): void {
   if (document.visibilityState !== 'visible') return;
   if (state.sport === 'surf') void loadSurf(); // refetches only once the data is old
+  if (state.sport === 'climb') renderClimb(); // weather older than an hour is fetched again
   if (!state.regions.length) return;
   if (!syncClock() && (showingStored || Date.now() - loadedAt > STALE_MS)) go(state.date);
 }
@@ -413,7 +467,9 @@ const snowOpacityInput = $<HTMLInputElement>('o-snow');
 state.thr = +thrSelect.value;
 state.aspMin = +aspMinSelect.value;
 state.showRest = restBox.checked;
-state.showLee = $<HTMLInputElement>('s-lee').checked;
+/** Lee-slope hatch: an avalanche thing, so ski only. */
+const leeOn = () => $<HTMLInputElement>('s-lee').checked && state.sport === 'ski';
+state.showLee = leeOn();
 steepnessLayer.setOpacity(+steepOpacityInput.value);
 snowLayer.setOpacity(+snowOpacityInput.value);
 
@@ -450,27 +506,29 @@ function bindToggle(id: string, ...layers: L.Layer[]): void {
 bindToggle('l-skred', avalancheLayer, regionGroup);
 bindToggle('l-bratt', steepnessLayer);
 // Runout areas: an option on the steepness layer (swaps its tiles).
-{
-  const box = $<HTMLInputElement>('b-runout');
-  const apply = () => {
-    setRunout(box.checked);
-    $('runout-legend').hidden = !box.checked;
-    if (box.checked) count('layer-runout');
-  };
-  box.addEventListener('change', apply);
-  apply();
-  renderRunoutLegend($('runout-legend'));
+// Ski only: the climbing view of the same layer is plain steepness.
+const runoutBox = $<HTMLInputElement>('b-runout');
+function applyRunout(): void {
+  const on = runoutBox.checked && state.sport === 'ski';
+  setRunout(on);
+  $('runout-legend').hidden = !runoutBox.checked;
+  if (on) count('layer-runout');
 }
+runoutBox.addEventListener('change', applyRunout);
+applyRunout();
+renderRunoutLegend($('runout-legend'));
 bindToggle('l-snow', snowLayer);
 bindToggle('l-asp', aspectLayer);
 bindToggle('l-obs', obsGroup);
 bindToggle('l-cam', webcamLayer);
-// Surf spots: no checkbox, always on the map while surf is chosen.
-function syncSurfLayer(): void {
-  if (state.sport === 'surf') surfLayer.addTo(map);
-  else map.removeLayer(surfLayer);
+// Surf spots and crags: no checkbox, always on the map while their sport is chosen.
+function syncSportLayers(): void {
+  for (const [layer, sport] of [[surfLayer, 'surf'], [climbLayer, 'climb']] as const) {
+    if (state.sport === sport) layer.addTo(map);
+    else map.removeLayer(layer);
+  }
 }
-syncSurfLayer();
+syncSportLayers();
 for (const id of ['l-bratt', 'l-snow', 'l-asp']) $(id).addEventListener('change', syncMapLegend);
 
 steepOpacityInput.addEventListener('input', () => steepnessLayer.setOpacity(+steepOpacityInput.value));
@@ -493,8 +551,9 @@ restBox.addEventListener('change', () => {
 // One setting, shown under both layers it affects.
 for (const id of ['s-lee', 'a-lee']) {
   $<HTMLInputElement>(id).addEventListener('change', (e) => {
-    state.showLee = (e.target as HTMLInputElement).checked;
-    $<HTMLInputElement>('s-lee').checked = $<HTMLInputElement>('a-lee').checked = state.showLee;
+    const on = (e.target as HTMLInputElement).checked;
+    $<HTMLInputElement>('s-lee').checked = $<HTMLInputElement>('a-lee').checked = on;
+    state.showLee = leeOn();
     redrawLee();
   });
 }
@@ -565,7 +624,7 @@ $('demo').addEventListener('click', () => {
 
 /* ---------- tabs + panel ---------- */
 
-const TABS = ['layers', 'surf', 'warn', 'wx', 'tools'] as const;
+const TABS = ['layers', 'surf', 'climb', 'warn', 'wx', 'tools'] as const;
 type Tab = (typeof TABS)[number];
 function setTab(t: Tab): void {
   for (const k of TABS) {
@@ -623,10 +682,16 @@ function expandPanel(): void {
 
 /* ---------- sport ---------- */
 
-/** Ski ↔ surf: swap the layers on the map and move off a tab the other sport doesn't have. */
+/** Another sport: swap the layers on the map and move off a tab the new sport doesn't have. */
 function onSport(s: Sport): void {
   toggles.forEach((apply) => apply());
-  syncSurfLayer();
+  syncSportLayers();
+  applyRunout();
+  if (state.showLee !== leeOn()) {
+    state.showLee = leeOn();
+    aspectLayer.redraw();
+    avalancheLayer.redraw();
+  }
   // A point picked while surfing has no terrain: look it up now. Otherwise redraw for the sport.
   if (s === 'ski' && state.picked?.noTerrain) void pickPoint(state.picked.ll);
   else renderPanels();
@@ -637,7 +702,12 @@ function onSport(s: Sport): void {
     count('sport-surf');
     setTab('surf');
     void loadSurf();
-  } else if (!$('tab-surf').hidden) {
+  } else if (s === 'climb') {
+    count('sport-climb');
+    setTab('climb');
+    void loadCrags();
+    renderClimb();
+  } else if (!$('tab-surf').hidden || !$('tab-climb').hidden) {
     setTab('layers');
   }
 }
@@ -813,6 +883,24 @@ initSurf({
   },
 });
 
+/** Zoom a crag is shown at from the list. */
+const CRAG_ZOOM = 14;
+initClimb({
+  onDate: (iso) => go(iso),
+  onDetails: (id) => {
+    setTab('climb');
+    openCrag(id);
+  },
+  onShowOnMap: (crag) => {
+    resetSheet();
+    flyIntoView(L.latLng(crag.lat, crag.lng), Math.max(map.getZoom(), CRAG_ZOOM));
+  },
+  onWeather: (crag) => {
+    void pickPoint(L.latLng(crag.lat, crag.lng));
+    setTab('wx');
+  },
+});
+
 /**
  * A shared link with a point (`/@lat,lng`): select it, show its warning, and keep it
  * in view beside the panel (PC) or above the bottom sheet (phone).
@@ -836,6 +924,9 @@ trackView(go, openSharedPoint);
 if (state.sport === 'surf') {
   count('sport-surf');
   void loadSurf();
+} else if (state.sport === 'climb') {
+  count('sport-climb');
+  void loadCrags();
 }
 setStatus('Henter varslingsregioner…', 'busy');
 fetchRegions()

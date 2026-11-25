@@ -33,6 +33,7 @@ const HOSTS = {
   met: 'https://api.met.no', // point weather forecast (yr's data)
   openMeteo: 'https://api.open-meteo.com', // cloud heights + freezing level, recent wind, wind at surf spots
   openMeteoMarine: 'https://marine-api.open-meteo.com', // waves and swell at surf spots
+  overpass: 'https://overpass-api.de', // climbing crags from OpenStreetMap
   nveKart: 'https://kart.nve.no', // seNorge snow maps (WMS)
   openMeteoHistory: 'https://historical-forecast-api.open-meteo.com', // wind before older warning dates
   vegvesenWfs: 'https://ogckart-sn1.atlas.vegvesen.no', // webcam list (WFS)

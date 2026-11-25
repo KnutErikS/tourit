@@ -58,6 +58,15 @@ export const EVENTS = {
   'fail-dem': 'Feil: Kartverket høydedata',
   'fail-vegvesen': 'Feil: Vegvesen (webkamera)',
   'fail-marine': 'Feil: Open-Meteo Marine (bølger)',
+  'fail-overpass': 'Feil: OpenStreetMap Overpass (klatrefelt)',
+  'tab-climb': 'Fane: Klatring',
+  'sport-climb': 'Sport: Klatring valgt',
+  'climb-marker': 'Klatring: felt trykket i kartet',
+  'climb-list': 'Klatring: felt åpnet i lista',
+  'climb-weather': 'Klatring: Vær her',
+  'climb-filter-sport': 'Klatring: filter sport',
+  'climb-filter-trad': 'Klatring: filter trad',
+  'climb-sort-near': 'Klatring: sortert etter nærmest',
 } as const;
 export type EventName = keyof typeof EVENTS;
 

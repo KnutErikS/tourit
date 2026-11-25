@@ -2,20 +2,20 @@ import { state, type Sport } from '../state';
 import { $ } from '../util';
 
 /**
- * Ski or surf. The choice decides which layers, tabs and settings the panel
- * shows: elements marked `data-sport="ski"` or `data-sport="surf"` in
- * index.html only show for their sport (CSS keys off `body[data-sport]`);
- * unmarked ones (map, Vær tab, webcams) are shared. Remembered on the device,
+ * Ski, surf or climbing. The choice decides which layers, tabs and settings the
+ * panel shows: elements marked `data-sport="…"` in index.html (one sport, or
+ * several separated by spaces) only show for those sports (CSS keys off
+ * `body[data-sport]`); unmarked ones (map, Vær tab, webcams) are shared. Remembered on the device,
  * not put in shared links.
  */
 
 const KEY = 'tourit.sport';
-const SPORTS: Sport[] = ['ski', 'surf'];
+const SPORTS: Sport[] = ['ski', 'surf', 'climb'];
 
 function stored(): Sport {
   try {
     const v = localStorage.getItem(KEY);
-    return v === 'surf' ? 'surf' : 'ski';
+    return v === 'surf' || v === 'climb' ? v : 'ski';
   } catch {
     return 'ski';
   }

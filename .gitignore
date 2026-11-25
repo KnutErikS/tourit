@@ -3,3 +3,5 @@ dist/
 .DS_Store
 *.log
 .vite/
+# Built by scripts/crags.ts (npm run crags) in the deploy workflow
+public/data/

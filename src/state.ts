@@ -1,6 +1,6 @@
 import type { Picked, Region, RegobsObs } from './types';
 
-export type Sport = 'ski' | 'surf';
+export type Sport = 'ski' | 'surf' | 'climb';
 
 /**
  * Shared, mutable app state. Kept deliberately small: modules read from it,

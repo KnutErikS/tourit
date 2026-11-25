@@ -30,15 +30,16 @@
     <div class="brand">
       <button type="button" id="burger-in" class="burger-in" aria-controls="panel" aria-expanded="true" aria-label="Skjul panelet" title="Skjul panelet"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
       <h1>Skredterreng</h1>
-      <!-- Ski or surf: decides which layers and tabs show (ui/sport.ts). -->
-      <div class="sport" role="group" aria-label="Aktivitet">
-        <button type="button" id="sport-ski" aria-pressed="true" title="Ski: skredvarsel og skredterreng">Ski</button>
-        <button type="button" id="sport-surf" aria-pressed="false" title="Surf: bølger og vind på surfespotter">Surf</button>
-      </div>
       <button type="button" class="info-btn" id="about-btn" aria-haspopup="dialog" aria-controls="about" aria-label="Om appen, ansvar og kontakt" title="Om appen, ansvar og kontakt"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.01"/></svg></button>
       <!-- Phones only: search and date picker fold away behind these (see ui/headerTools.ts). -->
       <button type="button" class="hdr-tool" id="tool-search" aria-controls="search-row" aria-expanded="false" aria-label="Søk etter fjell eller sted" title="Søk etter fjell eller sted"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg></button>
       <button type="button" class="hdr-tool" id="tool-date" aria-controls="date-row" aria-expanded="false" aria-label="Velg dag for skredvarsel" title="Velg dag for skredvarsel"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></button>
+    </div>
+    <!-- Ski, surf or climbing: decides which layers and tabs show (ui/sport.ts). -->
+    <div class="sport" role="group" aria-label="Aktivitet">
+      <button type="button" id="sport-ski" aria-pressed="true" title="Ski: skredvarsel og skredterreng">Ski</button>
+      <button type="button" id="sport-surf" aria-pressed="false" title="Surf: bølger og vind på surfespotter">Surf</button>
+      <button type="button" id="sport-climb" aria-pressed="false" title="Klatring: klatrefelt og om steinen er tørr">Klatring</button>
     </div>
     <div class="search" id="search-row" role="search">
       <input id="search" type="search" placeholder="Søk etter fjell eller sted" autocomplete="off" spellcheck="false"
@@ -54,6 +55,7 @@
     <div class="tabs" role="tablist">
       <button role="tab" id="tab-btn-layers" aria-selected="true" aria-controls="tab-layers">Kartlag</button>
       <button role="tab" id="tab-btn-surf" aria-selected="false" aria-controls="tab-surf" data-sport="surf">Surf</button>
+      <button role="tab" id="tab-btn-climb" aria-selected="false" aria-controls="tab-climb" data-sport="climb">Klatring</button>
       <button role="tab" id="tab-btn-warn" aria-selected="false" aria-controls="tab-warn" data-sport="ski">Skredvarsel</button>
       <button role="tab" id="tab-btn-wx" aria-selected="false" aria-controls="tab-wx">Vær</button>
       <button role="tab" id="tab-btn-tools" aria-selected="false" aria-controls="tab-tools" data-sport="ski">Verktøy</button>
@@ -77,6 +79,18 @@
       <div class="desc" id="surf-layer-status" hidden></div>
     </section>
 
+    <section class="layer" id="sec-climb" data-sport="climb">
+      <div class="lhead">
+        <label class="nobox">Klatrefelt</label>
+        <span class="zoomtag">OpenStreetMap</span>
+      </div>
+      <p class="desc">Klatrefelt for sport og trad fra OpenStreetMap, fargelagt etter klatreforhold nå (eller kl. 12 på dagen du har valgt): om steinen er tørr, temperatur, vind og fukt. Været hentes for feltene i kartutsnittet, så grå felt får farge når du zoomer inn dit. Vises alltid når Klatring er valgt. Trykk på et felt for detaljer og de neste dagene.</p>
+      <div class="scale6" aria-label="Vurdering 0 til 5">
+        <div class="sc0">0 Dårlig</div><div class="sc1">1 Lite egnet</div><div class="sc2">2 Brukbart</div><div class="sc3">3 Bra</div><div class="sc4">4 Veldig bra</div><div class="sc5">5 Topp</div>
+      </div>
+      <div class="desc" id="climb-layer-status" hidden></div>
+    </section>
+
     <section class="layer" id="sec-skred" data-sport="ski">
       <div class="lhead">
         <label><input type="checkbox" id="l-skred" checked> Skredfare i terrenget</label>
@@ -95,7 +109,7 @@
       <p class="desc">Skravur: bratte heng i le for vinden de siste tre døgnene (vind i fjellhøyde, ca. 1500 moh.). Tett skravur betyr mye vindtransport. Teller bare vind som hadde løs snø å flytte: nysnø gir fokk fra lavere vindstyrke enn eldre snø, og våt snø eller skare etter mildvær og regn ligger i ro. Grov tommelfingerregel.</p>
     </section>
 
-    <section class="layer" data-sport="ski">
+    <section class="layer" data-sport="ski climb">
       <div class="lhead">
         <label><input type="checkbox" id="l-bratt"> Bratthet</label>
         <span class="zoomtag">NVE</span>
@@ -103,9 +117,9 @@
       <p class="desc">NVEs bratthetskart, samme lag som på varsom.no.</p>
       <div class="ctrl"><span>Gjennomsiktighet</span><input type="range" id="o-bratt" min="0.2" max="1" step="0.05" value="0.5" aria-label="Opasitet bratthet"></div>
       <div class="legend" id="bratt-legend"><span class="empty">Henter tegnforklaring…</span></div>
-      <div class="ctrl"><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="b-runout"> Vis utløpsområder</label></div>
-      <div class="legend" id="runout-legend" hidden></div>
-      <p class="desc">Hvor langt skred fra de bratte hengene kan gå, også ut på flatt terreng <em>under</em> dem (NVEs modell, samme som på varsom.no). Tre nyanser: forbi <b>kort</b> utløp går halvparten av skredene, forbi <b>middels</b> ett av fire, forbi <b>langt</b> ett av tjue. Noen skred går enda lenger. Ruter du tegner får markert strekninger i skredterreng og utløp.</p>
+      <div class="ctrl" data-sport="ski"><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="b-runout"> Vis utløpsområder</label></div>
+      <div class="legend" id="runout-legend" data-sport="ski" hidden></div>
+      <p class="desc" data-sport="ski">Hvor langt skred fra de bratte hengene kan gå, også ut på flatt terreng <em>under</em> dem (NVEs modell, samme som på varsom.no). Tre nyanser: forbi <b>kort</b> utløp går halvparten av skredene, forbi <b>middels</b> ett av fire, forbi <b>langt</b> ett av tjue. Noen skred går enda lenger. Ruter du tegner får markert strekninger i skredterreng og utløp.</p>
     </section>
 
     <section class="layer" data-sport="ski">
@@ -122,7 +136,7 @@
       <div class="legend" id="snow-legend"></div>
     </section>
 
-    <section class="layer" data-sport="ski">
+    <section class="layer" data-sport="ski climb">
       <div class="lhead">
         <label><input type="checkbox" id="l-asp"> Himmelretning</label>
         <span class="zoomtag needzoom" id="z-asp">fra zoom 11</span>
@@ -132,7 +146,7 @@
         <span>Bare der helningen er minst</span>
         <select id="a-min"><option value="5">5°</option><option value="15">15°</option><option value="25" selected>25°</option><option value="30">30°</option></select>
       </div>
-      <div class="ctrl"><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="a-lee" checked> Skraver lesider (vind siste tre døgn)</label><i class="lee-sw" aria-hidden="true"></i></div>
+      <div class="ctrl" data-sport="ski"><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="a-lee" checked> Skraver lesider (vind siste tre døgn)</label><i class="lee-sw" aria-hidden="true"></i></div>
       <div class="rose-legend"><span id="asp-rose"></span><div class="legend" id="asp-legend"></div></div>
     </section>
 
@@ -161,10 +175,14 @@
     <section class="summary" id="summary" data-sport="ski"><p class="empty">Trykk i kartet for å se varselet for et sted.</p></section>
 
     <p class="foot" data-sport="surf">Data: Bølger, dønning og vind fra <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> (DWD, ECMWF, MET Norge), spotdata fra <a href="https://www.surf-forecast.com/countries/Norway/breaks" target="_blank" rel="noopener">surf-forecast.com</a>, webkamera fra Statens vegvesen. Vurderingen er en grov automatisk tolkning av varselet for havet utenfor, ikke for stranden; se alltid selv. <button type="button" class="linkbtn" id="about-foot-surf">Ansvar, kontakt og versjon</button></p>
+    <p class="foot" data-sport="climb">Data: Klatrefelt © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>-bidragsytere (ODbL), vær fra <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>, bratthet fra NVE, terrengmodell fra Kartverket, webkamera fra Statens vegvesen. Klatreforholdene er en grov automatisk tolkning av været, ikke av akkurat din vegg; se alltid selv. <button type="button" class="linkbtn" id="about-foot-climb">Ansvar, kontakt og versjon</button></p>
     <p class="foot" data-sport="ski">Data: Snøskredvarsler fra <a href="https://www.varsom.no/snoskred/varsling/" target="_blank" rel="noopener">varsom.no</a> (NVE), bratthet fra NVE, terrengmodell fra Kartverket (hoydedata.no), webkamera fra Statens vegvesen. Terrengtreff er en automatisk tolkning av varselet og erstatter ikke egen vurdering i felt. <button type="button" class="linkbtn" id="about-foot">Ansvar, kontakt og versjon</button></p>
   </div>
   <div class="scroll" id="tab-surf" role="tabpanel" hidden>
     <div id="surf" class="surf"></div>
+  </div>
+  <div class="scroll" id="tab-climb" role="tabpanel" hidden>
+    <div id="climb" class="surf"></div>
   </div>
   <div class="scroll" id="tab-warn" role="tabpanel" hidden>
     <div id="detail" style="padding-top:10px"><p class="empty">Trykk på et sted i kartet. Du får varselet for regionen stedet ligger i, og ser om akkurat det punktet er utsatt for skredproblemene.</p></div>

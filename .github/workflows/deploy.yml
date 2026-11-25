@@ -1,10 +1,13 @@
-# Builds the site and publishes it to GitHub Pages on every push to main.
+# Builds the site and publishes it to GitHub Pages on every push to main,
+# and weekly so the climbing crags snapshot (scripts/crags.ts) stays fresh.
 # One-time setup: repo Settings → Pages → Source: "GitHub Actions".
 name: Deploy to GitHub Pages
 
 on:
   push:
     branches: [main]
+  schedule:
+    - cron: '17 3 * * 1' # Mondays 03:17 UTC: refresh the crags snapshot
   workflow_dispatch:
 
 permissions:
@@ -30,6 +33,12 @@ jobs:
       # A failing check stops the deploy: the site stays on the last good build.
       - run: npm run typecheck
       - run: npm test
+      # All Norwegian crags from OpenStreetMap, prebuilt so the app needn't wait on Overpass.
+      # If Overpass is down, keep the snapshot that is live now; if that fails too, deploy
+      # without it (the app then queries Overpass itself).
+      - name: Snapshot climbing crags
+        continue-on-error: true
+        run: npm run crags -- --fallback https://knuteriks.github.io/tourit/data/crags.json
       - run: npm run build
       - uses: actions/upload-pages-artifact@v5
         with:

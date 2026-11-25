@@ -1,7 +1,5 @@
-import * as L from 'leaflet';
 import { count } from '../analytics/count';
 import { climbWeatherCached, fetchClimbWeather } from '../api/climbWeather';
-import { DIRS } from '../config';
 import {
   bestClimbOfDay, cellOf, CLIMB_FROM_H, CLIMB_SCORE_NAME, CLIMB_TO_H, rainBefore, rateClimb, ROCK_NAME, type ClimbHour, type ClimbRating,
 } from '../domain/climb';
@@ -9,8 +7,9 @@ import { gradeText, matchesStyle, styleText, type Crag, type StyleFilter } from 
 import { closeClimbPopup, drawClimbMarkers } from '../layers/climb';
 import { map } from '../map';
 import { state } from '../state';
-import { $, esc, isoDate, safeUrl } from '../util';
-import { currentPosition, onPositionChange } from './locate';
+import { $, esc, safeUrl } from '../util';
+import { arrow, cap, deg, dirName, hh, km, r1, shortDate } from './format';
+import { dayStrip, Nearby, scoreBadge, shownTime, tableDate } from './spotList';
 
 /**
  * The Klatring tab: the crags in the map view (sport, trad or all), each with a
@@ -43,80 +42,15 @@ let filter: StyleFilter = 'all';
 type Sort = 'best' | 'near' | 'name';
 let sort: Sort = 'best';
 
-/* ---------- your position (for "Nærmest deg") ---------- */
+/** Your position for "Nærmest deg" (ui/spotList.ts); only redraws while climbing is shown. */
+const nearby = new Nearby(() => renderClimb(), 'listen følger kartet', () => state.sport === 'climb');
 
-/** Where distances are measured from: the map's position dot when on, else a one-off fix. */
-let here: L.LatLng | null = null;
-/** `here` when the list was last drawn, so moving a few metres doesn't redraw it. */
-let drawnFrom: L.LatLng | null = null;
-let locating = false;
-let locateError = '';
-const REDRAW_M = 500;
-
-function locateOnce(): void {
-  const pos = currentPosition();
-  if (pos) {
-    here = pos.ll;
-    return;
-  }
-  // After a failure, ask again only when "Nærmest deg" is picked again (not on every redraw).
-  if (here || locating || locateError) return;
-  if (!('geolocation' in navigator)) {
-    locateError = 'Denne nettleseren kan ikke vise posisjon, så listen følger kartet.';
-    return;
-  }
-  locating = true;
-  navigator.geolocation.getCurrentPosition(
-    (p) => {
-      locating = false;
-      here = L.latLng(p.coords.latitude, p.coords.longitude);
-      renderClimb();
-    },
-    (e) => {
-      locating = false;
-      locateError = e.code === e.PERMISSION_DENIED
-        ? 'Appen har ikke tilgang til posisjonen din, så listen følger kartet.'
-        : 'Fant ikke posisjonen din, så listen følger kartet.';
-      renderClimb();
-    },
-    { enableHighAccuracy: false, maximumAge: 300_000, timeout: 20_000 },
-  );
-}
-
-const km = (m: number) => {
-  const k = m / 1000;
-  return `${k < 10 ? k.toFixed(1).replace('.', ',') : Math.round(k)} km`;
-};
-
-/* ---------- formatting ---------- */
-
-const dirName = (deg: number) => DIRS[Math.round((((deg % 360) + 360) % 360) / 45) % 8];
-const r1 = (x: number) => (x < 10 ? x.toFixed(1).replace('.', ',') : String(Math.round(x)));
-const arrow = (from: number) => `<i class="wx-arrow" style="transform:rotate(${Math.round(from)}deg)" aria-hidden="true">↓</i>`;
-const deg = (t: number) => `${Math.round(t)}°`.replace('-', '−');
-const hh = (ms: number) => new Date(ms).toLocaleTimeString('nb-NO', { hour: '2-digit' });
-const shortDate = (iso: string) =>
-  new Date(iso + 'T12:00:00').toLocaleDateString('nb-NO', { weekday: 'short', day: 'numeric', month: 'short' });
-const weekday = (iso: string) => new Date(iso + 'T12:00:00').toLocaleDateString('nb-NO', { weekday: 'short' }).replace('.', '');
-const addDays = (iso: string, n: number) => {
-  const d = new Date(iso + 'T12:00:00');
-  d.setDate(d.getDate() + n);
-  return isoDate(d);
-};
-const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-const badge = (r: ClimbRating | null, cls = 'sp-badge') =>
-  r ? `<span class="${cls} sc${r.score}" title="${CLIMB_SCORE_NAME[r.score]}">${r.score}</span>` : `<span class="${cls} sc-1" title="Ingen værdata ennå">–</span>`;
+const badge = (r: ClimbRating | null, cls = 'sp-badge') => scoreBadge(r?.score ?? null, r ? CLIMB_SCORE_NAME[r.score] : 'Ingen værdata ennå', cls);
 
 /* ---------- time shown + weather ---------- */
 
-const todayIso = () => isoDate(new Date());
-
-function shown(): { t: number; label: string } | null {
-  const date = state.date || todayIso();
-  if (date < todayIso()) return null;
-  if (date === todayIso()) return { t: Date.now(), label: 'nå' };
-  return { t: new Date(date + 'T12:00:00').getTime(), label: `${shortDate(date)} kl. 12` };
-}
+/** Now when the chosen date is today, else 12:00 that day; null for past days. */
+const shown = shownTime;
 
 const hoursOf = (c: Crag): ClimbHour[] | null => climbWeatherCached(cellOf(c.lat, c.lng));
 
@@ -175,25 +109,20 @@ function nowCell(at: ReturnType<typeof ratingAt>, fetchingThis: boolean): string
 function dayCells(c: Crag, pick = true): string {
   const hours = hoursOf(c);
   if (!hours) return '';
-  const first = todayIso(), sel = state.date || first;
-  const cells: string[] = [];
-  for (let i = 0; i < DAYS; i++) {
-    const iso = addDays(first, i);
+  return dayStrip(DAYS, (iso) => {
     const best = bestClimbOfDay(hours, iso);
     const r = best?.rating;
-    const title = best && r ? `${shortDate(iso)}: ${CLIMB_SCORE_NAME[r.score]}, ${ROCK_NAME[r.rock].toLowerCase()} kl. ${hh(best.hour.time)}` : `${shortDate(iso)}: ingen data`;
-    const cls = `sp-day sc${r ? r.score : -1}${iso === sel ? ' sel' : ''}`;
-    cells.push(pick
-      ? `<button type="button" class="${cls}" data-date="${iso}" title="${esc(title)}" aria-label="${esc(title)}" aria-pressed="${iso === sel}">${esc(weekday(iso))}</button>`
-      : `<span class="${cls}" title="${esc(title)}" aria-label="${esc(title)}">${esc(weekday(iso))}</span>`);
-  }
-  return `<div class="sp-days" role="group" aria-label="Beste klatreforhold de neste dagene, kl. ${CLIMB_FROM_H}–${CLIMB_TO_H}">${cells.join('')}</div>`;
+    return {
+      score: r ? r.score : null,
+      title: best && r ? `${shortDate(iso)}: ${CLIMB_SCORE_NAME[r.score]}, ${ROCK_NAME[r.rock].toLowerCase()} kl. ${hh(best.hour.time)}` : `${shortDate(iso)}: ingen data`,
+    };
+  }, pick, `Beste klatreforhold de neste dagene, kl. ${CLIMB_FROM_H}–${CLIMB_TO_H}`);
 }
 
 function dayTable(c: Crag): string {
   const hours = hoursOf(c);
   if (!hours) return '';
-  const date = state.date && state.date >= todayIso() ? state.date : todayIso();
+  const date = tableDate();
   const start = new Date(date + 'T00:00:00').getTime(), now = Date.now();
   const rows: string[] = [];
   for (let k = 6; k <= 21; k += 3) {
@@ -271,10 +200,10 @@ export function renderClimb(): void {
   if (!el || state.sport !== 'climb') return;
   const when = shown();
   const all = filtered();
-  if (sort === 'near') locateOnce();
-  drawnFrom = here;
-  const distOf = (c: Crag) => (here ? here.distanceTo([c.lat, c.lng]) : null);
-  const nearYou = sort === 'near' && here !== null;
+  if (sort === 'near') nearby.locate();
+  nearby.drawn();
+  const distOf = (c: Crag) => nearby.distanceTo(c);
+  const nearYou = sort === 'near' && nearby.here !== null;
   let picked: Crag[];
   let scope: string;
   if (nearYou) {
@@ -302,7 +231,7 @@ export function renderClimb(): void {
     : nearYou
       ? [...items].sort((a, b) => a.dist! - b.dist!)
       : [...items].sort(byName);
-  const nearNote = sort !== 'near' ? '' : locating ? 'Finner posisjonen din…' : locateError;
+  const nearNote = sort === 'near' ? nearby.note() : '';
   const n = (f: StyleFilter) => crags.filter((c) => matchesStyle(c, f)).length;
   el.innerHTML = `
     <div class="surf-top">
@@ -404,16 +333,10 @@ export function initClimb(h: ClimbHooks): void {
       sort = v === 'name' || v === 'near' ? v : 'best';
       if (sort === 'near') {
         count('climb-sort-near');
-        locateError = '';
+        nearby.retry();
       }
       renderClimb();
     }
-  });
-  // Follow the map's position dot, but redraw only once you've moved a bit.
-  onPositionChange((pos) => {
-    if (!pos) return;
-    here = pos.ll;
-    if (state.sport === 'climb' && (!drawnFrom || drawnFrom.distanceTo(here) > REDRAW_M)) renderClimb();
   });
   el.addEventListener('click', (e) => {
     const t = e.target as HTMLElement;

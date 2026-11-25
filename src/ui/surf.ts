@@ -1,15 +1,13 @@
-import * as L from 'leaflet';
 import type { SpotForecast } from '../api/surf';
-import { DIRS } from '../config';
 import {
   DAY_FROM_H, DAY_TO_H, bestOfDay, dayStart, hourAt, rateHour, scoreName, WIND_NAME, type SurfHour, type SurfRating,
 } from '../domain/surf';
 import { KIND_NAME, SURF_SPOTS, type SurfSpot } from '../domain/surfSpots';
 import { closeSurfPopup, drawSurfMarkers } from '../layers/surf';
-import { state } from '../state';
-import { currentPosition, onPositionChange } from './locate';
 import { $, esc, isoDate } from '../util';
 import { count, countSpot } from '../analytics/count';
+import { arrow, cap, dirName, hh, km, r1, shortDate } from './format';
+import { dayStrip, Nearby, scoreBadge, shownTime, tableDate } from './spotList';
 
 /**
  * The Surf tab: every spot with its rating for the time shown (now, or 12:00 on
@@ -37,81 +35,13 @@ let openId: string | null = null;
 type Sort = 'best' | 'near' | 'coast';
 let sort: Sort = 'best';
 
-/* ---------- your position (for "Nærmest deg") ---------- */
+/** Your position for "Nærmest deg" (ui/spotList.ts). */
+const nearby = new Nearby(() => renderSurf(), 'listen står langs kysten', () => true);
 
-/** Where distances are measured from: the map's position dot when on, else a one-off fix. */
-let here: L.LatLng | null = null;
-/** `here` when the list was last drawn, so moving a few metres doesn't redraw it. */
-let drawnFrom: L.LatLng | null = null;
-let locating = false;
-let locateError = '';
-const REDRAW_M = 500;
-
-function locateOnce(): void {
-  const pos = currentPosition();
-  if (pos) {
-    here = pos.ll;
-    return;
-  }
-  // After a failure, ask again only when "Nærmest deg" is picked again (not on every redraw).
-  if (here || locating || locateError) return;
-  if (!('geolocation' in navigator)) {
-    locateError = 'Denne nettleseren kan ikke vise posisjon, så listen står langs kysten.';
-    return;
-  }
-  locating = true;
-  navigator.geolocation.getCurrentPosition(
-    (p) => {
-      locating = false;
-      here = L.latLng(p.coords.latitude, p.coords.longitude);
-      renderSurf();
-    },
-    (e) => {
-      locating = false;
-      locateError = e.code === e.PERMISSION_DENIED
-        ? 'Appen har ikke tilgang til posisjonen din, så listen står langs kysten.'
-        : 'Fant ikke posisjonen din, så listen står langs kysten.';
-      renderSurf();
-    },
-    { enableHighAccuracy: false, maximumAge: 300_000, timeout: 20_000 },
-  );
-}
-
-const distanceTo = (spot: SurfSpot) => (here ? here.distanceTo([spot.lat, spot.lng]) : null);
-const km = (m: number) => {
-  const k = m / 1000;
-  return `${k < 10 ? k.toFixed(1).replace('.', ',') : Math.round(k)} km`;
-};
-
-/* ---------- formatting ---------- */
-
-const dirName = (deg: number) => DIRS[Math.round((((deg % 360) + 360) % 360) / 45) % 8];
-const r1 = (x: number) => (x < 10 ? x.toFixed(1).replace('.', ',') : String(Math.round(x)));
-/** Arrow pointing the way it moves (from `from` degrees), like the Vær tab's wind arrows. */
-const arrow = (from: number) => `<i class="wx-arrow" style="transform:rotate(${Math.round(from)}deg)" aria-hidden="true">↓</i>`;
-const hh = (ms: number) => new Date(ms).toLocaleTimeString('nb-NO', { hour: '2-digit' });
-const shortDate = (iso: string) =>
-  new Date(iso + 'T12:00:00').toLocaleDateString('nb-NO', { weekday: 'short', day: 'numeric', month: 'short' });
-const weekday = (iso: string) => new Date(iso + 'T12:00:00').toLocaleDateString('nb-NO', { weekday: 'short' }).replace('.', '');
-const addDays = (iso: string, n: number) => {
-  const d = new Date(iso + 'T12:00:00');
-  d.setDate(d.getDate() + n);
-  return isoDate(d);
-};
-const badge = (r: SurfRating | null, cls = 'sp-badge') =>
-  r ? `<span class="${cls} sc${r.score}" title="${scoreName(r)}">${r.score}</span>` : `<span class="${cls} sc-1" title="Ingen data">–</span>`;
-
-/* ---------- time shown ---------- */
-
-const todayIso = () => isoDate(new Date());
+const badge = (r: SurfRating | null, cls = 'sp-badge') => scoreBadge(r?.score ?? null, r ? scoreName(r) : 'Ingen data', cls);
 
 /** Now when the chosen date is today, else 12:00 that day; null for past days. */
-function shown(): { t: number; label: string } | null {
-  const date = state.date || todayIso();
-  if (date < todayIso()) return null;
-  if (date === todayIso()) return { t: Date.now(), label: 'nå' };
-  return { t: dayStart(date) + 12 * HOUR, label: `${shortDate(date)} kl. 12` };
-}
+const shown = shownTime;
 
 function ratingAt(spot: SurfSpot, t: number): { hour: SurfHour; rating: SurfRating } | null {
   const hour = hourAt(forecasts.get(spot.id) ?? [], t);
@@ -133,27 +63,20 @@ function nowCell(at: ReturnType<typeof ratingAt>): string {
 /** The next days' best rating; buttons that pick the day in the list, plain cells in the map popup. */
 function dayCells(spot: SurfSpot, pick = true): string {
   const hours = forecasts.get(spot.id) ?? [];
-  const first = todayIso(), sel = state.date || first;
-  const cells: string[] = [];
-  for (let i = 0; i < DAYS; i++) {
-    const iso = addDays(first, i);
+  return dayStrip(DAYS, (iso) => {
     const best = bestOfDay(spot, hours, iso);
     const r = best?.rating;
-    const title = best && r
-      ? `${shortDate(iso)}: ${scoreName(r)}${r.size != null && r.size >= 0.3 ? `, ca. ${r1(r.size)} m` : ''} kl. ${hh(best.hour.time)}`
-      : `${shortDate(iso)}: ingen data`;
-    const cls = `sp-day sc${r ? r.score : -1}${iso === sel ? ' sel' : ''}`;
-    cells.push(
-      pick
-        ? `<button type="button" class="${cls}" data-date="${iso}" title="${esc(title)}" aria-label="${esc(title)}" aria-pressed="${iso === sel}">${esc(weekday(iso))}</button>`
-        : `<span class="${cls}" title="${esc(title)}" aria-label="${esc(title)}">${esc(weekday(iso))}</span>`,
-    );
-  }
-  return `<div class="sp-days" role="group" aria-label="Beste vurdering de neste dagene, kl. ${DAY_FROM_H}–${DAY_TO_H}">${cells.join('')}</div>`;
+    return {
+      score: r ? r.score : null,
+      title: best && r
+        ? `${shortDate(iso)}: ${scoreName(r)}${r.size != null && r.size >= 0.3 ? `, ca. ${r1(r.size)} m` : ''} kl. ${hh(best.hour.time)}`
+        : `${shortDate(iso)}: ingen data`,
+    };
+  }, pick, `Beste vurdering de neste dagene, kl. ${DAY_FROM_H}–${DAY_TO_H}`);
 }
 
 function dayTable(spot: SurfSpot): string {
-  const date = state.date && state.date >= todayIso() ? state.date : todayIso();
+  const date = tableDate();
   const hours = forecasts.get(spot.id) ?? [];
   const start = dayStart(date), now = Date.now();
   const rows: string[] = [];
@@ -221,15 +144,15 @@ export function renderSurf(): void {
   const el = document.getElementById('surf');
   if (!el) return;
   const when = shown();
-  if (sort === 'near') locateOnce();
-  drawnFrom = here;
-  const items = SURF_SPOTS.map((spot) => ({ spot, at: when ? ratingAt(spot, when.t) : null, dist: distanceTo(spot) }));
+  if (sort === 'near') nearby.locate();
+  nearby.drawn();
+  const items = SURF_SPOTS.map((spot) => ({ spot, at: when ? ratingAt(spot, when.t) : null, dist: nearby.distanceTo(spot) }));
   const list = sort === 'best'
     ? [...items].sort((a, b) => (b.at?.rating.score ?? -1) - (a.at?.rating.score ?? -1) || (b.at?.rating.size ?? 0) - (a.at?.rating.size ?? 0))
-    : sort === 'near' && here
+    : sort === 'near' && nearby.here
       ? [...items].sort((a, b) => a.dist! - b.dist!)
       : items;
-  const nearNote = sort !== 'near' ? '' : locating ? 'Finner posisjonen din…' : locateError;
+  const nearNote = sort === 'near' ? nearby.note() : '';
   el.innerHTML = `
     <div class="surf-top">
       <p class="kicker">Surfespotter · ${when ? esc(when.label) : 'velg i dag eller senere'}</p>
@@ -248,8 +171,6 @@ export function renderSurf(): void {
 }
 
 /* ---------- map popup ---------- */
-
-const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /** What a tap on a spot in the map shows: the rating, waves and wind for the time shown, and the next days. */
 function popupFor(spot: SurfSpot): HTMLElement {
@@ -331,15 +252,9 @@ export function initSurf(h: SurfHooks): void {
       const v = (t as HTMLSelectElement).value;
       sort = v === 'coast' || v === 'near' ? v : 'best';
       if (sort !== 'best') count(`surf-sort-${sort}`);
-      if (sort === 'near') locateError = '';
+      if (sort === 'near') nearby.retry();
       renderSurf();
     }
-  });
-  // Follow the map's position dot, but redraw only once you've moved a bit.
-  onPositionChange((pos) => {
-    if (!pos) return;
-    here = pos.ll;
-    if (!drawnFrom || drawnFrom.distanceTo(here) > REDRAW_M) renderSurf();
   });
   el.addEventListener('click', (e) => {
     const t = e.target as HTMLElement;

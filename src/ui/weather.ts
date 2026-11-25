@@ -8,20 +8,12 @@ import { $, esc, fmtTime, isoDate } from '../util';
 import { angDiff, nearestSpot, runs, windClass, windRel, WIND_CLASS_NAME, WIND_NAME, type WindClass } from '../domain/surf';
 import { SURF_SPOTS } from '../domain/surfSpots';
 import { daylightKey, sunDetails, sunKeys, sunNote, type SunKey } from './sun';
+import { arrow, cap, deg, dirName, hh, r1, shortDate } from './format';
 
 /** Daytime on a touring day, local time. */
 const DAY_FROM_H = 6, DAY_TO_H = 18;
 const HOUR = 3_600_000;
 
-const dirName = (deg: number) => DIRS[Math.round((((deg % 360) + 360) % 360) / 45) % 8];
-const r1 = (x: number) => (x < 10 ? x.toFixed(1).replace('.', ',') : Math.round(x).toString());
-const deg = (t: number) => `${Math.round(t)}°`.replace('-', '−');
-const hh = (ms: number) => new Date(ms).toLocaleTimeString('nb-NO', { hour: '2-digit' });
-const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-const shortDate = (iso: string) =>
-  new Date(iso + 'T12:00:00').toLocaleDateString('nb-NO', { weekday: 'short', day: 'numeric', month: 'short' });
-/** Arrow pointing the way the wind blows (from `from` degrees). */
-const arrow = (from: number) => `<i class="wx-arrow" style="transform:rotate(${Math.round(from)}deg)">↓</i>`;
 
 /* ---------- icons ---------- */
 

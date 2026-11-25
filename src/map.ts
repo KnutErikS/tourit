@@ -12,6 +12,18 @@ export const map = L.map('map', { zoomControl: false, minZoom: 4, maxZoom: 17, w
 
 L.control.zoom({ position: 'topright' }).addTo(map);
 
+/*
+ * Leaflet only re-measures its container on window `resize`. In the iPhone Home Screen
+ * app the map can be created before the window has its final size, and the size can
+ * then change without a `resize` (the launch settling, or --app-h from ui/viewport.ts).
+ * Leaflet then keeps the old size: a blank map, or tiles missing along an edge. Watch
+ * the container itself, and check again whenever the app comes back to the screen.
+ */
+const refit = () => requestAnimationFrame(() => map.invalidateSize({ debounceMoveend: true }));
+new ResizeObserver(refit).observe(map.getContainer());
+window.addEventListener('pageshow', refit);
+document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && refit());
+
 L.tileLayer(BASEMAP_URL, {
   maxZoom: 17,
   maxNativeZoom: BASEMAP_MAX_NATIVE,

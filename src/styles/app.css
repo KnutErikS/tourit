@@ -774,6 +774,9 @@ span.sp-day{display:block;text-align:center}
 .cg{width:20px;height:20px;border-radius:5px;background:var(--sc);color:var(--sc-ink);border:2px solid #fff;box-shadow:0 0 0 1px rgba(11,18,32,.7),0 1px 4px rgba(0,0,0,.35);display:grid;place-items:center;box-sizing:border-box;font:600 11px var(--f-body),sans-serif;cursor:pointer}
 .cg.sc-1{background:#8a96a3;width:16px;height:16px;border-radius:4px}
 .cg.sel{box-shadow:0 0 0 2px #0b1220,0 0 0 5px rgba(255,255,255,.85),0 2px 6px rgba(0,0,0,.4)}
+/* Several crags close together (layers/climb.ts): a round badge with the count, coloured by the best known rating. */
+.cg-cl{border-radius:50%;background:var(--sc);color:var(--sc-ink);border:2px solid #fff;box-shadow:0 0 0 1px rgba(11,18,32,.7),0 1px 4px rgba(0,0,0,.35);display:grid;place-items:center;box-sizing:border-box;font:600 11.5px var(--f-mono),monospace;cursor:pointer}
+.cg-cl.sc-1{background:#5f6c79;color:#fff}
 /* Klatring tab: sport / trad filter */
 .cg-filter{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);border-radius:7px;overflow:hidden}
 .cg-filter button{border:0;background:var(--panel);color:var(--muted);padding:5px 8px;font-family:var(--f-display),sans-serif;font-size:14px;font-weight:600;letter-spacing:.03em}

@@ -31,7 +31,7 @@ export function initAbout(): void {
   $('about-counting').hidden = !COUNTING;
   $<HTMLAnchorElement>('about-contact').href = contactUrl();
   $('about-btn').addEventListener('click', openAbout);
-  $('about-foot').addEventListener('click', openAbout);
+  for (const id of ['about-foot', 'about-foot-surf']) $(id).addEventListener('click', openAbout);
   $('about-ok').addEventListener('click', () => dlg.close());
   // Tap on the dimmed backdrop closes it too.
   dlg.addEventListener('click', (e) => e.target === dlg && dlg.close());

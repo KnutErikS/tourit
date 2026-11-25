@@ -59,7 +59,6 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body),sans-serif;f
 .brand{display:flex;align-items:center;gap:8px}
 .brand h1{flex:1}
 h1{font-family:var(--f-display),sans-serif;font-weight:700;font-size:24px;letter-spacing:.01em;margin:0;line-height:1}
-.brand small{font-family:var(--f-mono),monospace;font-size:10px;color:var(--muted);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .daterow{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .daterow input{font:inherit;font-family:var(--f-mono),monospace;font-size:13px;padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--fg)}
 button{font:inherit;cursor:pointer}
@@ -521,7 +520,6 @@ body.panel-hidden #coord{left:calc(72px + env(safe-area-inset-left,0px))}
 @media (max-width:640px){
   .hdr-tool{display:grid}
   .brand{gap:8px}
-  .brand small{display:none} /* sources are credited in the footer and the map attribution */
   #panel header{gap:8px;padding-bottom:8px}
   #panel:not(.show-search) #search-row,#panel:not(.show-date) #date-row{display:none}
 }
@@ -678,3 +676,69 @@ dialog.dlg .dlg-list{margin:0 0 10px;padding-left:18px;display:grid;gap:6px}
 .cam-img img{width:100%;aspect-ratio:4/3;object-fit:cover;background:var(--chip)}
 .cam-msg{margin:0;font-size:12.5px;color:var(--muted)}
 .cam-note{margin:0;font-size:11px;color:var(--muted);line-height:1.35}
+
+/* Sport: elements marked data-sport only show for their sport (ui/sport.ts). */
+body[data-sport="surf"] [data-sport="ski"],body[data-sport="ski"] [data-sport="surf"]{display:none!important}
+.sport{flex:none;display:inline-grid;grid-auto-flow:column;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.sport button{border:0;background:var(--panel);color:var(--muted);padding:4px 10px;font-family:var(--f-display),sans-serif;font-size:14px;font-weight:600;letter-spacing:.03em}
+.sport button+button{border-left:1px solid var(--line)}
+.sport button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.sport button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+@media (max-width:640px){.sport button{padding:8px 12px;font-size:15px}}
+/* The tab row: only the current sport's tabs take a column. */
+.tabs{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:auto}
+/* The header's one column never grows past the panel: the source credits shrink (ellipsis) to make room for the sport switch. */
+#panel header{grid-template-columns:minmax(0,1fr)}
+#tab-layers section.layer:is(#sec-skred,#sec-surf){border-top:0}
+
+/* Surf: rating colours, 0 (flat) to 5, -1 = no data. */
+.sc-1{--sc:transparent;--sc-ink:var(--muted)}
+.sc0{--sc:#c3ccd5;--sc-ink:#16202b}.sc1{--sc:#bfe3f2;--sc-ink:#16202b}.sc2{--sc:#7cc6e6;--sc-ink:#0b1c2b}
+.sc3{--sc:#2f9fd3;--sc-ink:#fff}.sc4{--sc:#1572b0;--sc-ink:#fff}.sc5{--sc:#0b4a86;--sc-ink:#fff}
+.scale6{display:grid;grid-template-columns:repeat(6,1fr);gap:2px;font-size:10.5px;text-align:center}
+.scale6 div{padding:4px 0;border-radius:3px;font-weight:600;background:var(--sc);color:var(--sc-ink);line-height:1.15}
+/* Map markers */
+.sm-hit{display:grid;place-items:center}
+.sm{width:30px;height:30px;border-radius:50%;background:var(--sc);color:var(--sc-ink);border:2px solid #fff;box-shadow:0 0 0 1px rgba(11,18,32,.7),0 1px 4px rgba(0,0,0,.35);display:grid;place-items:center;box-sizing:border-box;font-family:var(--f-mono),monospace;font-size:10.5px;font-weight:500;cursor:pointer}
+.sm.sc-1{background:#fff;color:#5b6876}
+.sm.sel{box-shadow:0 0 0 2px #0b1220,0 0 0 5px rgba(255,255,255,.85),0 2px 6px rgba(0,0,0,.4)}
+/* Surf tab */
+.surf{display:grid;gap:10px;padding-top:10px}
+.surf-top{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.splist{display:grid;gap:8px}
+.sp{border:1px solid var(--line);border-radius:10px;background:var(--panel);overflow:hidden}
+.sp.open{border-color:var(--accent)}
+.sp-h{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;width:100%;border:0;background:none;color:var(--fg);padding:8px 10px 6px;text-align:left}
+.sp-h:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.sp-badge{width:34px;height:34px;border-radius:6px;display:grid;place-items:center;font-family:var(--f-display),sans-serif;font-weight:700;font-size:20px;background:var(--sc);color:var(--sc-ink)}
+.sp-badge.sc-1{border:1px dashed var(--line)}
+.sp-badge.mini{width:22px;height:22px;font-size:14px;border-radius:4px}
+.sp-name{display:grid;min-width:0}
+.sp-name b{font-family:var(--f-display),sans-serif;font-size:17px;font-weight:600;line-height:1.1}
+.sp-name small,.sp-now small{font-size:11.5px;color:var(--muted)}
+.sp-now{display:grid;justify-items:end;text-align:right;font-size:12.5px;font-variant-numeric:tabular-nums}
+.sp-now b{font-family:var(--f-mono),monospace;font-weight:500;font-size:12.5px}
+.sp-days{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;padding:0 10px 8px}
+.sp-day{border:0;border-radius:4px;padding:3px 0;font-size:11px;font-weight:600;background:var(--sc);color:var(--sc-ink);text-transform:lowercase}
+.sp-day.sc-1{background:var(--chip);color:var(--muted)}
+.sp-day.sel{outline:2px solid var(--fg);outline-offset:1px}
+.sp-day:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.sp-d{display:grid;gap:10px;padding:2px 10px 10px;border-top:1px solid var(--line)}
+.sp-notes{margin:8px 0 0;padding-left:18px;font-size:12.5px;line-height:1.45;display:grid;gap:2px}
+.sp-facts{padding:0;border-top:0}
+.sp-tab{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums}
+.sp-tab caption{text-align:left;font-family:var(--f-display),sans-serif;font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding-bottom:4px}
+.sp-tab th{font-weight:500;color:var(--muted);text-align:left;padding:2px 4px;border-bottom:1px solid var(--line)}
+.sp-tab td{padding:3px 4px;border-bottom:1px solid var(--line);vertical-align:middle;font-family:var(--f-mono),monospace;font-size:11.5px}
+.sp-tab td small{display:block;font-family:var(--f-body),sans-serif;font-size:10.5px;color:var(--muted)}
+.sp-actions{display:flex;gap:8px;flex-wrap:wrap}
+.lhead label.nobox{cursor:default}
+/* Map popup for a spot */
+.sp-pop{display:grid;gap:8px}
+.sp-pop-h{display:flex;gap:10px;align-items:center}
+.sp-pop .sp-pop-when{margin:0;font-size:12.5px;color:var(--muted)}
+.sp-pop-when b{color:var(--fg);font-weight:600}
+.sp-pop .facts{font-size:12.5px;gap:3px 10px}
+.sp-pop .sp-notes{margin:0}
+.sp-pop .sp-days{padding:0}
+span.sp-day{display:block;text-align:center}

@@ -4,6 +4,8 @@ Avalanche terrain map for Norway. A static web app (no backend, no API keys) bui
 
 ## Features
 
+- **Ski / Surf** – a switch in the header picks the sport. Ski shows everything below; Surf hides the avalanche layers and the Skredvarsel and Verktøy tabs and shows the surf spots instead. The map, Vær tab, webcams, search and position are shared. The choice is remembered on the device (`ui/sport.ts`; elements marked `data-sport` in `index.html` only show for their sport).
+- **Surf** – 16 known spots from Larvik to Lofoten (`src/domain/surfSpots.ts`) with Open-Meteo's marine forecast (swell height, period and direction, wind sea, sea temperature) and the 10 m wind at the beach, about 7 days ahead. On the map, always while Surf is chosen (no checkbox): a badge per spot, coloured by a 0–5 rating, with the estimated breaking wave height; tap it for a popup with waves, swell, wind, sea temperature and the next days, plus *Mer om spotten* (opens it in the Surf tab) and *Vær her*. The Surf tab lists all spots (best first, or along the coast) with the rating now (or 12:00 on the chosen day), the best rating of each of the next 7 days (tap a day to show it), and, opened, the spot's facts, a 3-hourly table for the day, *Vis i kartet* and *Vær her* (picks the spot, so the Vær tab shows its forecast). Fetched only while Surf is chosen; stored on the device for use without network.
 - **Skredfare i terrenget** – forecast regions coloured by today's danger level. From zoom 10, slopes steeper than 27/30/35° that match the aspect and height band of the day's avalanche problems are coloured.
 - **Bratthet** – NVE's steepness map, optionally with modelled runout in three bands (short/medium/long: alpha angle 32°/27°/23°, passed by 1 in 2, 1 in 4 and 1 in 20 avalanches). Drawn routes are checked against it and stretches in steep terrain or runout are marked.
 - **Snø (seNorge)** – NVE's modelled snow maps for the chosen date (also a few days ahead): new snow over the last 1 or 3 days, or snow depth. 1 km grid, so it shows the pattern across a region, not single slopes.
@@ -71,6 +73,19 @@ Steps are MET's forecast for the point (temperature adjusted to the point's heig
 
 Every 25 m (at most 600 spots, 150 DEM tiles). **SLABS**: MSA40 × 4.3 per danger level × DCE (metres into the warning's heights) × AOF, interpolated in log space between the published knots (ISSW 2024). The paper doesn't publish its class cut-offs; ours put "elevated" at the risk of a 35° slope at level 3 at the edge of the warning's heights, facing its aspects, and "high" one level above. **Munter**: danger potential 2/4/8/16/32 ÷ (slope × aspect × group factors), acceptable at ≤ 1. Slope factor from the steepest part in whole degrees: 40°+ → 1, 36–39° → 2, 35° → 3, 30–34° → 4, under 30° → 8 (bergundsteigen 4/2001: 35–39° → 2, around 35° → 3, 30–34° → 4; under 30° → 8 is ours, the source gives no factor below 30°). Level 3 needs the steepest part under 40°, level 4 under 30°. 2nd-class factors void with a wet-snow problem.
 
+### Surf (`domain/surf.ts`)
+
+Two requests for all spots (Open-Meteo takes a list of coordinates): the marine API (best match: DWD EWAM ~5 km for ~3 days, then ECMWF WAM; `cell_selection=sea` moves a spot onto the nearest sea cell) and the forecast API for the 10 m wind. MET's own oceanforecast has no wave period, which surfing needs, so it isn't used.
+
+| Step | How |
+| --- | --- |
+| Swell that gets in | The swell partition's height (all waves when the model has no swell) × a direction factor: 1 within the spot's window (±45°, ours, narrower for Skagerrak spots) of its best swell direction, 0.5 at 1.5 × the window, 0 at 2.5 × (ours) |
+| Breaking height | Komar & Gaughan (1972): Hb = 0.39 g^(1/5) (T H0²)^(2/5), with the peak period. Under 0.3 m counts as flat |
+| Score 0–5 | Size points 0–4 at 0.3 / 0.6 / 0.9 / 1.5 m (ours); +1 at ≥ 11 s, −1 under 7 s; wind against the spot's offshore direction: within 30° offshore, 30–67.5° cross-offshore, to 112.5° cross (−1), to 150° cross-onshore and beyond onshore (−2), another −1 from 9 m/s when not offshore, −1 for offshore ≥ 14 m/s; under 2 m/s counts as glassy (all ours). ≥ 2.5 m is flagged as big |
+| Day colours | Best hour between 07 and 19 local time |
+
+Spot positions, type, best swell direction and offshore wind are from each spot's guide on surf-forecast.com (positions to 0.01°). The wave model sees the sea a few km out: sandbars, tide, reefs and shelter behind islands are not in it, and Skagerrak/Lista spots in particular depend on local swell the model may not resolve. None of the cut-offs have been checked against observed surf.
+
 ### Precision: known limits, biggest first
 
 1. **History weather at the point (fixed).** The hours before MET's forecast now come from the tapped point at its own height (see above) instead of one 850 hPa point per region; that point is still the fallback without network. Still approximate: ICON is a ~7 km model, so clear-night inversions in narrow valleys and showers on single slopes are smoothed; the old-snow surface (crust or not) and the wind still come from the region. Next step: try MET Nordic (1 km, on Open-Meteo for Norway) for the last 2–3 days, once its `past_days` support is confirmed.
@@ -128,7 +143,7 @@ src/
   types.ts              Types for NVE/Regobs data
   util.ts               DOM helper, esc(), safeUrl(), dates, fetch
   map.ts                Leaflet map + Kartverket topo basemap
-  api/                  NVE warnings/regions, Regobs search, Kartverket place names, MET point forecast, Open-Meteo air profile, region wind and point weather history
+  api/                  Surf: Open-Meteo marine + wind for all spots (surf.ts). NVE warnings/regions, Regobs search, Kartverket place names, MET point forecast, Open-Meteo air profile, region wind and point weather history
   tools/                Assembles domain logic + data for the Verktøy tab (Stop or Go, ALPTRUTh, infos, Regobs signs, the point's weather history, your own ticks)
   domain/               Pure logic, tested with node:test: problem matching, point-in-polygon, observation types, MGRS, weather (rain/snow, cloud layers, snow line), sun, wind loading, Stop or Go and the 20 × 20 m slope window, ALPTRUTh, weighted Regobs signs, new snow / loading / thaw / refreeze (precip.ts), infos, SLABS and Munter (risk.ts)
   terrain/              Elevation tiles (LERC) → slope/aspect; canvas layer base; DEM windows around a point; terrain horizon for sun shadow
@@ -164,4 +179,4 @@ The aspect and avalanche-terrain layers share the same drawing functions in 2D (
 
 ## Data
 
-Avalanche warnings and steepness © NVE / varsom.no · Snow maps © NVE / seNorge (NLOD) · Terrain model and basemap © Kartverket · 3D terrain: AWS Terrain Tiles (© Kartverket) · Observations © Regobs and the observers · Webcams © Statens vegvesen (NLOD, open WFS `datex_3_1:CctvSimple_v2`) · Other webcams © romsdal.com, Turtagrø hotell, Galdhøpiggen Sommerskisenter · Place names © Kartverket (Sentralt stedsnavnregister) · MGRS via [proj4js/mgrs](https://github.com/proj4js/mgrs). `docs/` holds the original single-file prototype and the prompts it came from.
+Avalanche warnings and steepness © NVE / varsom.no · Snow maps © NVE / seNorge (NLOD) · Terrain model and basemap © Kartverket · 3D terrain: AWS Terrain Tiles (© Kartverket) · Observations © Regobs and the observers · Webcams © Statens vegvesen (NLOD, open WFS `datex_3_1:CctvSimple_v2`) · Waves, swell and wind at surf spots: [Open-Meteo](https://open-meteo.com) (CC BY 4.0; DWD, ECMWF, MET Norway) · Surf spot details: surf-forecast.com · Other webcams © romsdal.com, Turtagrø hotell, Galdhøpiggen Sommerskisenter · Place names © Kartverket (Sentralt stedsnavnregister) · MGRS via [proj4js/mgrs](https://github.com/proj4js/mgrs). `docs/` holds the original single-file prototype and the prompts it came from.

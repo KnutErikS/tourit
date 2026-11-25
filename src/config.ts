@@ -13,6 +13,12 @@ export const MET_API = 'https://api.met.no/weatherapi';
 /** Open-Meteo: cloud cover per height and freezing level (ICON model). Free for non-commercial use, CC BY 4.0. */
 export const OPEN_METEO_API = 'https://api.open-meteo.com/v1';
 /**
+ * Open-Meteo's marine API: swell and wind-sea height, period and direction plus sea
+ * temperature, for the surf spots. Best-match model (DWD EWAM ~5 km for ~3 days,
+ * then ECMWF WAM). Free for non-commercial use, no key, CC BY 4.0.
+ */
+export const OPEN_METEO_MARINE_API = 'https://marine-api.open-meteo.com/v1';
+/**
  * Statens vegvesen's open map services (GeoServer). The DATEX 3.1 workspace has
  * the road webcams as a WFS layer; no registration or key. NLOD licence: credit Statens vegvesen.
  */

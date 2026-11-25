@@ -19,6 +19,8 @@ export const EVENTS = {
   'tab-warn': 'Fane: Skredvarsel',
   'tab-wx': 'Fane: Vær',
   'tab-tools': 'Fane: Verktøy',
+  'tab-surf': 'Fane: Surf',
+  'sport-surf': 'Sport: Surf valgt',
   'layer-bratt': 'Lag: Bratthet',
   'layer-runout': 'Lag: Utløp',
   'layer-snow': 'Lag: Snø (seNorge)',
@@ -47,6 +49,7 @@ export const EVENTS = {
   'fail-openmeteo': 'Feil: Open-Meteo',
   'fail-dem': 'Feil: Kartverket høydedata',
   'fail-vegvesen': 'Feil: Vegvesen (webkamera)',
+  'fail-marine': 'Feil: Open-Meteo Marine (bølger)',
 } as const;
 export type EventName = keyof typeof EVENTS;
 

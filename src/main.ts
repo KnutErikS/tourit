@@ -26,6 +26,7 @@ import * as L from 'leaflet';
 import { fetchRegions, fetchWarnings } from './api/nve';
 import { fetchObservations } from './api/regobs';
 import { fetchWebcams } from './api/vegvesen';
+import { fetchSurf } from './api/surf';
 import { fetchPointWeather } from './api/met';
 import { fetchAirProfile, fetchWindHistory } from './api/openMeteo';
 import { FETCH_H, windLoading, windowEnd } from './domain/wind';
@@ -41,10 +42,12 @@ import { renderSteepnessLegend, steepnessLayer } from './layers/steepness';
 import { renderRunoutLegend, setRunout } from './layers/runout';
 import { isSnowKind, renderSnowLegend, setSnow, snowLayer, type SnowKind } from './layers/snow';
 import { drawWebcams, webcamLayer } from './layers/webcams';
+import { surfLayer } from './layers/surf';
+import { SURF_SPOTS } from './domain/surfSpots';
 import { siteOk, type WebcamSite } from './domain/webcams';
 import { EXTRA_WEBCAMS } from './domain/extraWebcams';
 import { map } from './map';
-import { state } from './state';
+import { state, type Sport } from './state';
 import { terrainAt } from './terrain/dem';
 import type { Picked } from './types';
 import { registerServiceWorker } from './offline/download';
@@ -71,6 +74,8 @@ import { initLayerInfo } from './ui/layerInfo';
 import { initAbout } from './ui/about';
 import { initToolInfo } from './ui/toolInfo';
 import { initTools, renderTools, setToolsActive } from './ui/tools';
+import { initSurf, openSpot, renderSurf, setSurfData, setSurfStatus } from './ui/surf';
+import { initSport } from './ui/sport';
 import { initInfos } from './tools/infos';
 import { initRoute, isDrawing, refreshRouteRisk } from './ui/routePage';
 import { $, fmtDate, fmtTime, isoDate } from './util';
@@ -84,6 +89,13 @@ initCounting();
 
 const avalancheLayer = createAvalancheTerrainLayer(reportDemError);
 const aspectLayer = createAspectLayer(reportDemError);
+
+/** The sport each layer toggle belongs to; toggles not listed (webcams) show for both. */
+const LAYER_SPORT: Record<string, Sport> = { 'l-skred': 'ski', 'l-bratt': 'ski', 'l-snow': 'ski', 'l-asp': 'ski', 'l-obs': 'ski' };
+/** A layer is on the map when its box is ticked and it belongs to the sport shown. */
+function layerOn(id: string): boolean {
+  return $<HTMLInputElement>(id).checked && (LAYER_SPORT[id] ?? state.sport) === state.sport;
+}
 
 /* ---------- rendering ---------- */
 
@@ -277,6 +289,41 @@ async function loadWebcams(): Promise<void> {
 }
 webcamLayer.on('add', () => void loadWebcams());
 
+/**
+ * Waves and wind for the surf spots: fetched when surfing is chosen, and again
+ * after SURF_MAX_AGE (the wave models run every 6–12 hours; the wind hourly).
+ */
+const SURF_MAX_AGE = 30 * 60_000;
+let surfAt = 0;
+let surfLoading = false;
+async function loadSurf(): Promise<void> {
+  if (surfLoading || Date.now() - surfAt < SURF_MAX_AGE) return;
+  surfLoading = true;
+  const el = $('surf-layer-status');
+  const show = (text: string) => {
+    el.hidden = false;
+    el.textContent = text;
+  };
+  show('Henter bølgevarsel…');
+  try {
+    const { data, savedAt } = await fetchSurf(SURF_SPOTS);
+    if (savedAt !== null) count('fail-marine');
+    else surfAt = Date.now();
+    setSurfData(data, storedNote(savedAt));
+    show(`${storedNote(savedAt)}${SURF_SPOTS.length} surfespotter`);
+  } catch (e) {
+    count('fail-marine');
+    const text =
+      e instanceof NotStoredError
+        ? 'Uten nett, og bølgevarselet er ikke lagret på enheten ennå.'
+        : `Fikk ikke hentet bølgevarsel fra Open-Meteo (${(e as Error)?.message || 'nettverksfeil'}). Prøv igjen om litt.`;
+    setSurfStatus(text);
+    show(text);
+  } finally {
+    surfLoading = false;
+  }
+}
+
 /* ---------- dates ---------- */
 
 /** NVE publishes the next day's warning around 16:00. */
@@ -320,6 +367,7 @@ function go(date: string): void {
   state.regions.forEach((r) => ((r.wind = undefined), (r.hours = undefined)));
   loadWind(date).catch(windFail);
   applySnow();
+  renderSurf(); // the Surf tab and its markers follow the date
   // Weather follows the date shown, and gets refreshed along with the warning.
   if (state.picked && state.picked.terrain !== undefined) void loadWeather(state.picked);
 }
@@ -336,7 +384,9 @@ function syncClock(): boolean {
 
 /** Back in the foreground (phone unlocked, tab switched back): new day or stale data → fetch again. */
 function onForeground(): void {
-  if (document.visibilityState !== 'visible' || !state.regions.length) return;
+  if (document.visibilityState !== 'visible') return;
+  if (state.sport === 'surf') void loadSurf(); // refetches only once the data is old
+  if (!state.regions.length) return;
   if (!syncClock() && (showingStored || Date.now() - loadedAt > STALE_MS)) go(state.date);
 }
 document.addEventListener('visibilitychange', onForeground);
@@ -350,6 +400,8 @@ setInterval(() => document.visibilityState === 'visible' && state.regions.length
 
 // Map view, layer checkboxes and settings from the link or the last visit.
 const { date: startDate, point: startPoint } = restoreView();
+// Before the layers are bound: only the chosen sport's layers go on the map.
+initSport(onSport);
 const thrSelect = $<HTMLSelectElement>('s-thr');
 const aspMinSelect = $<HTMLSelectElement>('a-min');
 const restBox = $<HTMLInputElement>('s-rest');
@@ -378,14 +430,18 @@ applySnow();
 
 /** Layers counted when shown (the avalanche layer is on by default, so it tells nothing). */
 const LAYER_EVENTS: Record<string, EventName> = { 'l-bratt': 'layer-bratt', 'l-snow': 'layer-snow', 'l-asp': 'layer-asp', 'l-obs': 'layer-obs', 'l-cam': 'layer-cam' };
+/** Every toggle's apply, run again when the sport changes. */
+const toggles: (() => void)[] = [];
 function bindToggle(id: string, ...layers: L.Layer[]): void {
   const box = $<HTMLInputElement>(id);
   const event = LAYER_EVENTS[id];
   const apply = () => {
-    layers.forEach((l) => (box.checked ? l.addTo(map) : map.removeLayer(l)));
-    if (box.checked && event) count(event); // also when restored from the last visit: "visits that showed it"
+    const on = layerOn(id);
+    layers.forEach((l) => (on ? l.addTo(map) : map.removeLayer(l)));
+    if (on && event) count(event); // also when restored from the last visit: "visits that showed it"
   };
   box.addEventListener('change', apply);
+  toggles.push(apply);
   apply();
 }
 bindToggle('l-skred', avalancheLayer, regionGroup);
@@ -406,6 +462,12 @@ bindToggle('l-snow', snowLayer);
 bindToggle('l-asp', aspectLayer);
 bindToggle('l-obs', obsGroup);
 bindToggle('l-cam', webcamLayer);
+// Surf spots: no checkbox, always on the map while surf is chosen.
+function syncSurfLayer(): void {
+  if (state.sport === 'surf') surfLayer.addTo(map);
+  else map.removeLayer(surfLayer);
+}
+syncSurfLayer();
 for (const id of ['l-bratt', 'l-snow', 'l-asp']) $(id).addEventListener('change', syncMapLegend);
 
 steepOpacityInput.addEventListener('input', () => steepnessLayer.setOpacity(+steepOpacityInput.value));
@@ -445,7 +507,7 @@ void renderSteepnessLegend($('bratt-legend')).then(syncMapLegend);
  * the panel is hidden (CSS shows the box only then). One block per layer that is on.
  */
 function syncMapLegend(): void {
-  const on = (id: string) => $<HTMLInputElement>(id).checked;
+  const on = layerOn;
   const parts: string[] = [];
   if (on('l-bratt')) parts.push(`<div class="legend">${$('bratt-legend').innerHTML}</div>`);
   if (on('l-snow')) parts.push(`<div class="legend">${$('snow-legend').innerHTML}</div>`);
@@ -464,7 +526,7 @@ function syncMapLegend(): void {
  */
 function onZoom(): void {
   const z = map.getZoom();
-  const on = (id: string) => $<HTMLInputElement>(id).checked;
+  const on = layerOn;
   const msg =
     on('l-skred') && z < SKRED_MIN_ZOOM
       ? 'Zoom inn for å se terrengtreff'
@@ -500,7 +562,7 @@ $('demo').addEventListener('click', () => {
 
 /* ---------- tabs + panel ---------- */
 
-const TABS = ['layers', 'warn', 'wx', 'tools'] as const;
+const TABS = ['layers', 'surf', 'warn', 'wx', 'tools'] as const;
 type Tab = (typeof TABS)[number];
 function setTab(t: Tab): void {
   for (const k of TABS) {
@@ -554,6 +616,23 @@ PHONE.addEventListener('change', restorePanelHidden);
 function expandPanel(): void {
   if ($('panel').hidden) setPanelHidden(false);
   expandSheet();
+}
+
+/* ---------- sport ---------- */
+
+/** Ski ↔ surf: swap the layers on the map and move off a tab the other sport doesn't have. */
+function onSport(s: Sport): void {
+  toggles.forEach((apply) => apply());
+  syncSurfLayer();
+  syncMapLegend();
+  onZoom();
+  if (s === 'surf') {
+    count('sport-surf');
+    setTab('surf');
+    void loadSurf();
+  } else if (!$('tab-surf').hidden) {
+    setTab('layers');
+  }
 }
 
 /* ---------- picking a point ---------- */
@@ -694,14 +773,33 @@ initSearch((place) => {
   const z = Math.max(map.getZoom(), SEARCH_ZOOM);
   resetSheet(); // phones: back to half height so the map is visible
   setHeaderTool(null); // phones: fold the search away again
-  const inset = panelInsets();
-  if (is3DOpen()) flyTo3D(place.lat, place.lng, z, inset);
-  else {
-    // Centre the place in the part of the map that isn't covered by the panel.
-    const centre = map.unproject(map.project(ll, z).add([-inset.left / 2, inset.bottom / 2]), z);
-    map.flyTo(centre, z);
-  }
+  flyIntoView(ll, z);
   void pickPoint(ll);
+});
+
+/** Fly to a place, centred in the part of the map that isn't covered by the panel. */
+function flyIntoView(ll: L.LatLng, z: number): void {
+  const inset = panelInsets();
+  if (is3DOpen()) flyTo3D(ll.lat, ll.lng, z, inset);
+  else map.flyTo(map.unproject(map.project(ll, z).add([-inset.left / 2, inset.bottom / 2]), z), z);
+}
+
+/** Zoom a surf spot is shown at from the list. */
+const SPOT_ZOOM = 12;
+initSurf({
+  onDate: (iso) => go(iso),
+  onDetails: (id) => {
+    setTab('surf');
+    openSpot(id);
+  },
+  onShowOnMap: (spot) => {
+    resetSheet(); // phones: back to half height so the map is visible
+    flyIntoView(L.latLng(spot.lat, spot.lng), Math.max(map.getZoom(), SPOT_ZOOM));
+  },
+  onWeather: (spot) => {
+    void pickPoint(L.latLng(spot.lat, spot.lng));
+    setTab('wx');
+  },
 });
 
 /**
@@ -724,6 +822,10 @@ loadedAt = Date.now();
 dateEl.value = state.date;
 suggestTomorrow();
 trackView(go, openSharedPoint);
+if (state.sport === 'surf') {
+  count('sport-surf');
+  void loadSurf();
+}
 setStatus('Henter varslingsregioner…', 'busy');
 fetchRegions()
   .then((regions) => {

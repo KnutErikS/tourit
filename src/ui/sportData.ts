@@ -1,6 +1,6 @@
 import { count } from '../analytics/count';
 import { fetchCrags } from '../api/crags';
-import { fetchSurf } from '../api/surf';
+import { fetchSurf, SURF_MODELS, type SurfModel } from '../api/surf';
 import { SURF_SPOTS } from '../domain/surfSpots';
 import { map } from '../map';
 import { NotStoredError } from '../offline/dataCache';
@@ -17,8 +17,10 @@ import { setSurfData, setSurfStatus } from './surf';
  */
 
 /**
- * Waves and wind for the surf spots: fetched when surfing is chosen, and again
- * after SURF_MAX_AGE (the wave models run every 6–12 hours; the wind hourly).
+ * Waves and wind for the surf spots, from both wave models (shown side by side,
+ * ui/surf.ts): fetched when surfing is chosen, and again after SURF_MAX_AGE
+ * (the wave models run every 6–12 hours; the wind hourly). One model failing
+ * still shows the other.
  */
 const SURF_MAX_AGE = 30 * 60_000;
 let surfAt = 0;
@@ -32,23 +34,29 @@ export async function loadSurf(): Promise<void> {
     el.textContent = text;
   };
   show('Henter bølgevarsel…');
-  try {
-    const { data, savedAt } = await fetchSurf(SURF_SPOTS);
-    if (savedAt !== null) count('fail-marine');
-    else surfAt = Date.now();
-    setSurfData(data, storedNote(savedAt));
-    show(`${storedNote(savedAt)}${SURF_SPOTS.length} surfespotter`);
-  } catch (e) {
-    count('fail-marine');
+  const models = Object.keys(SURF_MODELS) as SurfModel[];
+  const results = await Promise.allSettled(models.map((m) => fetchSurf(SURF_SPOTS, m)));
+  const missing = models.filter((_, i) => results[i].status === 'rejected');
+  let stored: number | null = null;
+  results.forEach((r, i) => {
+    if (r.status !== 'fulfilled') return;
+    if (r.value.savedAt !== null) stored = Math.min(stored ?? Infinity, r.value.savedAt);
+    setSurfData(models[i], r.value.data, storedNote(r.value.savedAt), missing);
+  });
+  if (missing.length || stored !== null) count('fail-marine');
+  if (missing.length === models.length) {
+    const e = (results[0] as PromiseRejectedResult).reason;
     const text =
       e instanceof NotStoredError
         ? 'Uten nett, og bølgevarselet er ikke lagret på enheten ennå.'
         : `Fikk ikke hentet bølgevarsel fra Open-Meteo (${(e as Error)?.message || 'nettverksfeil'}). Prøv igjen om litt.`;
     setSurfStatus(text);
     show(text);
-  } finally {
-    surfLoading = false;
+  } else {
+    if (!missing.length && stored === null) surfAt = Date.now();
+    show(`${storedNote(stored)}${SURF_SPOTS.length} surfespotter`);
   }
+  surfLoading = false;
 }
 
 /**

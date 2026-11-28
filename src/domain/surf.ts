@@ -234,6 +234,8 @@ export interface OmLocation {
 export const asList = (raw: OmLocation | OmLocation[]): OmLocation[] => (Array.isArray(raw) ? raw : [raw]);
 
 const num = (v: number | null | undefined): number | null => (v == null || !Number.isFinite(v) ? null : v);
+/** A period of 0 s (NOAA GFS-Wave sends it where it finds no swell) means no data. */
+const period = (v: number | null): number | null => (v != null && v > 0 ? v : null);
 
 /**
  * One location's marine and wind answers merged into hours (marine times lead;
@@ -250,13 +252,15 @@ export function toSurfHours(marine: OmLocation, wind: OmLocation | null): SurfHo
     const at = (k: string) => num(m[k]?.[i]);
     const j = windAt.get(t);
     const wv = (k: string) => (j === undefined ? null : num(w?.[k]?.[j]));
+    const swellT = period(at('swell_wave_peak_period')) ?? period(at('swell_wave_period'));
     const hour: SurfHour = {
       time: t * 1000,
-      swellH: at('swell_wave_height'),
-      swellT: at('swell_wave_peak_period') ?? at('swell_wave_period'),
+      // No period means no swell partition: a 0 m height with it is "no data", not flat sea.
+      swellH: swellT == null && !at('swell_wave_height') ? null : at('swell_wave_height'),
+      swellT,
       swellDir: at('swell_wave_direction'),
       waveH: at('wave_height'),
-      waveT: at('wave_peak_period') ?? at('wave_period'),
+      waveT: period(at('wave_peak_period')) ?? period(at('wave_period')),
       waveDir: at('wave_direction'),
       windWaveH: at('wind_wave_height'),
       windSpeed: wv('wind_speed_10m'),

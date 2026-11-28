@@ -17,7 +17,7 @@ const SAVED_AT = 'x-tourit-saved-at';
 const SLOW_MS = 10_000;
 
 export type Kind = 'warnings' | 'observations' | 'regions' | 'weather' | 'profile' | 'wind' | 'history' | 'webcams' | 'surf' | 'crags';
-const KEEP: Record<Kind, number> = { warnings: 8, observations: 4, regions: 1, weather: 6, profile: 6, wind: 4, history: 8, webcams: 1, surf: 1, crags: 1 };
+const KEEP: Record<Kind, number> = { warnings: 8, observations: 4, regions: 1, weather: 6, profile: 6, wind: 4, history: 8, webcams: 1, surf: 2, crags: 1 };
 
 export interface Fetched<T> {
   data: T;

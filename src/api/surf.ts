@@ -24,30 +24,47 @@ const DAYS = 7;
 /** Open-Meteo sends no Expires; the wave models run every 6–12 hours, so an hour is plenty. */
 const TTL_MS = 60 * 60_000;
 
+/**
+ * Which wave model: Open-Meteo's best match (DWD EWAM ~5 km for ~3 days, then
+ * ECMWF WAM), or NOAA's GFS-Wave (WAVEWATCH III driven by GFS winds, 0.25°),
+ * the model family surf-forecast.com uses, to compare the two.
+ */
+export type SurfModel = 'best_match' | 'ncep_gfswave025';
+export const SURF_MODELS: Record<SurfModel, { label: string; short: string; source: string }> = {
+  best_match: { label: 'DWD/ECMWF', short: 'DWD/ECMWF', source: 'DWD EWAM (ca. 5 km, ca. 3 døgn), deretter ECMWF WAM (9 km)' },
+  ncep_gfswave025: { label: 'NOAA GFS-Wave', short: 'NOAA', source: 'NOAA GFS-Wave (WAVEWATCH III med GFS-vind, ca. 25 km), samme modellfamilie som surf-forecast.com' },
+};
+export const isSurfModel = (v: unknown): v is SurfModel => v === 'best_match' || v === 'ncep_gfswave025';
+
 export interface SpotForecast {
   id: string;
   hours: SurfHour[];
 }
 
-let memory: { data: SpotForecast[]; expires: number; key: string } | null = null;
+/** One answer per model, kept for TTL_MS. */
+const memory = new Map<string, { data: SpotForecast[]; expires: number }>();
 
 const coords = (spots: SurfSpot[]) =>
   `latitude=${spots.map((s) => s.lat).join(',')}&longitude=${spots.map((s) => s.lng).join(',')}`;
 
-export async function fetchSurf(spots: SurfSpot[]): Promise<Fetched<SpotForecast[]>> {
-  const key = spots.map((s) => s.id).join(',');
-  if (memory && memory.key === key && memory.expires > Date.now()) return { data: memory.data, savedAt: null };
-  return withStored('surf', 'all', async () => {
+export async function fetchSurf(spots: SurfSpot[], model: SurfModel = 'best_match'): Promise<Fetched<SpotForecast[]>> {
+  const key = `${model}|${spots.map((s) => s.id).join(',')}`;
+  const hit = memory.get(key);
+  if (hit && hit.expires > Date.now()) return { data: hit.data, savedAt: null };
+  // Stored per model: the default keeps its old key, so a copy stored before the choice existed still counts.
+  return withStored('surf', model === 'best_match' ? 'all' : model, async () => {
     const q = `${coords(spots)}&forecast_days=${DAYS}&timeformat=unixtime`;
     const [marine, wind] = await Promise.all([
-      getJson<OmLocation | OmLocation[]>(`${OPEN_METEO_MARINE_API}/marine?${q}&hourly=${MARINE_VARS.join(',')}&cell_selection=sea`),
+      getJson<OmLocation | OmLocation[]>(
+        `${OPEN_METEO_MARINE_API}/marine?${q}&hourly=${MARINE_VARS.join(',')}&cell_selection=sea${model === 'best_match' ? '' : `&models=${model}`}`,
+      ),
       // Waves without wind are still worth showing: the rating then leaves the wind out.
       getJson<OmLocation | OmLocation[]>(`${OPEN_METEO_API}/forecast?${q}&hourly=${WIND_VARS.join(',')}&wind_speed_unit=ms`).catch(() => null),
     ]);
     const m = asList(marine), w = wind ? asList(wind) : [];
     if (m.length !== spots.length) throw new Error('uventet svar fra Open-Meteo');
     const data = spots.map((s, i) => ({ id: s.id, hours: toSurfHours(m[i], w.length === spots.length ? w[i] : null) }));
-    memory = { data, expires: Date.now() + TTL_MS, key };
+    memory.set(key, { data, expires: Date.now() + TTL_MS });
     return data;
   });
 }

@@ -122,3 +122,12 @@ test('nearestSpot finds a spot within 5 km, else none', () => {
   assert.equal(nearestSpot(SURF_SPOTS, { lat: 61.5, lng: 8.5 }), null);
   assert.ok(Math.abs(kmBetween({ lat: 60, lng: 10 }, { lat: 61, lng: 10 }) - 111.2) < 0.2);
 });
+
+test('toSurfHours: 0 s periods and a 0 m swell without period are missing data, not flat sea', () => {
+  const hs = toSurfHours({ hourly: { time: [100], swell_wave_height: [0], swell_wave_period: [0], swell_wave_peak_period: [0], wave_height: [1.1], wave_period: [7], wave_peak_period: [0] } }, null);
+  assert.equal(hs[0].swellH, null);
+  assert.equal(hs[0].swellT, null);
+  assert.equal(hs[0].waveT, 7);
+  // Rated on all waves instead: not flat.
+  assert.ok(rateHour(spot, { ...hs[0], waveDir: 270 }).size! > 0.5);
+});

@@ -714,7 +714,7 @@ body[data-sport="ski"] [data-sport]:not([data-sport~="ski"]),body[data-sport="su
 .splist{display:grid;gap:8px}
 .sp{border:1px solid var(--line);border-radius:10px;background:var(--panel);overflow:hidden}
 .sp.open{border-color:var(--accent)}
-.sp-h{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;width:100%;border:0;background:none;color:var(--fg);padding:8px 10px 6px;text-align:left}
+.sp-h{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;width:100%;border:0;background:none;color:var(--fg);padding:8px 10px 6px;text-align:left}
 .sp-h:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .sp-badge{width:34px;height:34px;border-radius:6px;display:grid;place-items:center;font-family:var(--f-display),sans-serif;font-weight:700;font-size:20px;background:var(--sc);color:var(--sc-ink)}
 .sp-badge.sc-1{border:1px dashed var(--line)}
@@ -722,7 +722,8 @@ body[data-sport="ski"] [data-sport]:not([data-sport~="ski"]),body[data-sport="su
 .sp-name{display:grid;min-width:0}
 .sp-name b{font-family:var(--f-display),sans-serif;font-size:17px;font-weight:600;line-height:1.1}
 .sp-name small,.sp-now small{font-size:11.5px;color:var(--muted)}
-.sp-now{display:grid;justify-items:end;text-align:right;font-size:12.5px;font-variant-numeric:tabular-nums}
+.sp-now{display:grid;justify-items:end;text-align:right;font-size:12.5px;font-variant-numeric:tabular-nums;max-width:13em}
+.sp-now small{white-space:nowrap}
 .sp-now b{font-family:var(--f-mono),monospace;font-weight:500;font-size:12.5px}
 .sp-days{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;padding:0 10px 8px}
 .sp-day{border:0;border-radius:4px;padding:3px 0;font-size:11px;font-weight:600;background:var(--sc);color:var(--sc-ink);text-transform:lowercase}
@@ -784,3 +785,15 @@ span.sp-day{display:block;text-align:center}
 .cg-filter button[aria-checked="true"]{background:var(--chip);color:var(--fg);box-shadow:inset 0 -2px 0 var(--accent)}
 .cg-filter small{font-family:var(--f-mono),monospace;font-size:10.5px;font-weight:400;color:var(--muted)}
 .sp-actions a.btn{text-decoration:none;display:inline-flex;align-items:center}
+
+/* Surf: what a number in the popup is (anslått ved spotten / åpent hav) */
+.sp-hint{font-size:11px;color:var(--muted);font-weight:400}
+/* Surf: the two wave models side by side */
+.sp-cmp{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums;margin-top:6px}
+.sp-cmp th,.sp-cmp td{padding:3px 4px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.sp-cmp thead th{font-weight:600;color:var(--muted);font-size:11.5px}
+.sp-cmp thead th.sel{color:var(--fg);box-shadow:inset 0 -2px 0 var(--accent)}
+.sp-cmp tbody th{font-weight:500;color:var(--muted)}
+.sp-cmp td{font-family:var(--f-mono),monospace;font-size:11.5px}
+.sp-cmp td small{display:block;font-family:var(--f-body),sans-serif;font-size:10.5px;color:var(--muted)}
+.sp-cmp-key{margin:0 0 4px;font-size:11px;color:var(--muted)}

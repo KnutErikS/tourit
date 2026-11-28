@@ -79,6 +79,10 @@ Every 25 m (at most 600 spots, 150 DEM tiles). **SLABS**: MSA40 × 4.3 per dange
 
 Two requests for all spots (Open-Meteo takes a list of coordinates): the marine API (best match: DWD EWAM ~5 km for ~3 days, then ECMWF WAM; `cell_selection=sea` moves a spot onto the nearest sea cell) and the forecast API for the 10 m wind. MET's own oceanforecast has no wave period, which surfing needs, so it isn't used.
 
+**Two wave models side by side:** *DWD/ECMWF* (Open-Meteo's best match, above) and *NOAA GFS-Wave* (`models=ncep_gfswave025`: WAVEWATCH III driven by GFS winds, 0.25°), the model family surf-forecast.com uses (GEFS-Wave by default, GFS-Wave for Premium). Both are fetched (one request each, stored on the device on their own; one failing still shows the other). Heights in the list and the day table read "DWD/ECMWF / NOAA"; the popup and an opened spot have a two-column table (rating, breaking height, swell, total). The spot's 0–5 rating (badge, colours, sort, day cells, map) is the better of the two models at that time (tie: the bigger breaking height), and the period, direction and notes shown with it come from that model; the popup says which ("Bra (NOAA)"). The two get their winds from different weather models and often disagree on height.
+
+**Two heights are shown:** the big number (list, map badge, "Bryter") is our estimate of the breaking wave at the spot (below); "Dønning" is the swell's open-water significant height, the number other surf sites show (surf-forecast.com: open-water height close to the coast, not the breaking height). The popup also shows the total height (swell and wind sea). When the swell comes from the side of a spot, the breaking estimate is much smaller than the swell.
+
 | Step | How |
 | --- | --- |
 | Swell that gets in | The swell partition's height (all waves when the model has no swell) × a direction factor: 1 within the spot's window (±45°, ours, narrower for Skagerrak spots) of its best swell direction, 0.5 at 1.5 × the window, 0 at 2.5 × (ours) |

@@ -67,6 +67,13 @@ export const EVENTS = {
   'climb-filter-sport': 'Klatring: filter sport',
   'climb-filter-trad': 'Klatring: filter trad',
   'climb-sort-near': 'Klatring: sortert etter nærmest',
+  'tab-ice': 'Fane: Is',
+  'sport-ice': 'Sport: Skøyter valgt',
+  'ice-marker': 'Skøyter: trykket i kartet',
+  'ice-list': 'Skøyter: observasjon åpnet i lista',
+  'ice-days-1': 'Skøyter: siste døgn',
+  'ice-days-7': 'Skøyter: siste 7 døgn',
+  'ice-sort-near': 'Skøyter: sortert etter nærmest',
 } as const;
 export type EventName = keyof typeof EVENTS;
 

@@ -1,13 +1,13 @@
 import type { Picked, Region, RegobsObs } from './types';
 
-export type Sport = 'ski' | 'surf' | 'climb';
+export type Sport = 'ski' | 'surf' | 'climb' | 'ice';
 
 /**
  * Shared, mutable app state. Kept deliberately small: modules read from it,
  * and main.ts is the only place that orchestrates updates + re-rendering.
  */
 export const state = {
-  /** Which sport the panel is set up for (ui/sport.ts). */
+  /** Which sport the panel is set up for (ui/sport.ts). 'ice' = skating (Skøyter). */
   sport: 'ski' as Sport,
   /** Selected warning date, YYYY-MM-DD. */
   date: '',

@@ -43,6 +43,7 @@ import { isSnowKind, renderSnowLegend, setSnow, snowLayer, type SnowKind } from 
 import { drawWebcams, webcamLayer } from './layers/webcams';
 import { surfLayer } from './layers/surf';
 import { climbLayer } from './layers/climb';
+import { iceLayer } from './layers/ice';
 import { siteOk, type WebcamSite } from './domain/webcams';
 import { EXTRA_WEBCAMS } from './domain/extraWebcams';
 import { map } from './map';
@@ -75,7 +76,8 @@ import { initToolInfo } from './ui/toolInfo';
 import { initTools, renderTools, setToolsActive } from './ui/tools';
 import { initSurf, openSpot, renderSurf } from './ui/surf';
 import { initClimb, openCrag, renderClimb } from './ui/climb';
-import { loadCrags, loadSurf, preloadCrags } from './ui/sportData';
+import { initIce, openIce, renderIce } from './ui/ice';
+import { loadCrags, loadIce, loadSurf, preloadCrags } from './ui/sportData';
 import { initSport } from './ui/sport';
 import { initInfos } from './tools/infos';
 import { initRoute, isDrawing, refreshRouteRisk } from './ui/routePage';
@@ -340,6 +342,10 @@ function go(date: string): void {
   applySnow();
   renderSurf(); // the Surf tab and its markers follow the date
   if (state.sport === 'climb') renderClimb();
+  if (state.sport === 'ice') {
+    renderIce(); // the period shown ends on the new date
+    void loadIce();
+  }
   // Weather follows the date shown, and gets refreshed along with the warning.
   if (state.picked && state.picked.terrain !== undefined) void loadWeather(state.picked);
 }
@@ -359,6 +365,7 @@ function onForeground(): void {
   if (document.visibilityState !== 'visible') return;
   if (state.sport === 'surf') void loadSurf(); // refetches only once the data is old
   if (state.sport === 'climb') renderClimb(); // weather older than an hour is fetched again
+  if (state.sport === 'ice') void loadIce(); // refetches only once the data is old
   if (!state.regions.length) return;
   if (!syncClock() && (showingStored || Date.now() - loadedAt > STALE_MS)) go(state.date);
 }
@@ -437,9 +444,9 @@ bindToggle('l-snow', snowLayer);
 bindToggle('l-asp', aspectLayer);
 bindToggle('l-obs', obsGroup);
 bindToggle('l-cam', webcamLayer);
-// Surf spots and crags: no checkbox, always on the map while their sport is chosen.
+// Surf spots, crags and ice: no checkbox, always on the map while their sport is chosen.
 function syncSportLayers(): void {
-  for (const [layer, sport] of [[surfLayer, 'surf'], [climbLayer, 'climb']] as const) {
+  for (const [layer, sport] of [[surfLayer, 'surf'], [climbLayer, 'climb'], [iceLayer, 'ice']] as const) {
     if (state.sport === sport) layer.addTo(map);
     else map.removeLayer(layer);
   }
@@ -540,7 +547,7 @@ $('demo').addEventListener('click', () => {
 
 /* ---------- tabs + panel ---------- */
 
-const TABS = ['layers', 'surf', 'climb', 'warn', 'wx', 'tools'] as const;
+const TABS = ['layers', 'surf', 'climb', 'ice', 'warn', 'wx', 'tools'] as const;
 type Tab = (typeof TABS)[number];
 function setTab(t: Tab): void {
   for (const k of TABS) {
@@ -623,7 +630,12 @@ function onSport(s: Sport): void {
     setTab('climb');
     void loadCrags();
     renderClimb();
-  } else if (!$('tab-surf').hidden || !$('tab-climb').hidden) {
+  } else if (s === 'ice') {
+    count('sport-ice');
+    setTab('ice');
+    renderIce();
+    void loadIce();
+  } else if (!$('tab-surf').hidden || !$('tab-climb').hidden || !$('tab-ice').hidden) {
     setTab('layers');
   }
 }
@@ -817,6 +829,23 @@ initClimb({
   },
 });
 
+/** Zoom an ice observation is shown at from the list. */
+const ICE_ZOOM = 13;
+initIce({
+  onDetails: (id) => {
+    setTab('ice');
+    openIce(id);
+  },
+  onShowOnMap: (p) => {
+    resetSheet();
+    flyIntoView(L.latLng(p.lat, p.lng), Math.max(map.getZoom(), ICE_ZOOM));
+  },
+  onWeather: (p) => {
+    void pickPoint(L.latLng(p.lat, p.lng));
+    setTab('wx');
+  },
+});
+
 /**
  * A shared link with a point (`/@lat,lng`): select it, show its warning, and keep it
  * in view beside the panel (PC) or above the bottom sheet (phone).
@@ -843,6 +872,9 @@ if (state.sport === 'surf') {
 } else if (state.sport === 'climb') {
   count('sport-climb');
   void loadCrags();
+} else if (state.sport === 'ice') {
+  count('sport-ice');
+  void loadIce();
 }
 setStatus('Henter varslingsregioner…', 'busy');
 fetchRegions()

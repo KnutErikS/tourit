@@ -1,5 +1,6 @@
 import { count } from '../analytics/count';
 import { fetchCrags } from '../api/crags';
+import { fetchIceObs } from '../api/ice';
 import { fetchSurf, SURF_MODELS, type SurfModel } from '../api/surf';
 import { SURF_SPOTS } from '../domain/surfSpots';
 import { map } from '../map';
@@ -7,13 +8,15 @@ import { NotStoredError } from '../offline/dataCache';
 import { state } from '../state';
 import { $, storedNote } from '../util';
 import { cragCount, renderClimb, setClimbStatus, setCrags } from './climb';
+import { todayIso } from './format';
+import { renderIce, setIceObs, setIceStatus } from './ice';
 import { setSurfData, setSurfStatus } from './surf';
 
 /**
- * Loading the data behind the Surf and Klatring tabs: the wave forecast for the
- * spots and the list of crags. main.ts calls these when a sport is chosen, at
+ * Loading the data behind the Surf, Klatring and Skøyter tabs: the wave forecast
+ * for the spots, the list of crags, and the ice observations. main.ts calls these when a sport is chosen, at
  * start-up and when the app comes back to the foreground; the tabs themselves
- * (ui/surf.ts, ui/climb.ts) draw what they are handed.
+ * (ui/surf.ts, ui/climb.ts, ui/ice.ts) draw what they are handed.
  */
 
 /**
@@ -117,3 +120,53 @@ map.on('moveend', () => {
   climbTimer = setTimeout(renderClimb, 250);
 });
 
+
+/**
+ * Ice observations from Regobs for the chosen date and the days before: fetched
+ * when skating is chosen or the date changes, and again after ICE_MAX_AGE
+ * (people report through the day).
+ */
+const ICE_MAX_AGE = 15 * 60_000;
+let iceFor = '';
+let iceAt = 0;
+let iceLoading = '';
+export async function loadIce(): Promise<void> {
+  const date = state.date || todayIso();
+  if (iceLoading === date || (iceFor === date && Date.now() - iceAt < ICE_MAX_AGE)) return;
+  iceLoading = date;
+  const el = $('ice-layer-status');
+  const show = (text: string) => {
+    el.hidden = false;
+    el.textContent = text;
+  };
+  if (iceFor !== date) {
+    show('Henter isobservasjoner fra Regobs…');
+    setIceStatus('Henter isobservasjoner fra Regobs…');
+  }
+  try {
+    const { data, savedAt } = await fetchIceObs(date);
+    if (state.date && state.date !== date) return; // another date was chosen meanwhile
+    if (savedAt !== null) count('fail-regobs');
+    else (iceFor = date), (iceAt = Date.now());
+    setIceObs(data, date, storedNote(savedAt));
+    show(`${storedNote(savedAt)}${data.length} isobservasjoner siste 7 døgn`);
+  } catch (e) {
+    count('fail-regobs');
+    const text =
+      e instanceof NotStoredError
+        ? 'Uten nett, og isobservasjonene er ikke lagret på enheten ennå.'
+        : `Fikk ikke hentet isobservasjoner fra Regobs (${(e as Error)?.message || 'nettverksfeil'}). Prøv igjen om litt.`;
+    setIceStatus(text);
+    show(text);
+  } finally {
+    if (iceLoading === date) iceLoading = '';
+  }
+}
+
+/** The Skøyter tab lists what is in view: follow the map (after it settles). */
+let iceTimer: ReturnType<typeof setTimeout> | null = null;
+map.on('moveend', () => {
+  if (state.sport !== 'ice') return;
+  if (iceTimer) clearTimeout(iceTimer);
+  iceTimer = setTimeout(renderIce, 250);
+});
